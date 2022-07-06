@@ -13,6 +13,8 @@
 
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
+#define DO_NOTHING do_nothing
 
+void do_nothing(void*);
 
 #endif

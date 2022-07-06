@@ -77,6 +77,7 @@ namespace util {
         klass.init = queue_array_init;
         klass.peek = queue_array_peek;
         klass.pop  = queue_array_pop;
+        klass.push = queue_array_push;
         klass.stop = queue_array_finalize;
         klass.init = queue_array_init;
         initialized = true;

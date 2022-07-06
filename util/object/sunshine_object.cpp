@@ -60,7 +60,7 @@ namespace object
         memset(obj,0,sizeof(Object));
         obj->data = data;
         obj->free_func = free_func;
-        obj->refcount  = 0;
+        obj->refcount  = 1;
         return obj;
     }
 } // namespace object

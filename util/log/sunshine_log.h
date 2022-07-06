@@ -11,6 +11,7 @@
 #ifndef __SUNSHINE_LOG_H__
 #define __SUNSHINE_LOG_H__
 
+#include <sunshine_error.h>
 
 
 #define LOG_ERROR(content)  error::new_error(__FILE__,__LINE__,"error",content);
