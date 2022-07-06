@@ -16,6 +16,7 @@
 #include <sunshine_object.h>
 #include <sunshine_object.h>
 #include <cstdlib>
+#include <mutex>
 #include <string.h>
 
 #define BASE_SIZE 1024
@@ -29,12 +30,26 @@ namespace util {
      * Circular Array
      */
     struct _QueueArray {
+        /**
+         * @brief 
+         * 
+         */
         uint capacity;
         uint length;
 
+        /**
+         * @brief 
+         * 
+         */
         uint head;
         uint tail;
 
+        std::mutex _lock;
+
+        /**
+         * @brief 
+         * 
+         */
         object::Object* object_array;
     };
 
@@ -129,6 +144,7 @@ namespace util {
     queue_array_push(QueueArray* queue, 
                      object::Object* obj)
     {
+        std::lock_guard {queue->_lock};
         if (queue->length == (queue->capacity - 1))
             queue_array_do_expand(queue);
         
@@ -152,6 +168,7 @@ namespace util {
     bool            
     queue_array_peek(QueueArray* queue)
     {
+        std::lock_guard {queue->_lock};
         if (queue->length > 0)
         {
             return false;
@@ -170,6 +187,7 @@ namespace util {
     queue_array_pop(QueueArray* queue, 
                     object::Object* obj)
     {
+        std::lock_guard {queue->_lock};
         if (queue_array_peek(queue))
         {
             object::Object* head_pointer = (object::Object*)(queue->object_array + ( sizeof(object::Object) * (uint) queue->head));
@@ -196,6 +214,7 @@ namespace util {
     void            
     queue_array_finalize(QueueArray* queue)
     {
+        std::lock_guard {queue->_lock};
         free(queue->object_array);
         free(queue);
     }
