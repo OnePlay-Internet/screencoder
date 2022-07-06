@@ -38,15 +38,15 @@ namespace object
     pointer 
     object_ref (Object* obj)
     {
-        obj->refcount++;
+        obj->ref_count++;
         return obj->data;
     }
 
     void    
     object_unref (Object* obj)
     {
-        obj->refcount--;
-        if (!obj->refcount)
+        obj->ref_count--;
+        if (!obj->ref_count)
         {
             obj->free_func(obj->data);
             free(obj);
@@ -60,7 +60,7 @@ namespace object
         memset(obj,0,sizeof(Object));
         obj->data = data;
         obj->free_func = free_func;
-        obj->refcount  = 1;
+        obj->ref_count  = 1;
         return obj;
     }
 } // namespace object

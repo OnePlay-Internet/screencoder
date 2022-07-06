@@ -22,7 +22,7 @@ namespace object
     typedef void (*ObjectFreeFunc) (pointer data);
 
     typedef struct _Object{
-        uint refcount;
+        uint ref_count;
         ObjectFreeFunc free_func;
         pointer data;
     } Object;

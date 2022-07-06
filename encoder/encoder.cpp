@@ -15,6 +15,7 @@
 #include <sunshine_log.h>
 #include <sunshine_object.h>
 #include <sunshine_bitstream.h>
+#include <sunshine_event.h>
 
 #include <encoder_datatype.h>
 #include <encoder_packet.h>
@@ -40,10 +41,11 @@ namespace encoder {
      * 
      */
     typedef struct _SyncSessionContext{
+        event::Broadcaster* shutdown_event;
+        event::Broadcaster* idr_event;
+        event::Broadcaster* join_event;
+
         util::QueueArray* packet_queue;
-        util::QueueArray* shutdown_event;
-        util::QueueArray* join_event;
-        util::QueueArray* idr_event;
 
         int frame_nr;
         Config config;
@@ -254,43 +256,22 @@ namespace encoder {
 
 
         QUEUE_ARRAY_CLASS->stop(ctx->sync_session_queue);
-
-        int i = 0;
-        while ((synced_session_ctxs + i) != NULL)
-        {
-            SyncSessionContext ss_ctx = *(synced_session_ctxs + i);
-
-            bool temp = true;
-            object::Object* obj = OBJECT_CLASS->init(&temp,do_nothing);
-            QUEUE_ARRAY_CLASS->push(ss_ctx.shutdown_event,obj);
-            QUEUE_ARRAY_CLASS->push(ss_ctx.join_event,obj);
-            OBJECT_CLASS->unref(obj);
-            i++;
-        }
-        
         
         int i = 0;
         while ((synced_session_ctxs + i) != NULL)
         {
             SyncSessionContext ss_ctx = *(synced_session_ctxs + i);
-
-            bool temp = true;
-            object::Object* obj = OBJECT_CLASS->init(&temp,do_nothing);
-            QUEUE_ARRAY_CLASS->push(ss_ctx.shutdown_event,obj);
-            QUEUE_ARRAY_CLASS->push(ss_ctx.join_event,obj);
-            OBJECT_CLASS->unref(obj);
+            RAISE_EVENT(ss_ctx->shutdown_event);
+            RAISE_EVENT(ss_ctx->join_event);
             i++;
         }
 
         while (QUEUE_ARRAY_CLASS->peek(ctx->sync_session_queue))
         {
-            object::Object* obj = OBJECT_CLASS->init(NULL,do_nothing);
-            QUEUE_ARRAY_CLASS->pop(ctx->sync_session_queue,obj);
-
             SyncSessionContext* ss_ctx = (SyncSessionContext*) obj->data;
-            QUEUE_ARRAY_CLASS->push(ss_ctx->shutdown_event,obj);
-            QUEUE_ARRAY_CLASS->push(ss_ctx->join_event,obj);
-            OBJECT_CLASS->unref(obj);
+            RAISE_EVENT(ss_ctx->shutdown_event);
+            RAISE_EVENT(ss_ctx->join_event);
+            i++;
         }
     }
 }

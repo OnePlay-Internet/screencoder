@@ -16,6 +16,6 @@ typedef void*         pointer;
 typedef unsigned char uint8;
 typedef unsigned int  uint;
 typedef int           int32;
-typedef unsigned int  byte;
+typedef unsigned char byte;
 
 #endif

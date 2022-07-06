@@ -184,7 +184,7 @@ namespace util {
     }
 
 
-    void
+    bool 
     queue_array_pop(QueueArray* queue, 
                     object::Object* obj)
     {
@@ -193,8 +193,13 @@ namespace util {
         {
             object::Object* head_pointer = (object::Object*)(queue->object_array + ( sizeof(object::Object) * (uint) queue->head));
             obj->data = head_pointer->data;
+            OBJECT_CLASS->unref(obj);
+            return true;
         }
-        OBJECT_CLASS->unref(obj);
+        else
+        {
+            return false;
+        }
     }
 
 
