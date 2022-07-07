@@ -59,7 +59,12 @@
         "tuple": "cpp",
         "bitset": "cpp",
         "optional": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "semaphore": "cpp",
+        "shared_mutex": "cpp",
+        "stop_token": "cpp",
+        "typeindex": "cpp",
+        "initializer_list": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

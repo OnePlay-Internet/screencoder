@@ -8,9 +8,12 @@
  * @copyright Copyright (c) 2022
  * 
  */
+#ifndef __SUNSHINE_DISPLAY_VRAM_H__
+#define __SUNSHINE_DISPLAY_VRAM_H__
 #include <display.h>
 #include <d3d11_datatype.h>
 #include <common.h>
+
 
 namespace vram
 {
@@ -30,3 +33,5 @@ namespace vram
     }DisplayVram;
     
 } // namespace vram
+
+#endif

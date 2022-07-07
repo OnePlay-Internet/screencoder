@@ -103,9 +103,9 @@ namespace rtp
             payload = payload_new;
 
             if(av_packet->flags & AV_PKT_FLAG_KEY) {
-                int i = 0;
-                while(video_packet->replacements + i) {
-                    encoder::Replace replacement = *(video_packet->replacements + i);
+                int index = 0;
+                while(array_object_has_data(video_packet->replacement_array,index)) {
+                    encoder::Replace* replacement = (encoder::Replace*)array_object_get_data(video_packet->replacement_array,index);
 
                     pointer frame_old = replacement.old;
                     pointer frame_new = replacement._new;
@@ -114,7 +114,7 @@ namespace rtp
                     // payload_new = replace(payload, frame_old, frame_new);
                     // payload     = { (char *)payload_new.data(), payload_new.size() };
 
-                    i++;
+                    index++;
                 }
             }
 

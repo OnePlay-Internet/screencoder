@@ -25,6 +25,7 @@ namespace libav
     typedef AVFrame             Frame;
     typedef AVCodecContext      CodecContext;
     typedef AVBufferRef         BufferRef;
+    typedef AVPixelFormat       PixelFormat;
 } // namespace libav
 
 

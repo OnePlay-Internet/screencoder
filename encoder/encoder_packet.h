@@ -51,7 +51,7 @@ namespace encoder
     typedef struct _Packet{
         libav::Packet* packet;
         
-        Replace* replacements;
+        ArrayObject* replacement_array;
 
         pointer user_data;
     }Packet;

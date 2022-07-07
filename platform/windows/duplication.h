@@ -1,3 +1,15 @@
+/**
+ * @file duplication.h
+ * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
+ * @brief 
+ * @version 1.0
+ * @date 2022-07-07
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+#ifndef __SUNSHINE_DUPLICATION_H__
+#define __SUNSHINE_DUPLICATION_H__
 #include <common.h>
 #include <duplication.h>
 #include <d3d11_datatype.h>
@@ -28,3 +40,4 @@ namespace duplication
     DuplicationClass* duplication_class_init();
 } // namespace duplication
  
+#endif

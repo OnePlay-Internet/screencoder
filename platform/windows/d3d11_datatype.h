@@ -57,3 +57,5 @@ namespace directx
         typedef ID3D11DepthStencilView         *DepthStencilView     ; 
     }
 } // namespace d3d11
+
+#endif
