@@ -68,3 +68,9 @@ array_object_has_data(ArrayObject* array,
 {
     return index <= array->length;
 }
+
+int             
+array_object_length(ArrayObject* array)
+{
+    return array->length;
+}

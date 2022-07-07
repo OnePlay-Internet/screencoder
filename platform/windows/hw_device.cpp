@@ -181,7 +181,7 @@ namespace hwdevice
       }
 
 
-      self->color_matrix = helper::make_buffer(device_p, *(encoder::get_color() + 0));
+      self->color_matrix = helper::make_buffer(device_p, *(platf::get_color() + 0));
       if(!self->color_matrix) {
         // BOOST_LOG(error) << "Failed to create color matrix buffer"sv;
         return -1;

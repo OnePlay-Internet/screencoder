@@ -37,10 +37,9 @@ namespace display{
 
 
 
-  int 
-  display_base_init(DisplayBase* disp,
+  int
+  display_base_init(DisplayBase* self,
                     int framerate, 
-                    const char* adapter_name, 
                     const char* display_name) 
   {
     // Ensure we can duplicate the current display

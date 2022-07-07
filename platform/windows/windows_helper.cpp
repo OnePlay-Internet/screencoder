@@ -293,7 +293,7 @@ namespace helper
 namespace platf {
 
     Display*
-    display(MemoryType hwdevice_type, 
+    display_init(MemoryType hwdevice_type, 
             const char* display_name, 
             int framerate) 
     {

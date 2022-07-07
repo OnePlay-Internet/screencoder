@@ -83,6 +83,17 @@ namespace display {
       directx::d3d11::Texture2D texture;
     }DisplayRam;
 
+    /**
+     * @brief 
+     * 
+     * @param framerate 
+     * @param display_name 
+     * @return int 
+     */
+    int             display_base_init           (DisplayBase* self,
+                                                 int framerate, 
+                                                 const char* display_name);
+
 } // namespace platf::dxgi
 
 #endif

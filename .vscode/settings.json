@@ -64,7 +64,8 @@
         "shared_mutex": "cpp",
         "stop_token": "cpp",
         "typeindex": "cpp",
-        "initializer_list": "cpp"
+        "initializer_list": "cpp",
+        "numeric": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

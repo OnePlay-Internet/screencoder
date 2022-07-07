@@ -53,28 +53,64 @@ namespace platf {
         libav::Frame* frame;
     }HWDevice;
 
+    typedef struct _HWDeviceClass {
+        int (*convert)(Image* img);
+        int (*set_frame)(libav::Frame* frame);
 
+        void (*set_colorspace)(uint32 colorspace, 
+                               uint32 color_range);
+    }HWDeviceClass;
+
+
+    /**
+     * When display has a new image ready, this callback will be called with the new image.
+     * 
+     * On Break Request -->
+     *    Returns nullptr
+     * 
+     * On Success -->
+     *    Returns the image object that should be filled next.
+     *    This may or may not be the image send with the callback
+     */
     typedef void (*SnapshootCallback) (Image* img);
 
 
     typedef struct _Display {
-        /**
-         * When display has a new image ready, this callback will be called with the new image.
-         * 
-         * On Break Request -->
-         *    Returns nullptr
-         * 
-         * On Success -->
-         *    Returns the image object that should be filled next.
-         *    This may or may not be the image send with the callback
-         */
-        SnapshootCallback callback;
+        DisplayClass* klass;
 
         // Offsets for when streaming a specific monitor. By default, they are 0.
         int offset_x, offset_y;
         int env_width, env_height;
         int width, height;
     }Display;
+
+    typedef struct _DisplayClass {
+        Display*    (*init)             (int framerate, 
+                                         char* display_name);
+
+        int         (*dummy_img)        (Display* self,
+                                         Image* img);
+
+        Image*      (*alloc_img)        (Display* self);
+
+        void        (*free)             (Display* self);
+
+        int         (*dummy_img)        (Display* self
+                                         Image* img);
+
+        HWDevice*   (*make_hwdevice)    (Display* self,
+                                         PixelFormat pix_fmt);
+        
+        Capture     (*capture)          (Display* self,
+                                         SnapshootCallback snapshot_cb, 
+                                         Image* img, 
+                                         bool cursor);
+
+        Capture     (*snapshot)         (Display* self,
+                                         platf::Image *img_base, 
+                                         std::chrono::milliseconds timeout, 
+                                         bool cursor_visible) 
+    }DisplayClass;
 
 
     /**
@@ -93,6 +129,13 @@ namespace platf {
 
     // A list of names of displays accepted as display_name with the MemoryType
     char**                  display_names (MemoryType hwdevice_type);
+
+    /**
+     * @brief Get the color object
+     * 
+     * @return Color* 
+     */
+    Color*          get_color             ();
 } // namespace platf
 
 #endif //SUNSHINE_COMMON_H

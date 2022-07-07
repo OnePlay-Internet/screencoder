@@ -32,6 +32,12 @@ ArrayObject*    array_object_new           ();
 /**
  * @brief 
  * 
+ * @return ArrayObject* 
+ */
+void            array_object_finalize           (ArrayObject* arr);
+/**
+ * @brief 
+ * 
  * @param array 
  * @param data 
  */
@@ -46,5 +52,10 @@ void            array_object_emplace_back (ArrayObject* array,
  */
 pointer         array_object_get_data     (ArrayObject* array,
                                            int index);
+
+bool            array_object_has_data     (ArrayObject* array,
+                                           int index);
+
+int             array_object_length       (ArrayObject* array);
 
 #endif

@@ -14,6 +14,7 @@
 #include <d3d11_datatype.h>
 #include <common.h>
 
+#define DISPLAY_VRAM_CLASS      vram::display_class_init()
 
 namespace vram
 {
@@ -31,6 +32,10 @@ namespace vram
 
       directx::d3d11::Texture2D src;
     }DisplayVram;
+
+
+    platf::DisplayClass*    display_class_init    ();
+
     
 } // namespace vram
 

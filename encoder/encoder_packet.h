@@ -64,7 +64,6 @@ namespace encoder
         void    (*finalize) (Packet* packet);
     }PacketClass;
 
-    Color*          get_color           ();
 
     void            capture             ( pointer mail, 
                                           Config config, 
