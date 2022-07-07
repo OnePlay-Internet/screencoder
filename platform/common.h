@@ -40,7 +40,7 @@ namespace platf {
     }Capture;
 
     typedef struct _Image {
-        uint8 *data;
+        byte* data;
         int32 width;
         int32 height;
         int32 pixel_pitch;
@@ -49,16 +49,23 @@ namespace platf {
 
 
     typedef struct _HWDevice {
+        HWDeviceClass klass;
         void *data;
         libav::Frame* frame;
     }HWDevice;
 
     typedef struct _HWDeviceClass {
-        int (*convert)(Image* img);
-        int (*set_frame)(libav::Frame* frame);
+        HWDevice* (*init)       (platf::Display* display, 
+                                 directx::d3d11::Device device_p, 
+                                 directx::d3d11::DeviceContext device_ctx_p,
+                                 platf::PixelFormat pix_fmt);
 
-        void (*set_colorspace)(uint32 colorspace, 
-                               uint32 color_range);
+        int (*convert)          (Image* img);
+
+        int (*set_frame)        (libav::Frame* frame);
+
+        void (*set_colorspace)  (uint32 colorspace, 
+                                 uint32 color_range);
     }HWDeviceClass;
 
 
@@ -72,8 +79,12 @@ namespace platf {
      *    Returns the image object that should be filled next.
      *    This may or may not be the image send with the callback
      */
-    typedef void (*SnapshootCallback) (Image* img);
-
+    typedef void (*SnapshootCallback) (Image* img,
+                                       Display* disp,
+                                       encoder::Encoder* encoder,
+                                       ArrayObject* synced_sessions,
+                                       ArrayObject* synced_session_ctxs,
+                                       util::QueueArray* encode_session_ctx_queue);
 
     typedef struct _Display {
         DisplayClass* klass;
@@ -135,7 +146,7 @@ namespace platf {
      * 
      * @return Color* 
      */
-    Color*          get_color             ();
+    Color*                  get_color     ();
 } // namespace platf
 
 #endif //SUNSHINE_COMMON_H

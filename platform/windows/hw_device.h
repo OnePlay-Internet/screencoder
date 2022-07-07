@@ -59,6 +59,12 @@ namespace hwdevice
     }D3D11Device;
 
 
+    typedef struct _D3D11DeviceClass {
+      platf::HWDeviceClass base;
+    }D3D11DeviceClass;
+
+
+    D3D11DeviceClass*       d3d11_device_class_init        ();
     
 } // namespace hwdevice
 

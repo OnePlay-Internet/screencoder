@@ -5,6 +5,7 @@
 #include <sunshine_datatype.h>
 #include <avcodec_datatype.h>
 #include <avcodec_datatype.h>
+#include <string.h>
 
 #include <encoder_packet.h>
 #include <d3dcompiler.h>
@@ -22,6 +23,7 @@ extern "C" {
 #include <display_vram.h>
 #include <windows_helper.h>
 #include <hw_device.h>
+#include <encoder.h>
 
 
 #define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/shaders/directx"
@@ -40,36 +42,36 @@ namespace vram {
      */
     platf::Capture 
     display_vram_capture(DisplayVram* self,
+                        encoder::Encoder* encoder,
+                        encoder::SyncSession* encoder,
                         platf::SnapshootCallback snapshot_cb, 
-                        platf::Image img, 
-                        bool *cursor) 
+                        platf::Image* img, 
+                        bool cursor) 
     {
         auto next_frame = std::chrono::steady_clock::now();
-
         while(img) {
           auto now = std::chrono::steady_clock::now();
           while(next_frame > now) {
             now = std::chrono::steady_clock::now();
           }
-          next_frame = now + delay;
 
-          auto status = snapshot(img.get(), 1000ms, *cursor);
+          next_frame = now + self->base.delay;
+          auto status = self->base.base.klass->snapshot(self,img,1000ms,cursor);
           switch(status) {
-          case platf::Capture::reinit:
-          case platf::Capture::error:
-            return status;
-          case platf::Capture::timeout:
-            std::this_thread::sleep_for(1ms);
-            continue;
-          case platf::Capture::ok:
-            img = snapshot_cb(img);
-            break;
-          default:
-            // BOOST_LOG(error) << "Unrecognized capture status ["sv << (int)status << ']';
-            return status;
+            case platf::Capture::reinit:
+            case platf::Capture::error:
+              return status;
+            case platf::Capture::timeout:
+              std::this_thread::sleep_for(1ms);
+              continue;
+            case platf::Capture::ok:
+              snapshot_cb(img,self,encoder,);
+              break;
+            default:
+              // BOOST_LOG(error) << "Unrecognized capture status ["sv << (int)status << ']';
+              return status;
           }
         }
-
         return platf::Capture::ok;
     }
 
@@ -86,7 +88,7 @@ namespace vram {
       DXGI_OUTDUPL_FRAME_INFO frame_info;
 
       directx::dxgi::Resource res_p {};
-      platf::Capture capture_status = duplication_get_next_frame(dup,frame_info, timeout, &res_p);
+      platf::Capture capture_status = duplication::duplication_class_init()->next_frame(&self->base.dup,frame_info, timeout, f);
       directx::dxgi::Resource res { res_p };
 
       if(capture_status != platf::Capture::ok) {
@@ -132,8 +134,8 @@ namespace vram {
         t.Format           = DXGI_FORMAT_B8G8R8A8_UNORM;
         t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
 
-        texture2d_t texture;
-        auto status = device->CreateTexture2D(&t, &data, &texture);
+        directx::d3d11::Texture2D texture;
+        auto status = self->base.device->CreateTexture2D(&t, &data, &texture);
         if(FAILED(status)) {
           // BOOST_LOG(error) << "Failed to create mouse texture [0x"sv << util::hex(status).to_string_view() << ']';
           return platf::Capture::error;
@@ -146,22 +148,22 @@ namespace vram {
         desc.Texture2D.MipLevels = 1;
 
         // Free resources before allocating on the next line.
-        cursor.input_res.reset();
-        status = device->CreateShaderResourceView(texture.get(), &desc, &cursor.input_res);
+        self->cursor.input_res.reset();
+        status = device->CreateShaderResourceView(texture, &desc, &cursor.input_res);
         if(FAILED(status)) {
           // BOOST_LOG(error) << "Failed to create cursor shader resource view [0x"sv << util::hex(status).to_string_view() << ']';
           return platf::Capture::error;
         }
 
-        cursor.set_texture(t.Width, t.Height, std::move(texture));
+        self->cursor.set_texture(t.Width, t.Height, std::move(texture));
       }
 
       if(frame_info.LastMouseUpdateTime.QuadPart) {
-        cursor.set_pos(frame_info.PointerPosition.Position.x, frame_info.PointerPosition.Position.y, frame_info.PointerPosition.Visible && cursor_visible);
+        self->cursor.set_pos(frame_info.PointerPosition.Position.x, frame_info.PointerPosition.Position.y, frame_info.PointerPosition.Visible && cursor_visible);
       }
 
       if(frame_update_flag) {
-        src.reset();
+        // src.reset();
         status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
 
         if(FAILED(status)) {
@@ -170,23 +172,24 @@ namespace vram {
         }
       }
 
-      device_ctx->CopyResource(img->texture.get(), src.get());
+      self->device_ctx->CopyResource(img->texture, self->src);
       if(cursor.visible) {
         D3D11_VIEWPORT view {
           0.0f, 0.0f,
-          (float)self->base.width, (float)self->base.height,
+          (float)self->base.width, 
+          (float)self->base.height,
           0.0f, 1.0f
         };
 
-        device_ctx->VSSetShader(scene_vs.get(), nullptr, 0);
-        device_ctx->PSSetShader(scene_ps.get(), nullptr, 0);
+        device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
+        device_ctx->PSSetShader(self->scene_ps, nullptr, 0);
         device_ctx->RSSetViewports(1, &view);
         device_ctx->OMSetRenderTargets(1, &img->scene_rt, nullptr);
         device_ctx->PSSetShaderResources(0, 1, &cursor.input_res);
-        device_ctx->OMSetBlendState(blend_enable.get(), nullptr, 0xFFFFFFFFu);
-        device_ctx->RSSetViewports(1, &cursor.cursor_view);
+        device_ctx->OMSetBlendState(self->blend_enable, nullptr, 0xFFFFFFFFu);
+        device_ctx->RSSetViewports(1, &self->cursor.cursor_view);
         device_ctx->Draw(3, 0);
-        device_ctx->OMSetBlendState(blend_disable.get(), nullptr, 0xFFFFFFFFu);
+        device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
       }
 
       return platf::Capture::ok;
@@ -217,30 +220,32 @@ namespace vram {
         return -1;
       }
 
-      status = device->CreateVertexShader(scene_vs_hlsl->GetBufferPointer(), scene_vs_hlsl->GetBufferSize(), nullptr, &scene_vs);
+
+      display::HLSL* hlsl = init_hlsl();
+      status = device->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
       if(status) {
         // BOOST_LOG(error) << "Failed to create scene vertex shader [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
       }
 
-      status = device->CreatePixelShader(scene_ps_hlsl->GetBufferPointer(), scene_ps_hlsl->GetBufferSize(), nullptr, &scene_ps);
+      status = device->CreatePixelShader(hlsl->scene_ps_hlsl->GetBufferPointer(), hlsl->scene_ps_hlsl->GetBufferSize(), nullptr, &self->scene_ps);
       if(status) {
         // BOOST_LOG(error) << "Failed to create scene pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
       }
 
-      self->blend_enable  = helper::make_blend(device.get(), true);
-      self->blend_disable = helper::make_blend(device.get(), false);
+      self->blend_enable  = helper::make_blend(self->base.device, true);
+      self->blend_disable = helper::make_blend(self->base.device, false);
 
       if(!self->blend_disable || !self->base.blend_enable) {
         return -1;
       }
 
-      device_ctx->OMSetBlendState(blend_disable.get(), nullptr, 0xFFFFFFFFu);
+      device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
       device_ctx->PSSetSamplers(0, 1, &self->sampler_linear);
       device_ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-      return self;
+      return platf::Capture::ok;
     }
 
   
@@ -321,27 +326,30 @@ namespace vram {
     display_vram_dummy_img(DisplayVram* self,
                           platf::Image *img_base) 
     {
-      hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)img_base;
-      if(img->texture) {
-        return 0;
-      }
+      platf::Display* disp = (platf::Display*) self;
 
-      img->row_pitch  = disp->base.width * 4;
-      auto dummy_data = std::make_unique<int[]>(width * height);
+      hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)img_base;
+      if(img->texture) 
+        return 0;
+      
+      img->row_pitch  = disp->width * 4;
+
+      byte* dummy_data = (byte*)malloc(disp->width * disp->height);
+      memset(dummy_data,0, disp->width * disp->height);
+
       D3D11_SUBRESOURCE_DATA data {
-        dummy_data.get(),
+        dummy_data,
         (UINT)img->row_pitch
       };
-      std::fill_n(dummy_data.get(), width * height, 0);
 
       D3D11_TEXTURE2D_DESC t {};
-      t.Width            = width;
-      t.Height           = height;
+      t.Width            = disp->width;
+      t.Height           = disp->height;
       t.MipLevels        = 1;
       t.ArraySize        = 1;
       t.SampleDesc.Count = 1;
       t.Usage            = D3D11_USAGE_DEFAULT;
-      t.Format           = format;
+      t.Format           = self->base.format;
       t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
 
       directx::d3d11::Texture2D tex;
@@ -351,33 +359,25 @@ namespace vram {
         return -1;
       }
 
-      img->texture = std::move(tex);
-      img->data    = (std::uint8_t *)img->texture.get();
+      img->texture = tex;
+      img->base.data    = (byte*)img->texture;
 
       return 0;
     }
 
     platf::HWDevice*
-    display_vram_make_hwdevice(platf::PixelFormat pix_fmt) 
+    display_vram_make_hwdevice(DisplayVram* self,
+                               platf::PixelFormat pix_fmt) 
     {
       if(pix_fmt != platf::PixelFormat::nv12) {
         // BOOST_LOG(error) << "DisplayVram doesn't support pixel format ["sv << from_pix_fmt(pix_fmt) << ']';
         return nullptr;
       }
 
-      platf::HWDevice hwdevice = {0};
-
-      auto ret = hwdevice->init(
-        shared_from_this(),
-        device.get(),
-        device_ctx.get(),
+      return hwdevice::d3d11_device_class_init()->base.init( self,
+        self->base.device,
+        self->base.device_ctx,
         pix_fmt);
-
-      if(ret) {
-        return nullptr;
-      }
-
-      return hwdevice;
     }
 
     display::HLSL*

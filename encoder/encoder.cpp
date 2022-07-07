@@ -51,10 +51,12 @@ namespace encoder {
 
         int frame_nr;
         Config config;
+        Encoder* encoder;
+        platf::Display* encoder;
         pointer channel_data;
     }SyncSessionContext;
 
-    typedef struct SyncSession{
+    typedef struct _SyncSession{
         SyncSessionContext* ctx;
         platf::Image* img_tmp;
         Session session;
@@ -209,11 +211,11 @@ namespace encoder {
                  int width, int height, 
                  platf::HWDevice* hwdevice) 
     {
-        bool hardware = encoder.dev_type != AV_HWDEVICE_TYPE_NONE;
+        bool hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
 
         Profile video_format = config.videoFormat == 0 ? encoder->h264 : encoder->hevc;
         if(!video_format[FrameFlags::PASSED]) {
-            // BOOST_LOG(error) << encoder.name << ": "sv << video_format.name << " mode not supported"sv;
+            // BOOST_LOG(error) << encoder->name << ": "sv << video_format.name << " mode not supported"sv;
             return NULL;
         }
 
@@ -235,20 +237,20 @@ namespace encoder {
         ctx->framerate = AVRational { config.framerate, 1 };
 
         if(config.videoFormat == 0) {
-            ctx->profile = encoder.profile.h264_high;
+            ctx->profile = encoder->profile.h264_high;
         }
         else if(config.dynamicRange == 0) {
-            ctx->profile = encoder.profile.hevc_main;
+            ctx->profile = encoder->profile.hevc_main;
         }
         else {
-            ctx->profile = encoder.profile.hevc_main_10;
+            ctx->profile = encoder->profile.hevc_main_10;
         }
 
         // B-frames delay decoder output, so never use them
         ctx->max_b_frames = 0;
 
         // Use an infinite GOP length since I-frames are generated on demand
-        ctx->gop_size = encoder.flags & LIMITED_GOP_SIZE ? INT16_MAX : INT_MAX;
+        ctx->gop_size = encoder->flags & LIMITED_GOP_SIZE ? INT16_MAX : INT_MAX;
         ctx->keyint_min = INT_MAX;
 
         if(config.numRefFrames == 0) {
@@ -298,10 +300,10 @@ namespace encoder {
 
         AVPixelFormat sw_fmt;
         if(config.dynamicRange == 0) {
-            sw_fmt = encoder.static_pix_fmt;
+            sw_fmt = encoder->static_pix_fmt;
         }
         else {
-            sw_fmt = encoder.dynamic_pix_fmt;
+            sw_fmt = encoder->dynamic_pix_fmt;
         }
 
         // Used by cbs::make_sps_hevc
@@ -309,7 +311,7 @@ namespace encoder {
 
         libav::BufferRef* hwdevice_ctx;
         if(hardware) {
-            ctx->pix_fmt = encoder.dev_pix_fmt;
+            ctx->pix_fmt = encoder->dev_pix_fmt;
 
             libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(hwdevice);
 
@@ -363,7 +365,7 @@ namespace encoder {
             handle_option(*video_format.qp);
         }
         else {
-            BOOST_LOG(error) << "Couldn't set video quality: encoder "sv << encoder.name << " doesn't support qp"sv;
+            BOOST_LOG(error) << "Couldn't set video quality: encoder "sv << encoder->name << " doesn't support qp"sv;
             return NULL;
         }
 
@@ -402,7 +404,7 @@ namespace encoder {
             device = hwdevice;
         }
 
-        if(device->set_frame(frame)) 
+        if(device->klass.set_frame(frame)) 
             return NULL;
         
 
@@ -447,7 +449,7 @@ namespace encoder {
     {
         SyncSession* encode_session = (SyncSession*)malloc(sizeof(SyncSession));
 
-        platf::PixelFormat pix_fmt = ctx->config.dynamicRange == 0 ? map_pix_fmt(encoder.static_pix_fmt) : map_pix_fmt(encoder.dynamic_pix_fmt);
+        platf::PixelFormat pix_fmt = ctx->config.dynamicRange == 0 ? map_pix_fmt(encoder->static_pix_fmt) : map_pix_fmt(encoder->dynamic_pix_fmt);
         platf::HWDevice* hwdevice = disp->klass->make_hwdevice(disp,pix_fmt);
 
         if(!hwdevice) 
@@ -474,6 +476,8 @@ namespace encoder {
      */
     platf::Capture
     on_image_snapshoot (platf::Image* img,
+                        platf::Display* disp,
+                        Encoder* encoder,
                         ArrayObject* synced_sessions,
                         ArrayObject* synced_session_ctxs,
                         util::QueueArray* encode_session_ctx_queue)
@@ -482,19 +486,17 @@ namespace encoder {
             object::Object* obj = OBJECT_CLASS->init(NULL,DO_NOTHING);
             QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue,obj);
             SyncSessionContext* encode_session_ctx = obj->data;
-            if(!encode_session_ctx) {
-                return platf::Capture::error;
-            }
 
-            array_object_emplace_back(synced_session_ctxs,encode_session_ctx);
-
-            SyncSession* encode_session = make_synced_session(disp.get(), encoder, *img, *synced_session_ctxs.back());
-            if(!encode_session) {
+            if(!encode_session_ctx) 
                 return platf::Capture::error;
-            }
+            SyncSession* encode_session = make_synced_session(disp, encoder, *img, encode_session_ctx);
+            if(!encode_session) 
+                return platf::Capture::error;
 
             array_object_emplace_back(synced_sessions,encode_session);
+            array_object_emplace_back(synced_session_ctxs,encode_session_ctx);
         }
+
 
         int index = 0;
         while (array_object_has_data(synced_sessions,index))
@@ -522,7 +524,7 @@ namespace encoder {
             }
 
             // convert image
-            if(pos->session.device->convert(*img)) {
+            if(pos->session.device->klass.convert(*img)) {
                 LOG_ERROR("Could not convert image");
                 RAISE_EVENT(ctx->shutdown_event);
                 continue;
@@ -579,6 +581,7 @@ namespace encoder {
         }
     }
 
+    // TODO add encoder and display to context
     Status
     encode_run_sync(ArrayObject* synced_session_ctxs,
                     util::QueueArray* encode_session_ctx_queue) 
@@ -603,6 +606,22 @@ namespace encoder {
             count++;
         }
 
+        // create one session for easch synced session context
+        count = 0;
+        SyncSessionContext* synced_sessions;
+        while(array_object_has_data(synced_session_ctxs,count)) {
+            SyncSessionContext* ctx = array_object_get_data(synced_session_ctxs,count);
+            auto synced_session = make_synced_session(disp, encoder, *img, *ctx);
+
+            if(!synced_session) 
+                return Status::error;
+
+            array_object_emplace_back(synced_sessions,synced_session);
+            count++;
+        }
+
+
+
         // pop context from context queue and move them to synced session queue
         if(!array_object_length(synced_session_ctxs)) 
         {
@@ -621,7 +640,7 @@ namespace encoder {
         // reset display every 200ms until display is ready
         platf::Display* disp;
         while(encode_session_ctx_queue.running()) {
-            reset_display(disp, encoder.dev_type, display_names[display_p], framerate);
+            reset_display(disp, encoder->dev_type, display_names[display_p], framerate);
             if(disp) 
                 break;
 
@@ -632,29 +651,17 @@ namespace encoder {
             return encoder::error;
         
         // allocate display image and intialize with dummy data
-        auto img = disp->klass->alloc_img(disp);
+        platf::Image* img = disp->klass->alloc_img(disp);
         if(!img || disp->klass->dummy_img(disp,img)) {
             return Status::error;
         }
 
-        // create one session for easch synced session context
-        count = 0;
-        SyncSessionContext* synced_sessions;
-        while(array_object_has_data(synced_session_ctxs,count)) {
-            SyncSessionContext* ctx = array_object_get_data(synced_session_ctxs,count);
-            auto synced_session = make_synced_session(disp, encoder, *img, *ctx);
 
-            if(!synced_session) 
-                return Status::error;
-
-            array_object_emplace_back(synced_sessions,synced_session);
-            count++;
-        }
 
 
         // return status
-        auto ec = Status::ok;
-        while(encode_session_ctx_queue.running()) {
+        Status ec = Status::ok;
+        while(TRUE) {
             // cursor
             // run image capture in while loop, 
             auto status = disp->klass->capture(disp,on_image_snapshoot, img, TRUE);

@@ -7,6 +7,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext_d3d11va.h>
 }
+#include <display.h>
 
 #include <windows_helper.h>
 
@@ -134,21 +135,20 @@ namespace hwdevice
      * @param pix_fmt 
      * @return int 
      */
-    int 
-    hw_device_init( D3D11Device* self,
-                platf::Display* display, 
-                directx::d3d11::Device device_p, 
-                directx::d3d11::DeviceContext device_ctx_p,
-                platf::PixelFormat pix_fmt) 
+    platf::HWDevice*
+    hw_device_init(platf::Display* display, 
+                   directx::d3d11::Device device_p, 
+                   directx::d3d11::DeviceContext device_ctx_p,
+                   platf::PixelFormat pix_fmt) 
     {
-      HLSL* hlsl = init_hlsl();
+      D3D11Device* self = malloc(sizeof(D3D11Device));
+      self->base.klass = d3d11_device_class_init;
+      display::HLSL* hlsl = init_hlsl();
       HRESULT status;
 
       device_p->AddRef();
       self->base->data = device_p;
-
       self->device_ctx = device_ctx_p;
-
       self->format = (pix_fmt == platf::PixelFormat::nv12 ? DXGI_FORMAT_NV12 : DXGI_FORMAT_P010);
       status = device_p->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &sefl->scene_vs);
       if(status) {
@@ -213,7 +213,7 @@ namespace hwdevice
 
       status = device_p->CreateShaderResourceView(back_img.texture.get(), &desc, &back_img.input_res);
       if(FAILED(status)) {
-        BOOST_LOG(error) << "Failed to create input shader resource view [0x"sv << util::hex(status).to_string_view() << ']';
+        // BOOST_LOG(error) << "Failed to create input shader resource view [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
       }
 
@@ -221,7 +221,7 @@ namespace hwdevice
       device_ctx_p->PSSetConstantBuffers(0, 1, &self->color_matrix);
       device_ctx_p->VSSetConstantBuffers(0, 1, &self->info_scene);
 
-      return 0;
+      return self;
     }
 
     void 
