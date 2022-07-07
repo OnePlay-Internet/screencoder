@@ -48,7 +48,18 @@
         "*.ipp": "cpp",
         "*.tcc": "cpp",
         "string": "cpp",
-        "unordered_set": "cpp"
+        "unordered_set": "cpp",
+        "any": "cpp",
+        "array": "cpp",
+        "set": "cpp",
+        "memory_resource": "cpp",
+        "string_view": "cpp",
+        "typeinfo": "cpp",
+        "*.inc": "cpp",
+        "tuple": "cpp",
+        "bitset": "cpp",
+        "optional": "cpp",
+        "random": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

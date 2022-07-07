@@ -15,18 +15,18 @@ extern "C" {
 
 
 namespace nv {
-    enum class profile_h264_e : int {
-    baseline,
-    main,
-    high,
-    high_444p,
-    };
+    typedef enum _ProfileH264{
+        baseline,
+        main,
+        high,
+        high_444p,
+    }ProfileH264;
 
-    enum class profile_hevc_e : int {
-    main,
-    main_10,
-    rext,
-    };
+    typedef enum _ProfileHEVC{
+        main,
+        main_10,
+        rext,
+    }ProfileHEVC;
 } // namespace nv
 
 namespace encoder {
@@ -38,7 +38,7 @@ namespace encoder {
      * @return libav::BufferRef* 
      */
     libav::BufferRef* 
-    dxgi_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_ctx) 
+    dxgi_make_hwdevice_ctx(platf::HWDevice *hwdevice_ctx) 
     {
         libav::BufferRef* ctx_buf { av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA) };
         auto ctx = (AVD3D11VADeviceContext *)((AVHWDeviceContext *)ctx_buf->data)->hwctx;
@@ -78,9 +78,9 @@ namespace encoder {
         encoder.name = "nvenc";
         encoder.profile = 
         { 
-            (int)nv::profile_h264_e::high, 
-            (int)nv::profile_hevc_e::main, 
-            (int)nv::profile_hevc_e::main_10 
+            (int)nv::ProfileH264::high, 
+            (int)nv::ProfileHEVC::main, 
+            (int)nv::ProfileHEVC::main_10 
         };
 
         /**

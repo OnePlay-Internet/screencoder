@@ -19,7 +19,9 @@
 
 #include <encoder_datatype.h>
 #include <encoder_packet.h>
+#include <encoder_d3d11_device.h>
 #include <common.h>
+#include <display.h>
 
 
 
@@ -29,7 +31,7 @@ namespace encoder {
 
     void do_nothing(pointer data){};
 
-    typedef enum class _Status : int{
+    typedef enum _Status {
         ok,
         reinit,
         timeout,
@@ -54,7 +56,7 @@ namespace encoder {
 
     typedef struct _Session {
         libav::CodecContext context;
-        platf::hwdevice_t* device;
+        platf::HWDevice* device;
 
         Replace* replacements;
 
@@ -79,23 +81,25 @@ namespace encoder {
     encode_run_sync(SyncSessionContext* synced_session_ctxs,
                     util::QueueArray* encode_session_ctx_queue) 
     {
-        // const auto &encoder = encoders.front();
-        // auto display_names  = platf::display_names(map_dev_type(encoder.dev_type));
-        // int display_p       = 0;
+        const Encoder* encoder = NVENC;
+        auto display_names  = platf::display_names(map_dev_type(encoder.dev_type));
+        int display_p       = 0;
 
-        // if(display_names.empty()) {
-        //     display_names.emplace_back(config::video.output_name);
-        // }
+        if(display_names.empty()) {
+            display_names.emplace_back(config::video.output_name);
+        }
 
-        // for(int x = 0; x < display_names.size(); ++x) {
-        //     if(display_names[x] == config::video.output_name) {
-        //     display_p = x;
+        for(int x = 0; x < display_names.size(); ++x) {
+            if(display_names[x] == config::video.output_name) {
+            display_p = x;
 
-        //     break;
-        //     }
-        // }
+            break;
+            }
+        }
 
-        // std::shared_ptr<platf::display_t> disp;
+        platf::Display* disp;
+        auto img = disp->alloc_img();
+
 
         // auto switch_display_event = mail::man->event<int>(mail::switch_display);
 
@@ -147,7 +151,7 @@ namespace encoder {
         // return status
         // auto ec = Status::ok;
         // while(encode_session_ctx_queue.running()) {
-        //     auto snapshot_cb = [&](std::shared_ptr<platf::img_t> &img) -> std::shared_ptr<platf::img_t> {
+        //     auto snapshot_cb = [&](std::shared_ptr<platf::Image> &img) -> std::shared_ptr<platf::Image> {
         //     while(encode_session_ctx_queue.peek()) {
         //         auto encode_session_ctx = encode_session_ctx_queue.pop();
         //         if(!encode_session_ctx) {
@@ -274,5 +278,89 @@ namespace encoder {
             i++;
         }
     }
-}
 
+    /**
+     * @brief 
+     * 
+     * @param shutdown_event 
+     * @param packet_queue 
+     * @param config 
+     * @param data 
+     */
+    void 
+    capture( event::Broadcaster* shutdown_event,
+             util::QueueArray* packet_queue,
+             Config config,
+             pointer data) 
+    {
+        event::Broadcaster* join_event = NEW_EVENT;
+        event::Broadcaster* idr_event = NEW_EVENT;
+        RAISE_EVENT(idr_event);
+
+        // start capture thread sync and let it manages its own context
+        CaptureThreadSyncContext ctx = {0};
+        captureThreadSync(&ctx);
+
+        // push new session context to concode queue
+        SyncSessionContext ss_ctx = {
+            shutdown_event,
+            idr_event,
+            join_event,
+            
+            packet_queue,
+            1,
+
+            &config,
+            data
+        };
+
+        object::Object* obj = OBJECT_CLASS->init(&ss_ctx,DO_NOTHING);
+        QUEUE_ARRAY_CLASS->push(ctx.sync_session_queue,obj);
+
+        // Wait for join signal
+        while(!WAIT_EVENT(join_event)){ }
+    }
+
+    Color 
+    make_color_matrix(float Cr, float Cb, 
+                      float U_max, float V_max, 
+                      float add_Y, float add_UV, 
+                      const float2 &range_Y, const float2 &range_UV) 
+    {
+        float Cg = 1.0f - Cr - Cb;
+
+        float Cr_i = 1.0f - Cr;
+        float Cb_i = 1.0f - Cb;
+
+        float shift_y  = range_Y[0] / 256.0f;
+        float shift_uv = range_UV[0] / 256.0f;
+
+        float scale_y  = (range_Y[1] - range_Y[0]) / 256.0f;
+        float scale_uv = (range_UV[1] - range_UV[0]) / 256.0f;
+        return {
+            { Cr, Cg, Cb, add_Y },
+            { -(Cr * U_max / Cb_i), -(Cg * U_max / Cb_i), U_max, add_UV },
+            { V_max, -(Cg * V_max / Cr_i), -(Cb * V_max / Cr_i), add_UV },
+            { scale_y, shift_y },
+            { scale_uv, shift_uv },
+        };
+    }
+
+    Color*
+    get_color(){
+        static bool init = false;
+        static Color colors[4];
+        if(init)
+            return &colors;
+
+        init = true; 
+        colors = 
+        {
+            make_color_matrix(0.299f, 0.114f, 0.436f, 0.615f, 0.0625, 0.5f, { 16.0f, 235.0f }, { 16.0f, 240.0f }),   // BT601 MPEG
+            make_color_matrix(0.299f, 0.114f, 0.5f, 0.5f, 0.0f, 0.5f, { 0.0f, 255.0f }, { 0.0f, 255.0f }),           // BT601 JPEG
+            make_color_matrix(0.2126f, 0.0722f, 0.436f, 0.615f, 0.0625, 0.5f, { 16.0f, 235.0f }, { 16.0f, 240.0f }), // BT701 MPEG
+            make_color_matrix(0.2126f, 0.0722f, 0.5f, 0.5f, 0.0f, 0.5f, { 0.0f, 255.0f }, { 0.0f, 255.0f }),         // BT701 JPEG
+        };
+        return &colors;
+    }
+}

@@ -30,7 +30,7 @@ namespace encoder
         int hevc_main_10;
     } Profile;
 
-    typedef libav::BufferRef* (*MakeHWDeviceContext) (platf::hwdevice_t *hwdevice);
+    typedef libav::BufferRef* (*MakeHWDeviceContext) (platf::HWDevice *hwdevice);
 
     typedef enum _EncodingFlags{
         DEFAULT           = 0x00,
