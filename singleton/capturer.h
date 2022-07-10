@@ -13,16 +13,15 @@
 #define __SUNSHINE_CAPTURER_H__
 
 
-#include <sunshine_queue.h>
-#include <sunshine_event.h>
+#include <sunshine_util.h>
 
 
 namespace singleton
 {
     typedef struct _Capturer
     {
-        event::Broadcaster* shutdown_event;
-        event::Broadcaster* idr_event;
+        util::Broadcaster* shutdown_event;
+        util::Broadcaster* idr_event;
 
         util::QueueArray* packet_queue;
 

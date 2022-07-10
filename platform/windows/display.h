@@ -12,7 +12,7 @@
 #include <dxgi.h>
 #include <dxgi1_2.h>
 
-#include <sunshine_datatype.h>
+#include <sunshine_util.h>
 #include <utility.h>
 
 #include <d3d11_datatype.h>

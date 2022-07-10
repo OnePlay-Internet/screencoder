@@ -17,6 +17,7 @@ typedef unsigned char uint8;
 typedef unsigned int  uint;
 typedef int           int32;
 typedef unsigned int  uint32;
+
 typedef unsigned char byte;
 
 #endif

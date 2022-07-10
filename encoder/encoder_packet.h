@@ -1,5 +1,5 @@
 /**
- * @file encoder_datatype.h
+ * @file encoder.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -12,7 +12,8 @@
 #ifndef __ENCODER_PACKET_H__
 #define __ENCODER_PACKET_H__
 #include <avcodec_datatype.h>
-#include <sunshine_datatype.h>
+#include <sunshine_util.h>
+
 
 
 
@@ -24,8 +25,8 @@ using float2 = float[2];
 namespace encoder
 {
     typedef struct _Replace {
-        pointer old;
-        pointer _new;
+        util::Object* old;
+        util::Object* _new;
     }Replace;
 
     typedef struct _Config{
@@ -51,23 +52,19 @@ namespace encoder
     typedef struct _Packet{
         libav::Packet* packet;
         
-        ArrayObject* replacement_array;
+        util::ListObject* replacement_array;
 
         pointer user_data;
     }Packet;
 
     typedef struct _PacketClass{
-        Packet* (*init) ();
-
-
+        Packet* (*init)     ();
 
         void    (*finalize) (Packet* packet);
-    }PacketClass;
-
-
-    void            capture             ( pointer mail, 
-                                          Config config, 
-                                          pointer user_data);
+    }PacketClass;    
+    
+    
+    PacketClass*        packet_class_init       ();
 } // namespace error
 
 

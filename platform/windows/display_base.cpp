@@ -1,6 +1,14 @@
-//
-// Created by loki on 1/12/20.
-//
+/**
+ * @file display_base.cpp
+ * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
+ * @brief 
+ * @version 1.0
+ * @date 2022-07-10
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+#include <sunshine_util.h>
 
 #include <cmath>
 #include <codecvt>
@@ -9,7 +17,6 @@
 #include <misc.h>
 #include <config.h>
 
-#include <sunshine_log.h>
 #include <common.h>
 
 #include <d3d11_datatype.h>
@@ -45,22 +52,22 @@ namespace display{
     // Ensure we can duplicate the current display
     syncThreadDesktop();
 
-    disp->delay = std::chrono::nanoseconds { 1s } / framerate;
+    self->delay = std::chrono::nanoseconds { 1s } / framerate;
 
     // Get rectangle of full desktop for absolute mouse coordinates
-    disp->env_width  = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    disp->env_height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    self->base.env_width  = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    self->base.env_height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
     HRESULT status;
 
-    status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&disp->factory);
+    status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&self->factory);
     if(FAILED(status)) {
       LOG_ERROR("Failed to create DXGIFactory1");
       return -1;
     }
 
     directx::dxgi::Adapter* adapter_p;
-    for(int x = 0; disp->factory->EnumAdapters1(x, &adapter_p) != DXGI_ERROR_NOT_FOUND; ++x) {
+    for(int x = 0; self->factory->EnumAdapters1(x, &adapter_p) != DXGI_ERROR_NOT_FOUND; ++x) {
       DXGI_ADAPTER_DESC1 adapter_desc;
       directx::dxgi::Adapter* adapter_temp = adapter_p;
       adapter_temp->GetDesc1(&adapter_desc);
@@ -79,27 +86,27 @@ namespace display{
         }
 
         if(desc.AttachedToDesktop) {
-          disp->output = output;
+          self->output = output;
 
-          disp->base->offset_x = desc.DesktopCoordinates.left;
-          disp->base->offset_y = desc.DesktopCoordinates.top;
-          disp->base->width    = desc.DesktopCoordinates.right -  disp->base->offset_x;
-          disp->base->height   = desc.DesktopCoordinates.bottom - disp->base->offset_y;
+          self->base.offset_x = desc.DesktopCoordinates.left;
+          self->base.offset_y = desc.DesktopCoordinates.top;
+          self->base.width    = desc.DesktopCoordinates.right -  self->base.offset_x;
+          self->base.height   = desc.DesktopCoordinates.bottom - self->base.offset_y;
 
           // left and bottom may be negative, yet absolute mouse coordinates start at 0x0
           // Ensure offset starts at 0x0
-          disp->base->offset_x -= GetSystemMetrics(SM_XVIRTUALSCREEN);
-          disp->base->offset_y -= GetSystemMetrics(SM_YVIRTUALSCREEN);
+          self->base.offset_x -= GetSystemMetrics(SM_XVIRTUALSCREEN);
+          self->base.offset_y -= GetSystemMetrics(SM_YVIRTUALSCREEN);
         }
       }
 
-      if(disp->output) {
-        disp->adapter = adapter_temp;
+      if(self->output) {
+        self->adapter = adapter_temp;
         break;
       }
     }
 
-    if(!disp->output) {
+    if(!self->output) {
       BOOST_LOG(error) << "Failed to locate an output device"sv;
       return -1;
     }
@@ -114,7 +121,7 @@ namespace display{
       D3D_FEATURE_LEVEL_9_1
     };
 
-    status = disp->adapter->QueryInterface(IID_IDXGIAdapter, (void **)&adapter_p);
+    status = self->adapter->QueryInterface(IID_IDXGIAdapter, (void **)&adapter_p);
     if(FAILED(status)) {
       // BOOST_LOG(error) << "Failed to query IDXGIAdapter interface"sv;
       return -1;
@@ -128,9 +135,9 @@ namespace display{
       featureLevels, 
       sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
       D3D11_SDK_VERSION,
-      &disp->device,
-      &disp->feature_level,
-      &disp->device_ctx);
+      &self->device,
+      &self->feature_level,
+      &self->device_ctx);
 
     adapter_p->Release();
 
@@ -140,7 +147,7 @@ namespace display{
     }
 
     DXGI_ADAPTER_DESC adapter_desc;
-    disp->adapter->GetDesc(&adapter_desc);
+    self->adapter->GetDesc(&adapter_desc);
 
     // auto description = converter.to_bytes(adapter_desc.Description);
     // BOOST_LOG(info)
@@ -215,7 +222,7 @@ namespace display{
     // Try to reduce latency
     {
       directx::dxgi::Device1 dxgi{};
-      status = disp->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
+      status = self->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
@@ -231,7 +238,7 @@ namespace display{
     //TODO: Use IDXGIOutput5 for improved performance
     {
       directx::dxgi::Output1 output1 = {0};
-      status = disp->output->QueryInterface(IID_IDXGIOutput1, (void **)&output1);
+      status = self->output->QueryInterface(IID_IDXGIOutput1, (void **)&output1);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to query IDXGIOutput1 from the output"sv;
         return -1;
@@ -239,7 +246,7 @@ namespace display{
 
       // We try this twice, in case we still get an error on reinitialization
       for(int x = 0; x < 2; ++x) {
-        status = output1->DuplicateOutput((IUnknown *)disp->device.get(), &disp->dup.dup);
+        status = output1->DuplicateOutput((IUnknown *)self->device, &self->dup.dup);
         if(SUCCEEDED(status)) {
           break;
         }
@@ -253,8 +260,8 @@ namespace display{
     }
 
     DXGI_OUTDUPL_DESC dup_desc;
-    disp->dup->GetDesc(&dup_desc);
-    disp->format = dup_desc.ModeDesc.Format;
+    self->dup->GetDesc(&dup_desc);
+    self->format = dup_desc.ModeDesc.Format;
     // BOOST_LOG(debug) << "Source format ["sv << format_str[dup_desc.ModeDesc.Format] << ']';
     return 0;
   }

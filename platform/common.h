@@ -4,13 +4,13 @@
 
 #ifndef SUNSHINE_COMMON_H
 #define SUNSHINE_COMMON_H
+#include <sunshine_util.h>
 
 #include <bitset>
 #include <filesystem>
 #include <functional>
 #include <mutex>
 #include <string>
-#include <sunshine_datatype.h>
 #include <avcodec_datatype.h>
 
 #include <utility.h>
@@ -49,7 +49,7 @@ namespace platf {
 
 
     typedef struct _HWDevice {
-        HWDeviceClass klass;
+        HWDeviceClass* klass;
         void *data;
         libav::Frame* frame;
     }HWDevice;
@@ -60,11 +60,18 @@ namespace platf {
                                  directx::d3d11::DeviceContext device_ctx_p,
                                  platf::PixelFormat pix_fmt);
 
-        int (*convert)          (Image* img);
+        int (*convert)          (HWDevice* self,
+                                 Image* img);
 
-        int (*set_frame)        (libav::Frame* frame);
+        /**
+         * @brief 
+         * do the conversion from ImageD3D to libav::Frame
+         */
+        int (*set_frame)        (HWDevice* self,
+                                 libav::Frame* frame);
 
-        void (*set_colorspace)  (uint32 colorspace, 
+        void (*set_colorspace)  (HWDevice* self,
+                                 uint32 colorspace, 
                                  uint32 color_range);
     }HWDeviceClass;
 
@@ -80,10 +87,8 @@ namespace platf {
      *    This may or may not be the image send with the callback
      */
     typedef void (*SnapshootCallback) (Image* img,
-                                       Display* disp,
-                                       encoder::Encoder* encoder,
-                                       ArrayObject* synced_sessions,
-                                       ArrayObject* synced_session_ctxs,
+                                       util::ListObject* synced_sessions,
+                                       util::ListObject* synced_session_ctxs,
                                        util::QueueArray* encode_session_ctx_queue);
 
     typedef struct _Display {
@@ -98,6 +103,8 @@ namespace platf {
     typedef struct _DisplayClass {
         Display*    (*init)             (int framerate, 
                                          char* display_name);
+
+        void        (*finalize)         (Display* self);
 
         int         (*dummy_img)        (Display* self,
                                          Image* img);

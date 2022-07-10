@@ -14,63 +14,125 @@
 
 
 
-#define MAX_LENGTH      1024
-
-/**
- * @brief 
- * 
- */
-struct _ArrayObject{
-    object::Object* array[MAX_LENGTH];
-    int length;
-};      
-
-
-ArrayObject*
-array_object_new()
+namespace util
 {
-    ArrayObject* arr = malloc(sizeof(ArrayObject));
-    memset(arr,0,sizeof(ArrayObject))
-    arr->length=0;
-    return arr;
-}
+    /**
+     * @brief 
+     * 
+     */
+    struct _ListObject{
+        ObjectContainer* first;
 
-void
-array_object_finalize(ArrayObject* arr)
-{
-    // OBJECT_CLASS->unref()
-}
+        uint length;
+    };      
 
-void
-array_object_emplace_back(ArrayObject* array,
-                          pointer data)
-{
-    int i = 0;
-    while (array->array[i])
+
+    ListObject*
+    list_object_new()
     {
-        i++;
+        ListObject* arr = malloc(sizeof(ListObject));
+        memset(arr,0,sizeof(ListObject))
+
+        arr->length=0;
+        return arr;
     }
 
-    array->array[i] = OBJECT_CLASS->init(data,DO_NOTHING)
-    array->length++;
-}
+    void
+    array_object_finalize(ListObject* arr)
+    {
+        ObjectContainer* container = array->first;
+        while (!container->next) 
+        { 
+            OBJECT_CLASS->unref(&container->obj);
+            container = container->next; 
+        }
+        free(arr);
+    }
 
-pointer         
-array_object_get_data(ArrayObject* array,
-                      int index)
-{
-    return array->array[index]->data;
-}
+    void
+    array_object_emplace_back(ListObject* array,
+                              Object* obj)
+    {
+        ObjectContainer* container = NULL;
+        if (array->length)
+        {
+            container = array->first;
+            while (!container->next) { container = container->next; }
+        }
+        
+        ObjectContainer* last = malloc(sizeof(ObjectContainer));
+        memset(last,0,sizeof(ObjectContainer));
+        last->obj->ref_count = obj->ref_count + 1;
+        last->obj->free_func = obj->free_func;
+        last->obj->data = obj->data;
+        last->next = NULL;
 
-bool
-array_object_has_data(ArrayObject* array,
-                      int index)
-{
-    return index <= array->length;
-}
+        if (array->length)
+            container->next = last;
+        else
+            array->first = last;
 
-int             
-array_object_length(ArrayObject* array)
-{
-    return array->length;
-}
+        array->length++;
+    }
+
+    bool
+    array_object_get_data(ListObject* array,
+                          Object* obj,
+                          int index)
+    {
+        if (!array_object_has_data(array,index))
+            return false;
+        
+        int count = 0;
+        ObjectContainer* prev_container,container,next_container;
+        container = array->first;
+        while (!container->next || count = index) 
+        { 
+            prev_container = container;
+            container = container->next; 
+
+            if (container->next)
+                next_container = container->next;
+        }
+
+        obj->data = container->obj->data;
+        obj->free_func = container->obj->free_func;
+        obj->ref_count = container->obj->ref_count + obj->ref_count;
+
+        if(next_container)
+            prev_container->next = next_container;
+        return true;
+    }
+
+    bool
+    array_object_has_data(ListObject* array,
+                          int index)
+    {
+        return index < array->length;
+    }
+
+    int             
+    array_object_length(ListObject* array)
+    {
+        return array->length;
+    }
+    
+    ListObjectClass* 
+    list_object_class_init()
+    {
+        static bool initialize = false;
+        static ListObjectClass klass = {0};
+        if (initialize)
+            return &klass;
+        
+        initialize = true;
+        klass.emplace_back = array_object_emplace_back;
+        klass.finalize     = array_object_finalize;
+        klass.has_data     = array_object_has_data;
+        klass.get_data     = array_object_get_data;
+        klass.init         = list_object_new;
+        klass.length       = array_object_length;
+        return &klass;
+    }
+} // namespace util
+

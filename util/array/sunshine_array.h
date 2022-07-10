@@ -15,47 +15,31 @@
 #include <sunshine_datatype.h>
 #include <sunshine_object.h>
 
+#define LIST_OBJECT_CLASS       util::list_object_class_init()
 
 
-typedef struct  _ArrayObject         ArrayObject;      
+namespace util
+{
+    typedef struct  _ListObject         ListObject;      
 
+    typedef struct _ListObjectClass {
+        ListObject*     (*init)             ();
 
+        void            (*finalize)         (ListObject* list);
 
+        void            (*emplace_back)     (ListObject* list,
+                                             Object* obj);
 
-/**
- * @brief 
- * 
- * @return ArrayObject* 
- */
-ArrayObject*    array_object_new           ();
+        bool            (*has_data)         (ListObject* list,
+                                             int index);
 
-/**
- * @brief 
- * 
- * @return ArrayObject* 
- */
-void            array_object_finalize           (ArrayObject* arr);
-/**
- * @brief 
- * 
- * @param array 
- * @param data 
- */
-void            array_object_emplace_back (ArrayObject* array,
-                                           pointer data);
+        bool            (*get_data)         (ListObject* list,  
+                                             Object* obj,
+                                             int index);
 
-/**
- * @brief 
- * 
- * @param array 
- * @param data 
- */
-pointer         array_object_get_data     (ArrayObject* array,
-                                           int index);
+        int             (*length)           (ListObject*);
+    }ListObjectClass;
 
-bool            array_object_has_data     (ArrayObject* array,
-                                           int index);
-
-int             array_object_length       (ArrayObject* array);
-
+    ListObjectClass* list_object_class_init    ();
+}
 #endif

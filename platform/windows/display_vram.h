@@ -19,24 +19,22 @@
 namespace vram
 {
     typedef struct _DisplayVram{
-      display::DisplayBase base;
-      display::GpuCursor cursor;
+        display::DisplayBase base;
+        display::GpuCursor cursor;
 
-      directx::d3d11::SamplerState sampler_linear;
+        directx::d3d11::SamplerState sampler_linear;
 
-      directx::d3d11::BlendState blend_enable;
-      directx::d3d11::BlendState blend_disable;
+        directx::d3d11::BlendState blend_enable;
+        directx::d3d11::BlendState blend_disable;
 
-      directx::d3d11::PixelShader scene_ps;
-      directx::d3d11::VertexShader scene_vs;
+        directx::d3d11::PixelShader scene_ps;
+        directx::d3d11::VertexShader scene_vs;
 
-      directx::d3d11::Texture2D src;
+        directx::d3d11::Texture2D src;
     }DisplayVram;
 
 
     platf::DisplayClass*    display_class_init    ();
-
-    
 } // namespace vram
 
 #endif

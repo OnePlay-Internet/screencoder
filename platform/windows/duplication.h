@@ -26,7 +26,7 @@ namespace duplication
         platf::Capture(*next_frame)     (Duplication* dup,
                                          DXGI_OUTDUPL_FRAME_INFO &frame_info, 
                                          std::chrono::milliseconds timeout, 
-                                         directx::dxgi::Resource res_p);
+                                         directx::dxgi::Resource* res_p);
 
         platf::Capture(*reset)          (Duplication* dup,
                                          directx::dxgi::OutputDuplication* dup_p);

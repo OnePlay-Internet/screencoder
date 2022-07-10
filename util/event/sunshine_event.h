@@ -13,11 +13,12 @@
 
 #include <sunshine_queue.h>
 
-#define NEW_EVENT       event::new_event()
-#define RAISE_EVENT(x)  event::raise_event(x)
-#define WAIT_EVENT(x)   event::wait_event(x)
+#define NEW_EVENT       util::new_event()
+#define RAISE_EVENT(x)  util::raise_event(x)
+#define WAIT_EVENT(x)   util::wait_event(x)
+#define IS_INVOKED(x)   util::is_invoked(x)
 
-namespace event
+namespace util
 {
     typedef util::QueueArray       Broadcaster;
 
@@ -26,6 +27,8 @@ namespace event
     void            raise_event     (Broadcaster* broadcaster);
 
     bool            wait_event      (Broadcaster* broadcaster);
+
+    bool            is_invoked      (Broadcaster* broadcaster);
 } // namespace event
 
 

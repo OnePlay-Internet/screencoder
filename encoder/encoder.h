@@ -1,5 +1,5 @@
 /**
- * @file encoder_datatype.h
+ * @file encoder.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -13,12 +13,27 @@
 #define __ENCODER_DATATYPE_H__
 
 #include <encoder_d3d11_device.h>
+#include <sunshine_util.h>
 
 
 
 namespace encoder
 {
-    typedef struct _Session Session;
+    typedef struct _Session {
+        libav::CodecContext* context;
+        platf::HWDevice* device;
+
+        /**
+         * @brief 
+         * Replace
+         */
+        util::ListObject* replacement_array;
+
+        bitstream::NAL sps;
+        bitstream::NAL vps;
+
+        int inject;
+    }Session;
 
     typedef struct _SessionClass{
         
@@ -53,10 +68,18 @@ namespace encoder
     }FrameFlags;
 
 
+    typedef struct _CodecConfig{
+        char* name;
+        bool has_qp;
+        int qp;
+        std::bitset<MAX_FLAGS> capabilities;
+    }CodecConfig;
 
     typedef struct _Encoder{
         char* name;
 
+        CodecConfig h264;
+        CodecConfig hevc;
 
         Profile profile;
 

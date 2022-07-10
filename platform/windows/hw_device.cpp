@@ -28,8 +28,8 @@ namespace hwdevice
       int out_width  = frame->width;
       int out_height = frame->height;
 
-      float in_width  = img.display->width;
-      float in_height = img.display->height;
+      float in_width  = hw->img.display->width;
+      float in_height = hw->img.display->height;
 
       // // Ensure aspect ratio is maintained
       auto scalar       = std::fminf(out_width / in_width, out_height / in_height);
@@ -74,11 +74,11 @@ namespace hwdevice
         return -1;
       }
 
-      img.width       = out_width;
-      img.height      = out_height;
-      img.data        = (std::uint8_t *)img.texture.get();
-      img.row_pitch   = out_width * 4;
-      img.pixel_pitch = 4;
+      hw->img.base.width       = out_width;
+      hw->img.base.height      = out_height;
+      hw->img.base.data        = (uint8*)hw->img.texture;
+      hw->img.base.row_pitch   = out_width * 4;
+      hw->img.base.pixel_pitch = 4;
 
       float info_in[16 / sizeof(float)] { 1.0f / (float)out_width }; //aligned to 16-byte
       hw->info_scene = helper::make_buffer(device, info_in);
@@ -93,14 +93,14 @@ namespace hwdevice
         D3D11_RTV_DIMENSION_TEXTURE2D
       };
 
-      status = device_p->CreateRenderTargetView(img.texture.get(), &nv12_rt_desc, &hw->nv12_Y_rt);
+      status = device_p->CreateRenderTargetView(hw->img.texture, &nv12_rt_desc, &hw->nv12_Y_rt);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create render target view [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
       }
 
       nv12_rt_desc.Format = DXGI_FORMAT_R8G8_UNORM;
-      status = device_p->CreateRenderTargetView(img.texture.get(), &nv12_rt_desc, &hw->nv12_UV_rt);
+      status = device_p->CreateRenderTargetView(hw->img.texture, &nv12_rt_desc, &hw->nv12_UV_rt);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create render target view [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
@@ -112,16 +112,16 @@ namespace hwdevice
       }
 
       auto desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
-      desc->texture = (ID3D11Texture2D *)img.data;
+      desc->texture = (directx::d3d11::Texture2D*)hw->img.data;
       desc->index   = 0;
 
-      frame->data[0] = img.data;
+      frame->data[0] = hw->img.base.data;
       frame->data[1] = 0;
 
-      frame->linesize[0] = img.row_pitch;
+      frame->linesize[0] = hw->img.row_pitch;
 
-      frame->height = img.height;
-      frame->width  = img.width;
+      frame->height = hw->img.height;
+      frame->width  = hw->img.width;
 
       return 0;
     }
@@ -194,13 +194,13 @@ namespace hwdevice
       status = device_p->CreateInputLayout(
         &layout_desc, 1,
         convert_UV_vs_hlsl->GetBufferPointer(), convert_UV_vs_hlsl->GetBufferSize(),
-        &sefl->input_layout);
+        &self->input_layout);
 
       img.display = std::move(display);
 
       // Color the background black, so that the padding for keeping the aspect ratio
       // is black
-      if(img.display->dummy_img(&self->back_img)) {
+      if(self->img.display->klass->dummy_img(&self->back_img)) {
         // BOOST_LOG(warning) << "Couldn't create an image to set background color to black"sv;
         return -1;
       }
@@ -211,15 +211,15 @@ namespace hwdevice
       };
       desc.Texture2D.MipLevels = 1;
 
-      status = device_p->CreateShaderResourceView(back_img.texture.get(), &desc, &back_img.input_res);
+      status = device_p->CreateShaderResourceView(back_img.texture, &desc, &back_img.input_res);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create input shader resource view [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
       }
 
-      device_ctx_p->IASetInputLayout(input_layout.get());
-      device_ctx_p->PSSetConstantBuffers(0, 1, &self->color_matrix);
-      device_ctx_p->VSSetConstantBuffers(0, 1, &self->info_scene);
+      self->device_ctx->IASetInputLayout(self->input_layout);
+      self->device_ctx->PSSetConstantBuffers(0, 1, &self->color_matrix);
+      self->device_ctx->VSSetConstantBuffers(0, 1, &self->info_scene);
 
       return self;
     }
@@ -255,7 +255,7 @@ namespace hwdevice
       }
 
       device_ctx_p->PSSetConstantBuffers(0, 1, &color_matrix);
-      self->color_matrix = std::move(color_matrix);
+      self->color_matrix = color_matrix;
     }
 
     /**
@@ -266,40 +266,55 @@ namespace hwdevice
      */
     int 
     hw_device_convert(D3D11Device* self,
-                      platf::Image img_base) 
+                      platf::Image* img_base) 
     {
-        ImageD3D img = (ImageD3D)img_base;
+        ImageD3D* img = (ImageD3D*)img_base;
 
-        device_ctx_p->IASetInputLayout(input_layout.get());
+        self->device_ctx->IASetInputLayout(self->input_layout));
 
         _init_view_port(self->img.width, self->img.height);
-        device_ctx_p->OMSetRenderTargets(1, &self->nv12_Y_rt, nullptr);
-        device_ctx_p->VSSetShader(scene_vs.get(), nullptr, 0);
-        device_ctx_p->PSSetShader(convert_Y_ps.get(), nullptr, 0);
-        device_ctx_p->PSSetShaderResources(0, 1, &back_img.input_res);
-        device_ctx_p->Draw(3, 0);
+        self->device_ctx->OMSetRenderTargets(1, &self->nv12_Y_rt, nullptr);
+        self->device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
+        self->device_ctx->PSSetShader(self->convert_Y_ps, nullptr, 0);
+        self->device_ctx->PSSetShaderResources(0, 1, &self->back_img.input_res);
+        self->device_ctx->Draw(3, 0);
 
-        device_ctx_p->RSSetViewports(1, &self->outY_view);
-        device_ctx_p->PSSetShaderResources(0, 1, &img.input_res);
-        device_ctx_p->Draw(3, 0);
+        self->device_ctx->RSSetViewports(1, &self->outY_view);
+        self->device_ctx->PSSetShaderResources(0, 1, &img.input_res);
+        self->device_ctx->Draw(3, 0);
 
         // Artifacts start appearing on the rendered image if Sunshine doesn't flush
         // before rendering on the UV part of the image.
-        device_ctx_p->Flush();
+        self->device_ctx->Flush();
 
         _init_view_port(self->img.width / 2, self->img.height / 2);
-        device_ctx_p->OMSetRenderTargets(1, &self->nv12_UV_rt, nullptr);
-        device_ctx_p->VSSetShader(convert_UV_vs.get(), nullptr, 0);
-        device_ctx_p->PSSetShader(convert_UV_ps.get(), nullptr, 0);
-        device_ctx_p->PSSetShaderResources(0, 1, &back_img.input_res);
-        device_ctx_p->Draw(3, 0);
+        self->device_ctx->OMSetRenderTargets(1, &self->nv12_UV_rt, nullptr);
+        self->device_ctx->VSSetShader(self->convert_UV_vs, nullptr, 0);
+        self->device_ctx->PSSetShader(self->convert_UV_ps, nullptr, 0);
+        self->device_ctx->PSSetShaderResources(0, 1, &self->back_img.input_res);
+        self->device_ctx->Draw(3, 0);
 
-        device_ctx_p->RSSetViewports(1, &self->outUV_view);
-        device_ctx_p->PSSetShaderResources(0, 1, &img.input_res);
-        device_ctx_p->Draw(3, 0);
-        device_ctx_p->Flush();
+        self->device_ctx->RSSetViewports(1, &self->outUV_view);
+        self->device_ctx->PSSetShaderResources(0, 1, &img.input_res);
+        self->device_ctx->Draw(3, 0);
+        self->device_ctx->Flush();
 
         return 0;
+    }
+
+    D3D11DeviceClass*       
+    d3d11_device_class_init()
+    {
+        static bool initialize = FALSE;
+        static D3D11DeviceClass klass = {0};
+        if (initialize)
+            return &klass;
+        
+        klass.base.convert = hw_device_convert;
+        klass.base.init    = hw_device_init;
+        klass.base.set_frame = hw_device_set_frame;
+        klass.base.set_colorspace = hw_device_set_colorspace;
+        return &klass;
     }
     
 } // namespace hwdevice

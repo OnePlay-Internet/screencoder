@@ -10,11 +10,8 @@
  */
 #ifndef __ENCODER_D3D11_DEVICE_H__
 #define __ENCODER_D3D11_DEVICE_H__
-#include <encoder_datatype.h>
-#include <avcodec_datatype.h>
-#include <sunshine_log.h>
-#include <sunshine_macro.h>
-#include <common.h>
+#include <sunshine_util.h>
+#include <encoder.h>
 
 #ifdef _WIN32
 extern "C" {

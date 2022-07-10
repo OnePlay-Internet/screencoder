@@ -1,8 +1,8 @@
 #include <cmath>
 
 #include <codecvt>
-#include <sunshine_macro.h>
-#include <sunshine_datatype.h>
+#include <sunshine_util.h>
+
 #include <avcodec_datatype.h>
 #include <avcodec_datatype.h>
 #include <string.h>
@@ -26,6 +26,7 @@ extern "C" {
 #include <encoder.h>
 
 
+
 #define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/shaders/directx"
 
 
@@ -42,8 +43,6 @@ namespace vram {
      */
     platf::Capture 
     display_vram_capture(DisplayVram* self,
-                        encoder::Encoder* encoder,
-                        encoder::SyncSession* encoder,
                         platf::SnapshootCallback snapshot_cb, 
                         platf::Image* img, 
                         bool cursor) 
@@ -56,7 +55,7 @@ namespace vram {
           }
 
           next_frame = now + self->base.delay;
-          auto status = self->base.base.klass->snapshot(self,img,1000ms,cursor);
+          auto status = display_vram_snapshot(self,img,1000ms,cursor);
           switch(status) {
             case platf::Capture::reinit:
             case platf::Capture::error:
@@ -87,9 +86,8 @@ namespace vram {
 
       DXGI_OUTDUPL_FRAME_INFO frame_info;
 
-      directx::dxgi::Resource res_p {};
-      platf::Capture capture_status = duplication::duplication_class_init()->next_frame(&self->base.dup,frame_info, timeout, f);
-      directx::dxgi::Resource res { res_p };
+      directx::dxgi::Resource res;
+      platf::Capture capture_status = duplication::duplication_class_init()->next_frame(&self->base.dup,frame_info, timeout, &res);
 
       if(capture_status != platf::Capture::ok) {
         return capture_status;
@@ -106,16 +104,16 @@ namespace vram {
       if(frame_info.PointerShapeBufferSize > 0) {
         DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
 
-        byte* img_data = (byte*)malloc( frame_info.PointerShapeBufferSize );
+        OBJECT_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
 
         UINT dummy;
-        status = dup.dup->GetFramePointerShape(img_data, img_data, &dummy, &shape_info);
+        status = self->base.dup->GetFramePointerShape(img_object->size, img_ptr, &dummy, &shape_info);
         if(FAILED(status)) {
           // BOOST_LOG(error) << "Failed to get new pointer shape [0x"sv << util::hex(status).to_string_view() << ']';
           return platf::Capture::error;
         }
 
-        auto cursor_img = helper::make_cursor_image(img_data, shape_info);
+        byte* cursor_img = helper::make_cursor_image(img_ptr, shape_info);
 
         D3D11_SUBRESOURCE_DATA data {
           cursor_img,
@@ -172,7 +170,7 @@ namespace vram {
         }
       }
 
-      self->device_ctx->CopyResource(img->texture, self->src);
+      self->base.device_ctx->CopyResource(img->texture, self->src);
       if(cursor.visible) {
         D3D11_VIEWPORT view {
           0.0f, 0.0f,
@@ -181,15 +179,15 @@ namespace vram {
           0.0f, 1.0f
         };
 
-        device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
-        device_ctx->PSSetShader(self->scene_ps, nullptr, 0);
-        device_ctx->RSSetViewports(1, &view);
-        device_ctx->OMSetRenderTargets(1, &img->scene_rt, nullptr);
-        device_ctx->PSSetShaderResources(0, 1, &cursor.input_res);
-        device_ctx->OMSetBlendState(self->blend_enable, nullptr, 0xFFFFFFFFu);
-        device_ctx->RSSetViewports(1, &self->cursor.cursor_view);
-        device_ctx->Draw(3, 0);
-        device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
+        self->base.device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
+        self->base.device_ctx->PSSetShader(self->scene_ps, nullptr, 0);
+        self->base.device_ctx->RSSetViewports(1, &view);
+        self->base.device_ctx->OMSetRenderTargets(1, &img->scene_rt, nullptr);
+        self->base.device_ctx->PSSetShaderResources(0, 1, &cursor.input_res);
+        self->base.device_ctx->OMSetBlendState(self->blend_enable, nullptr, 0xFFFFFFFFu);
+        self->base.device_ctx->RSSetViewports(1, &self->cursor.cursor_view);
+        self->base.device_ctx->Draw(3, 0);
+        self->base.device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
       }
 
       return platf::Capture::ok;
@@ -200,6 +198,9 @@ namespace vram {
                       char* display_name) 
     {
       DisplayVram* self = (DisplayVram*)malloc(sizeof(DisplayVram));
+      memset(self,0,sizeof(DisplayVram));
+
+
       self->base.base.klass = display_class_init();
       if(display::display_base_init(&self->base,framerate, display_name)) {
         return -1;
@@ -241,51 +242,41 @@ namespace vram {
         return -1;
       }
 
-      device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
-      device_ctx->PSSetSamplers(0, 1, &self->sampler_linear);
-      device_ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+      self->base.device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
+      self->base.device_ctx->PSSetSamplers(0, 1, &self->sampler_linear);
+      self->base.device_ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
       return platf::Capture::ok;
     }
 
-  
-    platf::DisplayClass*    
-    display_class_init()
+    void
+    display_vram_finalize(DisplayVram* self)
     {
-        static bool init = false;
-        static platf::DisplayClass klass;
-        if (init)
-            return &klass;
-        
-        klass.init          = display_vram_init;
-        klass.alloc_img     = display_vram_alloc_img;
-        klass.dummy_img     = display_vram_dummy_img;
-        klass.make_hwdevice = display_vram_make_hwdevice;
-        klass.snapshot      = display_vram_snapshot;
-        klass.capture       = display_vram_capture;
-        return &klass;
+        free(self);
     }
 
+  
 
     platf::Image*
     display_vram_alloc_img(DisplayVram* disp) 
     {
-      platf::Image* img = (platf::Image*)malloc(sizeof(hwdevice::ImageD3D));
+      hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)malloc(sizeof(hwdevice::ImageD3D));
+      platf::Image* img_base = (platf::Image*)img;
+
       platf::Display* platf_disp = (platf::Display*)disp;
       display::DisplayBase* display_base = (display::DisplayBase*)disp;
 
-      img->pixel_pitch = 4;
-      img->row_pitch   = img->pixel_pitch * platf_disp->width;
-      img->width       = platf_disp->width;
-      img->height      = platf_disp->height;
-      img->display     = disp;
+      img_base->pixel_pitch = 4;
+      img_base->row_pitch   = img_base->pixel_pitch * platf_disp->width;
+      img_base->width       = platf_disp->width;
+      img_base->height      = platf_disp->height;
+      img_base->display     = disp;
 
-      byte* dummy_data = (byte*) malloc(img->row_pitch * platf_disp->height);
+      OBJECT_MALLOC(dummy_obj,img_base->row_pitch * platf_disp->height,dummy_data);
       D3D11_SUBRESOURCE_DATA data {
         dummy_data,
-        (UINT)img->row_pitch
+        (UINT)img_base->row_pitch
       };
-      memset(dummy_data,0, img->row_pitch * platf_disp->height);
 
       D3D11_TEXTURE2D_DESC t {};
       t.Width            = platf_disp->width;
@@ -297,22 +288,23 @@ namespace vram {
       t.Format           = disp->format;
       t.BindFlags        = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
-      auto status = device->CreateTexture2D(&t, &data, &img->texture);
+      auto status = disp->base.device->CreateTexture2D(&t, &data, &img->texture);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create img buf texture [0x"sv << util::hex(status).to_string_view() << ']';
         return nullptr;
       }
 
-      if(helper::init_render_target_b(device.get(), 
+      if(helper::init_render_target_b(disp->base.device, 
                               img->input_res, 
                               img->scene_rt, 
                               platf_disp->width, platf_disp->height, 
                               display_base->format, 
-                              img->texture)) {
+                              img->texture)) 
+      {
         return nullptr;
       }
 
-      img->data = (byte*)img->texture;
+      img_base->data = (byte*)img->texture;
       return img;
     }
 
@@ -417,5 +409,27 @@ namespace vram {
       }
       // BOOST_LOG(info) << "Compiled shaders"sv;
       return &hlsl;
+    }    
+    
+    
+    platf::DisplayClass*    
+    display_class_init()
+    {
+        static bool init = false;
+        static platf::DisplayClass klass;
+        if (init)
+            return &klass;
+        
+        init = true;
+        klass.init          = display_vram_init;
+        klass.finalize      = display_vram_finalize;
+        klass.alloc_img     = display_vram_alloc_img;
+        klass.dummy_img     = display_vram_dummy_img;
+        klass.make_hwdevice = display_vram_make_hwdevice;
+        klass.snapshot      = display_vram_snapshot;
+        klass.capture       = display_vram_capture;
+        return &klass;
     }
+
+
 } // namespace platf::dxgi

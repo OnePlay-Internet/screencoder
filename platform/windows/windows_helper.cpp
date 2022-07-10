@@ -1,6 +1,7 @@
 #include <d3d11_datatype.h>
 #include <display_vram.h>
-#include <sunshine_datatype.h>
+#include <sunshine_util.h>
+
 #include <common.h>
 
 namespace helper
@@ -64,7 +65,7 @@ namespace helper
 
 
     byte*
-    make_cursor_image(byte* img_data, 
+    make_cursor_image(util::Object* img_data, 
                       DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info) 
     {
       const uint32 black       = 0xFF000000;
@@ -72,16 +73,16 @@ namespace helper
       const uint32 transparent = 0;
 
       switch(shape_info.Type) {
-      case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR:
-        std::for_each((std::uint32_t *)std::begin(img_data), (std::uint32_t *)std::end(img_data), [](auto &pixel) {
-          if(pixel & 0xFF000000) {
-            pixel = transparent;
-          }
-        });
-      case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
-        return img_data;
-      default:
-        break;
+        case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR:
+          std::for_each((std::uint32_t *)std::begin(img_data), (std::uint32_t *)std::end(img_data), [](auto &pixel) {
+            if(pixel & 0xFF000000) {
+              pixel = transparent;
+            }
+          });
+        case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
+          return img_data;
+        default:
+          break;
       }
 
       shape_info.Height /= 2;
@@ -291,23 +292,17 @@ namespace helper
 
 
 namespace platf {
-
-    Display*
-    display_init(MemoryType hwdevice_type, 
-            const char* display_name, 
+    Display* 
+    display(MemoryType hwdevice_type, 
+            char* display_name, 
             int framerate) 
     {
-        if(hwdevice_type == MemoryType::dxgi) {
-            vram::DisplayVram disp_vram {0};
-            if(!disp_vram.base->init(framerate, display_name)) {
-              return &disp_vram;
-            }
-        } else if(hwdevice_type == MemoryType::system) {
-            // vram::DisplayRam disp_ram {0};
-            // if(!disp_ram.base->init(framerate, display_name)) {
-            //   return &disp_ram;
-            // }
-        }
+        if(hwdevice_type == MemoryType::dxgi) 
+            return vram::display_class_init()->init(framerate, display_name);
+        
+        if(hwdevice_type == MemoryType::system)
+            // TODO display ram
+        
         return NULL;
     }
 

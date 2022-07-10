@@ -1,5 +1,18 @@
-#include <common.h>
+/**
+ * @file duplication.cpp
+ * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
+ * @brief 
+ * @version 1.0
+ * @date 2022-07-10
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 #include <duplication.h>
+#include <sunshine_util.h>
+
+
+#include <common.h>
 
 
 
@@ -20,7 +33,7 @@ namespace duplication
         DwmFlush();
       }
 
-      auto status = dup->dup->AcquireNextFrame(timeout.count(), &frame_info, res_p);
+      HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), &frame_info, res_p);
 
       switch(status) {
       case S_OK:

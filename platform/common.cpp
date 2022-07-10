@@ -18,19 +18,6 @@
 
 namespace platf
 {
-    Display* 
-    display(MemoryType hwdevice_type, 
-            char* display_name, 
-            int framerate) 
-    {
-        if(hwdevice_type == MemoryType::dxgi) 
-            return vram::display_class_init()->init(framerate, display_name);
-        
-        if(hwdevice_type == MemoryType::system)
-            // TODO display ram
-        
-        return NULL;
-    }
     
 
     encoder::Color 
@@ -62,7 +49,7 @@ namespace platf
     get_color()
     {
         static bool init = false;
-        static Color colors[4];
+        static encoder::Color colors[4];
         if(init)
             return &colors;
 
