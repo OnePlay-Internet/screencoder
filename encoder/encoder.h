@@ -69,6 +69,11 @@ namespace encoder
         MAX_FLAGS
     }FrameFlags;
 
+    typedef enum _ValidateFlags{
+        VUI_PARAMS     = 0x01,
+        NALU_PREFIX_5B = 0x02,
+    }ValidateFlags;
+
     typedef enum _Type
     {
         STRING,
@@ -121,6 +126,11 @@ namespace encoder
 
     platf::PixelFormat  map_pix_fmt     (libav::PixelFormat fmt);
 
+
+    int 
+    validate_config(platf::Display* disp, 
+                    Encoder* encoder, 
+                    Config* config) ;
 } // namespace error
 
 

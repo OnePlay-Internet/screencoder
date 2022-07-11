@@ -14,6 +14,10 @@
 #include <encoder.h>
 
 
-bool        encoder::init_encoder_base       (encoder::Encoder* encoder);
+namespace encoder
+{
+    bool        init_encoder_base       (Encoder* encoder);
+
+}
 
 #endif

@@ -793,4 +793,77 @@ namespace encoder {
 
         return platf::PixelFormat::unknown_pixelformat;
     }
+
+
+    int 
+    validate_config(platf::Display* disp, 
+                    Encoder* encoder, 
+                    Config* config) 
+    {
+        disp = reset_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
+        if(!disp) {
+            return -1;
+        }
+
+        platf::PixelFormat pix_fmt  = config->dynamicRange == 0 ? 
+                                        map_pix_fmt(encoder->static_pix_fmt) : 
+                                        map_pix_fmt(encoder->dynamic_pix_fmt);
+
+        platf::HWDevice* hwdevice = disp->klass->make_hwdevice(disp,pix_fmt);
+        if(!hwdevice) {
+            return -1;
+        }
+
+        Session* session = NULL;
+        make_session(session, encoder, config, disp->width, disp->height, hwdevice);
+        if(!session) {
+            return -1;
+        }
+
+        platf::Image* img = disp->klass->alloc_img(disp);
+
+        if(!img || disp->klass->dummy_img(disp,img)) 
+            return -1;
+        
+        if(session->device->klass->convert(session->device,img)) 
+            return -1;
+        
+
+        libav::Frame* frame = session->device->frame;
+        frame->pict_type = AV_PICTURE_TYPE_I;
+
+        util::QueueArray* packets = QUEUE_ARRAY_CLASS->init();
+        while(!QUEUE_ARRAY_CLASS->peek(packets)) {
+            if(encode(1, session, frame, packets, NULL)) {
+                return -1;
+            }
+        }
+
+        util::Object* obj = QUEUE_ARRAY_CLASS->pop(packets);
+        Packet* packet    = (Packet*)OBJECT_CLASS->ref(obj);
+
+        libav::Packet* av_packet = packet->packet;
+        OBJECT_CLASS->unref(obj);
+
+        if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
+            // BOOST_LOG(error) << "First packet type is not an IDR frame"sv;
+            return -1;
+        }
+
+        int flag = 0;
+        if(bitstream::validate_sps(av_packet, config->videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
+            flag |= ValidateFlags::VUI_PARAMS;
+        }
+
+        char* hevc_nalu = "\000\000\000\001(";
+        char* h264_nalu = "\000\000\000\001e";
+        char* nalu_prefix = config->videoFormat ? hevc_nalu : h264_nalu;
+        std::string_view payload { (char *)av_packet->data, (std::size_t)av_packet->size };
+
+        // TODO search
+        // if(std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) 
+        //     flag |= ValidateFlags::NALU_PREFIX_5b;
+
+        return flag;
+    }
 }

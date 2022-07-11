@@ -12,6 +12,7 @@
 #define __WINDOWS_HELPER_H__
 
 #include <d3d11_datatype.h>
+#include <sunshine_util.h>
 
 namespace helper
 {

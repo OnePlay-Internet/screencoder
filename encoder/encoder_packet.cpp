@@ -20,7 +20,7 @@ namespace encoder
     Packet* 
     packet_init()
     {
-        Packet* pk = malloc(sizeof(Packet));
+        Packet* pk = (Packet*)malloc(sizeof(Packet));
         pk->packet = av_packet_alloc();
         pk->replacement_array = LIST_OBJECT_CLASS->init();
     }
@@ -29,7 +29,7 @@ namespace encoder
     packet_finalize(void* packet)
     {
         av_packet_unref(((Packet*)packet)->packet);
-        array_object_finalize(((Packet*)packet)->replacement_array);
+        LIST_OBJECT_CLASS->finalize(((Packet*)packet)->replacement_array);
     }
 
 

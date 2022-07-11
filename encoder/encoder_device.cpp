@@ -23,82 +23,7 @@
 
 namespace encoder
 {
-    enum ValidateFlags{
-        VUI_PARAMS     = 0x01,
-        NALU_PREFIX_5b = 0x02,
-    };
 
-    int 
-    validate_config(platf::Display* disp, 
-                    Encoder* encoder, 
-                    config::Encoder* config) 
-    {
-        reset_display(disp, encoder->dev_type, config->output_name, config->framerate);
-        if(!disp) {
-            return -1;
-        }
-
-        platf::PixelFormat pix_fmt  = config.dynamicRange == 0 ? 
-                                        map_pix_fmt(encoder.static_pix_fmt) : 
-                                        map_pix_fmt(encoder.dynamic_pix_fmt);
-
-        platf::HWDevice* hwdevice = disp->klass->make_hwdevice(disp,pix_fmt);
-        if(!hwdevice) {
-            return -1;
-        }
-
-        Session* session = NULL;
-        make_session(session, encoder, config, disp->width, disp->height, hwdevice);
-        if(!session) {
-            return -1;
-        }
-
-        platf::Image* img = disp->klass->alloc_img(disp);
-
-        if(!img || disp->klass->dummy_img(disp,img)) 
-            return -1;
-        
-        if(session->device->klass->convert(session->device,img)) 
-            return -1;
-        
-
-        libav::Frame* frame = session->device->frame;
-        frame->pict_type = AV_PICTURE_TYPE_I;
-
-        util::QueueArray* packets = QUEUE_ARRAY_CLASS->init();
-        while(!QUEUE_ARRAY_CLASS->peek(packets)) {
-            if(encode(1, session, frame, packets, NULL)) {
-                return -1;
-            }
-        }
-
-        util::Object* obj = QUEUE_ARRAY_CLASS->pop(packets);
-        Packet* packet    = (Packet*)OBJECT_CLASS->ref(obj);
-
-        libav::Packet* av_packet = packet->packet;
-        OBJECT_CLASS->unref(obj);
-
-        if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
-            // BOOST_LOG(error) << "First packet type is not an IDR frame"sv;
-            return -1;
-        }
-
-        int flag = 0;
-        if(bitstream::validate_sps(av_packet, config.videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
-            flag |= ValidateFlags::VUI_PARAMS;
-        }
-
-        char* hevc_nalu = "\000\000\000\001(";
-        char* h264_nalu = "\000\000\000\001e";
-        char* nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
-        std::string_view payload { (char *)av_packet->data, (std::size_t)av_packet->size };
-
-        // TODO search
-        // if(std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) 
-        //     flag |= ValidateFlags::NALU_PREFIX_5b;
-
-        return flag;
-    }
 
     bool 
     validate_encoder(Encoder* encoder) 
@@ -123,8 +48,8 @@ namespace encoder
         Config config_autoselect { 1920, 1080, 60, 1000, 1, 0, 1, 0, 0 };
 
         retry:
-        auto max_ref_frames_h264 = validate_config(disp, encoder, config_max_ref_frames);
-        auto autoselect_h264     = validate_config(disp, encoder, config_autoselect);
+        auto max_ref_frames_h264 = validate_config(disp, encoder, &config_max_ref_frames);
+        auto autoselect_h264     = validate_config(disp, encoder, &config_autoselect);
 
         if(max_ref_frames_h264 < 0 && autoselect_h264 < 0) {
             if(encoder->h264.has_qp && encoder->h264.capabilities[FrameFlags::CBR]) 
@@ -137,9 +62,9 @@ namespace encoder
             return false;
         }
 
-        std::vector<std::pair<validate_flag_e, FrameFlags::flag_e>> packet_deficiencies {
+        std::vector<std::pair<ValidateFlags, FrameFlags>> packet_deficiencies {
             { ValidateFlags::VUI_PARAMS, FrameFlags::VUI_PARAMETERS },
-            { ValidateFlags::NALU_PREFIX_5b, FrameFlags::NALU_PREFIX_5b },
+            { ValidateFlags::NALU_PREFIX_5B, FrameFlags::NALU_PREFIX_5b },
         };
 
         for(auto [validate_flag, encoder_flag] : packet_deficiencies) {
@@ -150,14 +75,14 @@ namespace encoder
         encoder->h264.capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] = autoselect_h264 >= 0;
         encoder->h264.capabilities[FrameFlags::PASSED]                = true;
 
-        encoder->h264.capabilities[FrameFlags::SLICE] = validate_config(disp, encoder, config_max_ref_frames);
+        encoder->h264.capabilities[FrameFlags::SLICE] = validate_config(disp, encoder, &config_max_ref_frames);
         if(test_hevc) {
             config_max_ref_frames.videoFormat = 1;
             config_autoselect.videoFormat     = 1;
 
         retry_hevc:
-            auto max_ref_frames_hevc = validate_config(disp, encoder, config_max_ref_frames);
-            auto autoselect_hevc     = validate_config(disp, encoder, config_autoselect);
+            auto max_ref_frames_hevc = validate_config(disp, encoder, &config_max_ref_frames);
+            auto autoselect_hevc     = validate_config(disp, encoder, &config_autoselect);
 
             // If HEVC must be supported, but it is not supported
             if(max_ref_frames_hevc < 0 && autoselect_hevc < 0) {
@@ -183,13 +108,13 @@ namespace encoder
             encoder->hevc.capabilities[FrameFlags::PASSED] = max_ref_frames_hevc >= 0 || autoselect_hevc >= 0;
         }
 
-        std::vector<std::pair<FrameFlags::flag_e, config_t>> configs {
+        std::vector<std::pair<FrameFlags, Config>> configs {
             { FrameFlags::DYNAMIC_RANGE, { 1920, 1080, 60, 1000, 1, 0, 3, 1, 1 } },
         };
 
         if(!(encoder->flags & SINGLE_SLICE_ONLY)) {
             configs.emplace_back(
-            std::pair<FrameFlags, config_t> { FrameFlags::SLICE, { 1920, 1080, 60, 1000, 2, 1, 1, 0, 0 } });
+            std::pair<FrameFlags, Config> { FrameFlags::SLICE, { 1920, 1080, 60, 1000, 2, 1, 1, 0, 0 } });
         }
 
         for(auto &[flag, config] : configs) {
@@ -199,9 +124,9 @@ namespace encoder
             h264.videoFormat = 0;
             hevc.videoFormat = 1;
 
-            encoder->h264.capabilities[flag] = validate_config(disp, encoder, h264) >= 0;
+            encoder->h264.capabilities[flag] = validate_config(disp, encoder, &h264) >= 0;
             if(encoder->hevc.capabilities[FrameFlags::PASSED]) {
-                encoder->hevc.capabilities[flag] = validate_config(disp, encoder, hevc) >= 0;
+                encoder->hevc.capabilities[flag] = validate_config(disp, encoder, &hevc) >= 0;
             }
         }
 
@@ -210,8 +135,8 @@ namespace encoder
             encoder->hevc.capabilities[FrameFlags::SLICE] = false;
         }
 
-        encoder->h264.capabilities[FrameFlags::VUI_PARAMETERS] = encoder->h264.capabilities[FrameFlags::VUI_PARAMETERS] && !config::sunshine.flags[config::flag::FORCE_VIDEO_HEADER_REPLACE];
-        encoder->hevc.capabilities[FrameFlags::VUI_PARAMETERS] = encoder->hevc.capabilities[FrameFlags::VUI_PARAMETERS] && !config::sunshine.flags[config::flag::FORCE_VIDEO_HEADER_REPLACE];
+        encoder->h264.capabilities[FrameFlags::VUI_PARAMETERS] = encoder->h264.capabilities[FrameFlags::VUI_PARAMETERS];
+        encoder->hevc.capabilities[FrameFlags::VUI_PARAMETERS] = encoder->hevc.capabilities[FrameFlags::VUI_PARAMETERS];
 
         if(!encoder->h264.capabilities[FrameFlags::VUI_PARAMETERS]) {
             // BOOST_LOG(warning) << encoder->name << ": h264 missing sps->vui parameters"sv;
@@ -227,7 +152,6 @@ namespace encoder
             // BOOST_LOG(warning) << encoder->name << ": hevc: replacing nalu prefix data"sv;
         }
 
-        fg.disable();
         return true;
     }
 
@@ -242,7 +166,7 @@ namespace encoder
         // BOOST_LOG(info) << "//////////////////////////////////////////////////////////////////"sv;
 
         if( (!ENCODER_CONFIG->encoder && encoder->name != ENCODER_CONFIG->encoder) ||  // if config do not specify encoder and encoder name not equal one in config file
-            (config::video.hevc_mode == 3 && !pos->hevc[FrameFlags::DYNAMIC_RANGE]) ||
+            (ENCODER_CONFIG->hevc_mode == 3 && !encoder->hevc.capabilities[FrameFlags::DYNAMIC_RANGE]) ||
             !validate_encoder(encoder)) 
             return FALSE;
 
@@ -276,8 +200,8 @@ namespace encoder
             // BOOST_LOG(info) << "Found encoder "sv << encoder->name << ": ["sv << encoder->h264.name << ']';
         }
 
-        if(config::video.hevc_mode == 0) {
-            config::video.hevc_mode = encoder->hevc.capabilities[FrameFlags::PASSED] ? (encoder->hevc.capabilities[FrameFlags::DYNAMIC_RANGE] ? 3 : 2) : 1;
+        if(ENCODER_CONFIG->hevc_mode == 0) {
+            ENCODER_CONFIG->hevc_mode = encoder->hevc.capabilities[FrameFlags::PASSED] ? (encoder->hevc.capabilities[FrameFlags::DYNAMIC_RANGE] ? 3 : 2) : 1;
         }
 
         return 0;

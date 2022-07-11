@@ -14,12 +14,16 @@
 #include <codecvt>
 
 #include <display.h>
-#include <misc.h>
-#include <config.h>
+#include <sunshine_config.h>
 
 #include <common.h>
 
 #include <d3d11_datatype.h>
+#include <thread>
+
+using namespace std::literals;
+
+
 
 namespace display{
   HDESK 
@@ -66,22 +70,26 @@ namespace display{
       return -1;
     }
 
-    directx::dxgi::Adapter* adapter_p;
+    directx::dxgi::Adapter adapter_p;
     for(int x = 0; self->factory->EnumAdapters1(x, &adapter_p) != DXGI_ERROR_NOT_FOUND; ++x) {
       DXGI_ADAPTER_DESC1 adapter_desc;
-      directx::dxgi::Adapter* adapter_temp = adapter_p;
+      directx::dxgi::Adapter adapter_temp = adapter_p;
       adapter_temp->GetDesc1(&adapter_desc);
 
-      if(!adapter_name.empty() && adapter_desc.Description != adapter_name) {
-        continue;
+      // TODO
+      if(!ENCODER_CONFIG->adapter_name && 
+          adapter_desc.Description != (WCHAR*)ENCODER_CONFIG->adapter_name) 
+      {
+          continue;
       }
 
-      directx::dxgi::Output* output;
+      directx::dxgi::Output output;
       for(int y = 0; adapter_temp->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
         DXGI_OUTPUT_DESC desc;
         output->GetDesc(&desc);
 
-        if(!output_name.empty() && desc.DeviceName != display_name) {
+        // TODO
+        if(!ENCODER_CONFIG->output_name && desc.DeviceName != (WCHAR*)display_name) {
           continue;
         }
 
@@ -107,7 +115,7 @@ namespace display{
     }
 
     if(!self->output) {
-      BOOST_LOG(error) << "Failed to locate an output device"sv;
+      LOG_ERROR("Failed to locate an output device");
       return -1;
     }
 
@@ -175,7 +183,7 @@ namespace display{
       refresh_rate = std::round((double)timing_info.rateRefresh.uiNumerator / (double)timing_info.rateRefresh.uiDenominator);
     }
 
-    dup->use_dwmflush = config::video.dwmflush && !(framerate > refresh_rate) ? true : false;
+    self->dup.use_dwmflush = ENCODER_CONFIG->dwmflush && !(framerate > refresh_rate) ? true : false;
 
     // Bump up thread priority
     {
@@ -209,8 +217,8 @@ namespace display{
         }
       }
 
-      dxgi::dxgi_t dxgi;
-      status = device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
+      directx::dxgi::Device dxgi;
+      status = self->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
       if(FAILED(status)) {
         // BOOST_LOG(warning) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
@@ -260,7 +268,7 @@ namespace display{
     }
 
     DXGI_OUTDUPL_DESC dup_desc;
-    self->dup->GetDesc(&dup_desc);
+    self->dup.dup->GetDesc(&dup_desc);
     self->format = dup_desc.ModeDesc.Format;
     // BOOST_LOG(debug) << "Source format ["sv << format_str[dup_desc.ModeDesc.Format] << ']';
     return 0;

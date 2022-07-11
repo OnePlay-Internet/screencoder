@@ -27,6 +27,8 @@ include_directories(third-party/miniupnp)
 
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost COMPONENTS system thread REQUIRED)
 
 list(APPEND SUNSHINE_COMPILE_OPTIONS -Wall -Wno-missing-braces -Wno-maybe-uninitialized -Wno-sign-compare)
 
@@ -169,8 +171,9 @@ include_directories(
   
   ${FFMPEG_INCLUDE_DIRS}
   ${PLATFORM_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIR}
 )
-
+ 
 
 string(TOUPPER "x${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 if("${BUILD_TYPE}" STREQUAL "XDEBUG")
@@ -195,6 +198,7 @@ list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
     opus
     ${FFMPEG_LIBRARIES}
     ${PLATFORM_LIBRARIES}
+    ${Boost_LIBRARIES}
 )
 
 add_executable(sunshine 
