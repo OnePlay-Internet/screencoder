@@ -25,20 +25,22 @@ extern "C" {
 #endif
 
 
-namespace nv {
-    typedef enum _ProfileH264{
+namespace h264 {
+    typedef enum _Profile{
         baseline,
         main,
         high,
         high_444p,
-    }ProfileH264;
+    }Profile;
+} // namespace nv
 
-    typedef enum _ProfileHEVC{
+namespace hevc {
+    typedef enum _Profile{
         main,
         main_10,
         rext,
-    }ProfileHEVC;
-} // namespace nv
+    }Profile;
+}
 
 namespace encoder {
 
@@ -84,18 +86,19 @@ namespace encoder {
         // BOOST_LOG(info) << "//                                                              //"sv;
         // BOOST_LOG(info) << "//////////////////////////////////////////////////////////////////"sv;
 
-        KITTY_WHILE_LOOP(auto pos = std::begin(encoders), pos != std::end(encoders), {
-            if(
-            (!config::video.encoder.empty() && pos->name != config::video.encoder) ||
-            !validate_encoder(*pos) ||
-            (config::video.hevc_mode == 3 && !pos->hevc[encoder_t::DYNAMIC_RANGE])) {
-            pos = encoders.erase(pos);
+        // TODO
+        // KITTY_WHILE_LOOP(auto pos = std::begin(encoders), pos != std::end(encoders), {
+        //     if(
+        //     (!config::video.encoder.empty() && pos->name != config::video.encoder) ||
+        //     !validate_encoder(*pos) ||
+        //     (config::video.hevc_mode == 3 && !pos->hevc[encoder_t::DYNAMIC_RANGE])) {
+        //     pos = encoders.erase(pos);
 
-            continue;
-            }
+        //     continue;
+        //     }
 
-            break;
-        })
+        //     break;
+        // })
 
         // BOOST_LOG(info);
         // BOOST_LOG(info) << "//////////////////////////////////////////////////////////////"sv;
@@ -105,43 +108,43 @@ namespace encoder {
         // BOOST_LOG(info) << "//////////////////////////////////////////////////////////////"sv;
         // BOOST_LOG(info);
 
-        if(encoders.empty()) {
-            if(config::video.encoder.empty()) {
-            BOOST_LOG(fatal) << "Couldn't find any encoder"sv;
-            }
-            else {
-            BOOST_LOG(fatal) << "Couldn't find any encoder matching ["sv << config::video.encoder << ']';
-            }
+        // if(encoders.empty()) {
+        //     if(config::video.encoder.empty()) {
+        //     BOOST_LOG(fatal) << "Couldn't find any encoder"sv;
+        //     }
+        //     else {
+        //     BOOST_LOG(fatal) << "Couldn't find any encoder matching ["sv << config::video.encoder << ']';
+        //     }
 
-            return -1;
-        }
+        //     return -1;
+        // }
 
-        auto &encoder = encoders.front();
+        // auto &encoder = encoders.front();
 
-        BOOST_LOG(debug) << "------  h264 ------"sv;
-        for(int x = 0; x < encoder_t::MAX_FLAGS; ++x) {
-            auto flag = (encoder_t::flag_e)x;
-            BOOST_LOG(debug) << encoder_t::from_flag(flag) << (encoder.h264[flag] ? ": supported"sv : ": unsupported"sv);
-        }
-        BOOST_LOG(debug) << "-------------------"sv;
+        // BOOST_LOG(debug) << "------  h264 ------"sv;
+        // for(int x = 0; x < encoder_t::MAX_FLAGS; ++x) {
+        //     auto flag = (encoder_t::flag_e)x;
+        //     BOOST_LOG(debug) << encoder_t::from_flag(flag) << (encoder.h264[flag] ? ": supported"sv : ": unsupported"sv);
+        // }
+        // BOOST_LOG(debug) << "-------------------"sv;
 
-        if(encoder.hevc[encoder_t::PASSED]) {
-            BOOST_LOG(debug) << "------  hevc ------"sv;
-            for(int x = 0; x < encoder_t::MAX_FLAGS; ++x) {
-            auto flag = (encoder_t::flag_e)x;
-            BOOST_LOG(debug) << encoder_t::from_flag(flag) << (encoder.hevc[flag] ? ": supported"sv : ": unsupported"sv);
-            }
-            BOOST_LOG(debug) << "-------------------"sv;
+        // if(encoder.hevc[encoder_t::PASSED]) {
+        //     BOOST_LOG(debug) << "------  hevc ------"sv;
+        //     for(int x = 0; x < encoder_t::MAX_FLAGS; ++x) {
+        //     auto flag = (encoder_t::flag_e)x;
+        //     BOOST_LOG(debug) << encoder_t::from_flag(flag) << (encoder.hevc[flag] ? ": supported"sv : ": unsupported"sv);
+        //     }
+        //     BOOST_LOG(debug) << "-------------------"sv;
 
-            BOOST_LOG(info) << "Found encoder "sv << encoder.name << ": ["sv << encoder.h264.name << ", "sv << encoder.hevc.name << ']';
-        }
-        else {
-            BOOST_LOG(info) << "Found encoder "sv << encoder.name << ": ["sv << encoder.h264.name << ']';
-        }
+        //     BOOST_LOG(info) << "Found encoder "sv << encoder.name << ": ["sv << encoder.h264.name << ", "sv << encoder.hevc.name << ']';
+        // }
+        // else {
+        //     BOOST_LOG(info) << "Found encoder "sv << encoder.name << ": ["sv << encoder.h264.name << ']';
+        // }
 
-        if(config::video.hevc_mode == 0) {
-            config::video.hevc_mode = encoder.hevc[encoder_t::PASSED] ? (encoder.hevc[encoder_t::DYNAMIC_RANGE] ? 3 : 2) : 1;
-        }
+        // if(config::video.hevc_mode == 0) {
+        //     config::video.hevc_mode = encoder.hevc[encoder_t::PASSED] ? (encoder.hevc[encoder_t::DYNAMIC_RANGE] ? 3 : 2) : 1;
+        // }
 
         return 0;
     }
@@ -158,24 +161,25 @@ namespace encoder {
         encoder.name = "nvenc";
         encoder.profile = 
         { 
-            (int)nv::ProfileH264::high, 
-            (int)nv::ProfileHEVC::main, 
-            (int)nv::ProfileHEVC::main_10 
+            (int)h264::Profile::high, 
+            (int)hevc::Profile::main, 
+            (int)hevc::Profile::main_10 
         };
 
-        encoder.hevc = 
-        {
-            "nvenv_hevc",
-            FALSE,
-            0,
-        }
+        // TODO
+        // encoder.hevc = 
+        // {
+        //     "nvenv_hevc",
+        //     FALSE,
+        //     0,
+        // };
 
-        encoder.h264 = 
-        {
-            "nvenv_h264",
-            TRUE,
-            ENCODER_CONFIG->qp,
-        }
+        // encoder.h264 = 
+        // {
+        //     "nvenv_h264",
+        //     TRUE,
+        //     ENCODER_CONFIG->qp,
+        // };
 
 
         /**

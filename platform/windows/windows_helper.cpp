@@ -2,6 +2,14 @@
 #include <display_vram.h>
 #include <sunshine_util.h>
 
+#include <d3dcompiler.h>
+#include <directxmath.h>
+
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavutil/hwcontext_d3d11va.h>
+}
+
 #include <common.h>
 
 namespace helper
@@ -10,8 +18,9 @@ namespace helper
     make_buffer(directx::d3d11::Device device, 
                 char* t) 
     {
+      // TODO
       D3D11_BUFFER_DESC buffer_desc {
-        sizeof(buffer),
+        strlen(t),
         D3D11_USAGE_IMMUTABLE,
         D3D11_BIND_CONSTANT_BUFFER
       };
@@ -20,16 +29,14 @@ namespace helper
         &t
       };
 
-      pointer buf_p;
+      directx::d3d11::Buffer buf_p;
       auto status = device->CreateBuffer(&buffer_desc, &init_data, &buf_p);
       if(status) {
-        // BOOST_LOG(error) << "Failed to create buffer: [0x"sv << util::hex(status).to_string_view() << ']';
-        return nullptr;
+        LOG_ERROR("Failed to create buffer");
+        return NULL;
       }
 
-      return directx::d3d11::Buffer{
-        buf_p
-      };
+      return buf_p;
     }
 
     directx::d3d11::BlendState
@@ -65,29 +72,35 @@ namespace helper
 
 
     byte*
-    make_cursor_image(util::Object* img_data, 
+    make_cursor_image(util::Object* img_obj, 
                       DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info) 
     {
+      // TODO
+      byte* img_data = (byte*)OBJECT_CLASS->ref(img_obj);
       const uint32 black       = 0xFF000000;
       const uint32 white       = 0xFFFFFFFF;
       const uint32 transparent = 0;
 
       switch(shape_info.Type) {
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR:
-          std::for_each((std::uint32_t *)std::begin(img_data), (std::uint32_t *)std::end(img_data), [](auto &pixel) {
-            if(pixel & 0xFF000000) {
-              pixel = transparent;
-            }
-          });
+
+          // TODO
+          // std::for_each((std::uint32_t *)std::begin(img_data), (std::uint32_t *)std::end(img_data), [](auto &pixel) {
+          //   if(pixel & 0xFF000000) {
+          //     pixel = transparent;
+          //   }
+          // });
+
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
-          return img_data;
+          // TODO
+          // return img_data;
         default:
           break;
       }
 
       shape_info.Height /= 2;
 
-      byte* cursor_img = malloc(shape_info.Width * shape_info.Height * 4);
+      byte* cursor_img = (byte*)malloc(shape_info.Width * shape_info.Height * 4);
       auto bytes       = shape_info.Pitch * shape_info.Height;
 
       auto pixel_begin = (uint32 *)cursor_img;
@@ -132,9 +145,10 @@ namespace helper
               *left_p = black;
             }
 
-            if(bottom_p < (std::uint32_t *)std::end(cursor_img)) {
-              *bottom_p = black;
-            }
+            // TODO
+            // if(bottom_p < (std::uint32_t *)(cursor_img)) {
+            //   *bottom_p = black;
+            // }
 
             if(column != shape_info.Width - 1) {
               *right_p = black;
@@ -292,6 +306,7 @@ namespace helper
 
 
 namespace platf {
+  
     Display* 
     display(MemoryType hwdevice_type, 
             char* display_name, 
@@ -345,7 +360,7 @@ namespace platf {
           DXGI_OUTPUT_DESC desc;
           output->GetDesc(&desc);
 
-          char* name =  desc.DeviceName;
+          char* name =  (char*)desc.DeviceName;
           long width  = desc.DesktopCoordinates.right - desc.DesktopCoordinates.left;
           long height = desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top;
 
@@ -356,9 +371,10 @@ namespace platf {
           //   << "    AttachedToDesktop : "sv << (desc.AttachedToDesktop ? "yes"sv : "no"sv) << std::endl
           //   << "    Resolution        : "sv << width << 'x' << height << std::endl
           //   << std::endl;
-          (display_names + y) = &name;
+          *(display_names + y) = name;
         }
       }
       return display_names;
     }
+
 } // namespace platf

@@ -7,10 +7,12 @@ set(SUNSHINE_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 
 # Ugly hack to compile with #include <qos2.h>
+add_subdirectory(third-party/moonlight-common-c/enet)
 add_compile_definitions(
 	QOS_FLOWID=UINT32
 	PQOS_FLOWID=UINT32*
 	QOS_NON_ADAPTIVE_FLOW=2)
+
 
 set(UPNPC_BUILD_SHARED OFF CACHE BOOL "no shared libraries")
 set(UPNPC_BUILD_TESTS OFF CACHE BOOL "Don't build tests for miniupnpc")
@@ -21,8 +23,6 @@ set(UPNPC_NO_INSTALL ON CACHE BOOL "Don't install any libraries build for miniup
 # add_subdirectory(third-party/miniupnp/miniupnpc)
 # add_subdirectory(third-party/moonlight-common-c/enet)
 # add_subdirectory(third-party/Simple-Web-Server)
-
-include_directories(third-party/miniupnp)
 
 
 find_package(Threads REQUIRED)
@@ -99,6 +99,7 @@ file(GLOB UTIL_SOURCE_LIST
 	util/object/*.cpp
 	util/macro/*.cpp
 	util/log/*.cpp
+	util/error/*.cpp
 	util/event/*.cpp
 	util/error/*.cpp
 	util/datatype/*.cpp
@@ -108,8 +109,8 @@ file(GLOB UTIL_SOURCE_LIST
 
 file(GLOB ENCODER_SOURCE_LIST 
 	encoder/*.cpp
-	d3d11/*.cpp
-	bitstream/*.cpp
+	encoder/d3d11/*.cpp
+	encoder/bitstream/*.cpp
 )
 
 file(GLOB RTP_SOURCE_LIST 
@@ -119,6 +120,7 @@ file(GLOB RTP_SOURCE_LIST
 file(GLOB CONFIG_SOURCE_LIST 
 	config/*.cpp
 )
+
 file(GLOB PLATFORM_SOURCE_LIST 
 	platform/*.cpp
 	platform/windows/*.cpp
@@ -137,6 +139,9 @@ set(SUNSHINE_TARGET_FILES
 	${THIRDPARTY_SOURCE_LIST}
 	${PLATFORM_SOURCE_LIST}
 )
+
+add_subdirectory(third-party/cbs)
+
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/config
@@ -165,6 +170,7 @@ include_directories(
 
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party/cbs/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/third-party/cbs/include/cbs
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party/moonlight-common-c/enet/include
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party/moonlight-common-c/reedsolomon
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party/moonlight-common-c/src
@@ -189,7 +195,8 @@ endif()
 
 
 list(APPEND CBS_EXTERNAL_LIBRARIES
-	cbs)
+	cbs
+)
 
 list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
     ${CBS_EXTERNAL_LIBRARIES}

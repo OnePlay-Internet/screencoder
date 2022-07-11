@@ -111,7 +111,7 @@ namespace platf {
         Display*    (*init)             (int framerate, 
                                          char* display_name);
 
-        void        (*finalize)         (Display* self);
+        void        (*finalize)         (void* self);
 
         int         (*dummy_img)        (Display* self,
                                          Image* img);
@@ -145,7 +145,7 @@ namespace platf {
      * Returns Display based on hwdevice_type
      */
     Display*                display       (MemoryType hwdevice_type , 
-                                          const std::string &display_name , 
+                                          char* display_name , 
                                           int framerate);
 
 

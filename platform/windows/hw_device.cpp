@@ -14,11 +14,12 @@ extern "C" {
 namespace hwdevice
 {
     int 
-    hw_device_set_frame(D3D11Device* hw,
+    hw_device_set_frame(platf::HWDevice* self,
                         libav::Frame* frame) 
     {
+      D3D11Device* hw = (D3D11Device*)self;
       if(hw->hwframe)
-        av_frame_free(hw->hwframe);
+        av_frame_free(&hw->hwframe);
 
       hw->hwframe    = frame;
       hw->base.frame = frame;
@@ -68,7 +69,7 @@ namespace hwdevice
       t.Format           = hw->format;
       t.BindFlags        = D3D11_BIND_RENDER_TARGET;
 
-      auto status = device->CreateTexture2D(&t, NULL, &img.texture);
+      auto status = device->CreateTexture2D(&t, NULL, &hw->img.texture);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create render target texture [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
@@ -81,7 +82,7 @@ namespace hwdevice
       hw->img.base.pixel_pitch = 4;
 
       float info_in[16 / sizeof(float)] { 1.0f / (float)out_width }; //aligned to 16-byte
-      hw->info_scene = helper::make_buffer(device, info_in);
+      hw->info_scene = helper::make_buffer(device, (char*)info_in);
 
       if(!info_in) {
         // BOOST_LOG(error) << "Failed to create info scene buffer"sv;
@@ -93,14 +94,14 @@ namespace hwdevice
         D3D11_RTV_DIMENSION_TEXTURE2D
       };
 
-      status = device_p->CreateRenderTargetView(hw->img.texture, &nv12_rt_desc, &hw->nv12_Y_rt);
+      status = device->CreateRenderTargetView(hw->img.texture, &nv12_rt_desc, &hw->nv12_Y_rt);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create render target view [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
       }
 
       nv12_rt_desc.Format = DXGI_FORMAT_R8G8_UNORM;
-      status = device_p->CreateRenderTargetView(hw->img.texture, &nv12_rt_desc, &hw->nv12_UV_rt);
+      status = device->CreateRenderTargetView(hw->img.texture, &nv12_rt_desc, &hw->nv12_UV_rt);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create render target view [0x"sv << util::hex(status).to_string_view() << ']';
         return -1;
@@ -112,16 +113,16 @@ namespace hwdevice
       }
 
       auto desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
-      desc->texture = (directx::d3d11::Texture2D*)hw->img.data;
+      desc->texture = (directx::d3d11::Texture2D)hw->img.base.data;
       desc->index   = 0;
 
       frame->data[0] = hw->img.base.data;
       frame->data[1] = 0;
 
-      frame->linesize[0] = hw->img.row_pitch;
+      frame->linesize[0] = hw->img.base.row_pitch;
 
-      frame->height = hw->img.height;
-      frame->width  = hw->img.width;
+      frame->height = hw->img.base.height;
+      frame->width  = hw->img.base.width;
 
       return 0;
     }
@@ -141,50 +142,51 @@ namespace hwdevice
                    directx::d3d11::DeviceContext device_ctx_p,
                    platf::PixelFormat pix_fmt) 
     {
-      D3D11Device* self = malloc(sizeof(D3D11Device));
-      self->base.klass = d3d11_device_class_init;
-      display::HLSL* hlsl = init_hlsl();
+      D3D11Device* self = (D3D11Device*)malloc(sizeof(D3D11Device));
+      self->base.klass = (platf::HWDeviceClass*)d3d11_device_class_init();
+      display::HLSL* hlsl = display::init_hlsl();
       HRESULT status;
 
       device_p->AddRef();
-      self->base->data = device_p;
+      self->base.data = device_p;
       self->device_ctx = device_ctx_p;
       self->format = (pix_fmt == platf::PixelFormat::nv12 ? DXGI_FORMAT_NV12 : DXGI_FORMAT_P010);
-      status = device_p->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &sefl->scene_vs);
+      status = device_p->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
       if(status) {
         // BOOST_LOG(error) << "Failed to create scene vertex shader [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
+        return NULL;
       }
 
-      status = device_p->CreatePixelShader(hlsl->convert_Y_ps_hlsl->GetBufferPointer(), hlsl->convert_Y_ps_hlsl->GetBufferSize(), nullptr, &sef->convert_Y_ps);
+      status = device_p->CreatePixelShader(hlsl->convert_Y_ps_hlsl->GetBufferPointer(), hlsl->convert_Y_ps_hlsl->GetBufferSize(), nullptr, &self->convert_Y_ps);
       if(status) {
         // BOOST_LOG(error) << "Failed to create convertY pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
+        return NULL;
       }
 
-      status = device_p->CreatePixelShader(hlsl->convert_UV_ps_hlsl->GetBufferPointer(), hlsl->convert_UV_ps_hlsl->GetBufferSize(), nullptr, &sefl->convert_UV_ps);
+      status = device_p->CreatePixelShader(hlsl->convert_UV_ps_hlsl->GetBufferPointer(), hlsl->convert_UV_ps_hlsl->GetBufferSize(), nullptr, &self->convert_UV_ps);
       if(status) {
         // BOOST_LOG(error) << "Failed to create convertUV pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
+        return NULL;
       }
 
       status = device_p->CreateVertexShader(hlsl->convert_UV_vs_hlsl->GetBufferPointer(), hlsl->convert_UV_vs_hlsl->GetBufferSize(), nullptr, &self->convert_UV_vs);
       if(status) {
         // BOOST_LOG(error) << "Failed to create convertUV vertex shader [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
+        return NULL;
       }
 
-      status = device_p->CreatePixelShader(scene_ps_hlsl->GetBufferPointer(), scene_ps_hlsl->GetBufferSize(), nullptr, &scene_ps);
+      status = device_p->CreatePixelShader(hlsl->scene_ps_hlsl->GetBufferPointer(), hlsl->scene_ps_hlsl->GetBufferSize(), nullptr, &self->scene_ps);
       if(status) {
         // BOOST_LOG(error) << "Failed to create scene pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
+        return NULL;
       }
 
 
-      self->color_matrix = helper::make_buffer(device_p, *(platf::get_color() + 0));
+      // TODO
+      self->color_matrix = helper::make_buffer(device_p, (char*)(platf::get_color() + 0));
       if(!self->color_matrix) {
         // BOOST_LOG(error) << "Failed to create color matrix buffer"sv;
-        return -1;
+        return NULL;
       }
 
       D3D11_INPUT_ELEMENT_DESC layout_desc {
@@ -193,16 +195,17 @@ namespace hwdevice
 
       status = device_p->CreateInputLayout(
         &layout_desc, 1,
-        convert_UV_vs_hlsl->GetBufferPointer(), convert_UV_vs_hlsl->GetBufferSize(),
+        hlsl->convert_UV_vs_hlsl->GetBufferPointer(), 
+        hlsl->convert_UV_vs_hlsl->GetBufferSize(),
         &self->input_layout);
 
-      img.display = std::move(display);
+      self->img.display = std::move(display);
 
       // Color the background black, so that the padding for keeping the aspect ratio
       // is black
-      if(self->img.display->klass->dummy_img(&self->back_img)) {
+      if(self->img.display->klass->dummy_img(self->img.display,(platf::Image*)&self->back_img)) {
         // BOOST_LOG(warning) << "Couldn't create an image to set background color to black"sv;
-        return -1;
+        return NULL;
       }
 
       D3D11_SHADER_RESOURCE_VIEW_DESC desc {
@@ -211,25 +214,26 @@ namespace hwdevice
       };
       desc.Texture2D.MipLevels = 1;
 
-      status = device_p->CreateShaderResourceView(back_img.texture, &desc, &back_img.input_res);
+      status = device_p->CreateShaderResourceView(self->back_img.texture, &desc, &self->back_img.input_res);
       if(FAILED(status)) {
         // BOOST_LOG(error) << "Failed to create input shader resource view [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
+        return NULL;
       }
 
       self->device_ctx->IASetInputLayout(self->input_layout);
       self->device_ctx->PSSetConstantBuffers(0, 1, &self->color_matrix);
       self->device_ctx->VSSetConstantBuffers(0, 1, &self->info_scene);
 
-      return self;
+      return (platf::HWDevice*)self;
     }
 
     void 
-    hw_device_set_colorspace(D3D11Device* self,
+    hw_device_set_colorspace(platf::HWDevice* dev,
                              uint32 colorspace, 
                              uint32 color_range) 
     {
-      encoder::Color* colors = encoder::get_color();
+      D3D11Device* self = (D3D11Device*)dev;
+      encoder::Color* colors = platf::get_color();
       switch(colorspace) {
       case 5: // SWS_CS_SMPTE170M
         self->color_p = colors;
@@ -248,13 +252,13 @@ namespace hwdevice
         ++self->color_p;
       }
 
-      byte* color_matrix = helper::make_buffer((directx::d3d11::Device*)self->base.data, *self->color_p);
+      directx::d3d11::Buffer color_matrix = (directx::d3d11::Buffer)helper::make_buffer((directx::d3d11::Device)self->base.data, (char*)self->color_p);
       if(!color_matrix) {
         // BOOST_LOG(warning) << "Failed to create color matrix"sv;
         return;
       }
 
-      device_ctx_p->PSSetConstantBuffers(0, 1, &color_matrix);
+      self->device_ctx->PSSetConstantBuffers(0, 1, &color_matrix);
       self->color_matrix = color_matrix;
     }
 
@@ -265,14 +269,16 @@ namespace hwdevice
      * @return int 
      */
     int 
-    hw_device_convert(D3D11Device* self,
+    hw_device_convert(platf::HWDevice* dev,
                       platf::Image* img_base) 
     {
+        // TODO
+        D3D11Device* self = (D3D11Device*)dev;
         ImageD3D* img = (ImageD3D*)img_base;
 
-        self->device_ctx->IASetInputLayout(self->input_layout));
+        self->device_ctx->IASetInputLayout(self->input_layout);
 
-        _init_view_port(self->img.width, self->img.height);
+        d3d11_device_class_init()->init_view_port(self,self->img.base.width, self->img.base.height);
         self->device_ctx->OMSetRenderTargets(1, &self->nv12_Y_rt, nullptr);
         self->device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
         self->device_ctx->PSSetShader(self->convert_Y_ps, nullptr, 0);
@@ -280,14 +286,14 @@ namespace hwdevice
         self->device_ctx->Draw(3, 0);
 
         self->device_ctx->RSSetViewports(1, &self->outY_view);
-        self->device_ctx->PSSetShaderResources(0, 1, &img.input_res);
+        self->device_ctx->PSSetShaderResources(0, 1, &img->input_res);
         self->device_ctx->Draw(3, 0);
 
         // Artifacts start appearing on the rendered image if Sunshine doesn't flush
         // before rendering on the UV part of the image.
         self->device_ctx->Flush();
 
-        _init_view_port(self->img.width / 2, self->img.height / 2);
+        d3d11_device_class_init()->init_view_port(self,self->img.base.width / 2, self->img.base.height / 2);
         self->device_ctx->OMSetRenderTargets(1, &self->nv12_UV_rt, nullptr);
         self->device_ctx->VSSetShader(self->convert_UV_vs, nullptr, 0);
         self->device_ctx->PSSetShader(self->convert_UV_ps, nullptr, 0);
@@ -295,11 +301,35 @@ namespace hwdevice
         self->device_ctx->Draw(3, 0);
 
         self->device_ctx->RSSetViewports(1, &self->outUV_view);
-        self->device_ctx->PSSetShaderResources(0, 1, &img.input_res);
+        self->device_ctx->PSSetShaderResources(0, 1, &img->input_res);
         self->device_ctx->Draw(3, 0);
         self->device_ctx->Flush();
 
         return 0;
+    }
+
+    void 
+    _init_view_port(D3D11Device* self,
+                    float x, 
+                    float y, 
+                    float width, 
+                    float height) 
+    {
+      D3D11_VIEWPORT view {
+          x, y,
+          width, height,
+          0.0f, 1.0f
+      };
+
+      self->device_ctx->RSSetViewports(1, &view);
+    }
+
+    void 
+    d3d11_device_init_view_port(D3D11Device* self,
+                                float width, 
+                                float height) 
+    {
+      _init_view_port((D3D11Device*)self,0.0f, 0.0f, width, height);
     }
 
     D3D11DeviceClass*       
@@ -314,6 +344,7 @@ namespace hwdevice
         klass.base.init    = hw_device_init;
         klass.base.set_frame = hw_device_set_frame;
         klass.base.set_colorspace = hw_device_set_colorspace;
+        klass.init_view_port = d3d11_device_init_view_port;
         return &klass;
     }
     

@@ -20,7 +20,7 @@ namespace helper
                                                  char* t);
 
     directx::d3d11::BlendState make_blend       (directx::d3d11::Device device, 
-                                                 bool enable) 
+                                                 bool enable);
 
     byte*                   make_cursor_image   (byte* img_data, 
                                                  DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info);
@@ -32,6 +32,23 @@ namespace helper
                                                  directx::d3d11::RenderTargetView render_target, 
                                                  int width, int height, 
                                                  DXGI_FORMAT format);
+
+
+    /**
+     * @brief 
+     * 
+     * @param file 
+     * @return directx::d3d::Blob 
+     */
+    directx::d3d::Blob      compile_vertex_shader(LPCSTR file);
+
+    /**
+     * @brief 
+     * 
+     * @param file 
+     * @return directx::d3d::Blob 
+     */
+    directx::d3d::Blob      compile_pixel_shader(LPCSTR file);
 } // namespace helper
 
 

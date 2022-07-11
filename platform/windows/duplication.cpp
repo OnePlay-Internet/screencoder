@@ -24,7 +24,7 @@ namespace duplication
                               std::chrono::milliseconds timeout, 
                               directx::dxgi::Resource *res_p) 
     {
-      platf::Capture capture_status = duplication_release_frame(dup);
+      platf::Capture capture_status = duplication_class_init()->release_frame(dup);
       if(capture_status != platf::Capture::ok) {
         return capture_status;
       }
@@ -53,10 +53,10 @@ namespace duplication
 
     platf::Capture 
     duplication_reset(Duplication* dup,
-                      directx::dxgi::OutputDuplication* dup_p) 
+                      directx::dxgi::OutputDuplication dup_p) 
     {
-        platf::Capture capture_status = duplication_release_frame(dup);
-        dup->dup.reset(dup_p);
+        platf::Capture capture_status = duplication_class_init()->release_frame(dup);
+        dup->dup = dup_p;
         return capture_status;
     }
 
@@ -67,7 +67,7 @@ namespace duplication
           return platf::Capture::ok;
         }
 
-        auto status = dup->ReleaseFrame();
+        auto status = dup->dup->ReleaseFrame();
         switch(status) {
         case S_OK:
           dup->has_frame = false;

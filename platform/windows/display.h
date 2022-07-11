@@ -45,7 +45,19 @@ namespace display {
         bool visible;
     }GpuCursor;
 
+    typedef struct _GpuCursorClass {
+        void (*set_pos)     (GpuCursor* cursor,
+                             LONG rel_x, 
+                             LONG rel_y, 
+                             bool visible);
 
+        void (*set_texture) (GpuCursor* cursor,
+                             LONG width, 
+                             LONG height, 
+                             directx::d3d11::Texture2D texture);
+    }GpuCursorClass;
+
+    GpuCursorClass*     gpu_cursor_class_init       ();
 
     typedef enum _D3DKMT_SCHEDULINGPRIORITYCLASS {
         D3DKMT_SCHEDULINGPRIORITYCLASS_IDLE,
@@ -93,6 +105,7 @@ namespace display {
                                                  int framerate, 
                                                  const char* display_name);
 
+    HLSL*          init_hlsl                    (); 
 } // namespace platf::dxgi
 
 #endif

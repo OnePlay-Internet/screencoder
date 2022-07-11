@@ -20,6 +20,7 @@ extern "C" {
 }
 
 #include <cbs.h>
+#include <string.h>
 
 
 
@@ -37,10 +38,12 @@ namespace bitstream {
     void
     init_fragment(Fragment* o) 
     {
-        std::copy((std::uint8_t *)&o, (std::uint8_t *)(&o + 1), (std::uint8_t *)this);
 
-        o.data  = nullptr;
-        o.units = nullptr;
+        // TODO
+        // std::copy((std::uint8_t *)&o, (std::uint8_t *)(&o + 1), (std::uint8_t *));
+
+        o->data  = nullptr;
+        o->units = nullptr;
     };
 
     // frag_t() 
@@ -70,7 +73,7 @@ namespace bitstream {
         }
     }
 
-    util::Object
+    util::Object*
     write_with_context(Context *cbs_ctx, 
           uint8 nal, 
           void *uh, 
@@ -91,21 +94,21 @@ namespace bitstream {
             return {};
         }
 
-        OBJECT_DUPLICATE(frag.data,frag.data_size,obj);
-        return (*obj);
+        OBJECT_DUPLICATE(obj,frag.data_size,frag.data,temp);
+        return obj;
     }
 
-    util::Object
+    util::Object*
     write(uint8 nal, 
           void *uh, 
           libav::CodecID codec_id) 
     {
-        Context cbs_ctx;
+        Context* cbs_ctx;
         ff_cbs_init(&cbs_ctx, codec_id, NULL);
         return write_with_context(cbs_ctx, nal, uh, codec_id);
     }
 
-    util::Object
+    util::Object*
     make_sps_h264(const AVCodecContext *ctx) 
     {
         H264RawSPS sps {};
@@ -201,14 +204,14 @@ namespace bitstream {
     make_sps_hevc(const libav::CodecContext *avctx, 
                   const libav::Packet*packet) 
     {
-        Context ctx;
+        Context* ctx;
         if(ff_cbs_init(&ctx, AV_CODEC_ID_H265, nullptr)) {
             return {};
         }
 
         Fragment frag;
 
-        int err = ff_cbs_read_packet(&ctx, &frag, packet);
+        int err = ff_cbs_read_packet(ctx, &frag, packet);
         if(err < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, err));
@@ -225,65 +228,64 @@ namespace bitstream {
         vps.profile_tier_level.general_profile_compatibility_flag[4] = 1;
         sps.profile_tier_level.general_profile_compatibility_flag[4] = 1;
 
-        auto &vui = sps.vui;
-        std::memset(&vui, 0, sizeof(vui));
+        memset((void*)&sps.vui, 0, sizeof(H265RawVUI));
 
         sps.vui_parameters_present_flag = 1;
 
         // skip sample aspect ratio
 
-        vui.video_format                    = 5;
-        vui.colour_description_present_flag = 1;
-        vui.video_signal_type_present_flag  = 1;
-        vui.video_full_range_flag           = avctx->color_range == AVCOL_RANGE_JPEG;
-        vui.colour_primaries                = avctx->color_primaries;
-        vui.transfer_characteristics        = avctx->color_trc;
-        vui.matrix_coefficients             = avctx->colorspace;
+        sps.vui.video_format                    = 5;
+        sps.vui.colour_description_present_flag = 1;
+        sps.vui.video_signal_type_present_flag  = 1;
+        sps.vui.video_full_range_flag           = avctx->color_range == AVCOL_RANGE_JPEG;
+        sps.vui.colour_primaries                = avctx->color_primaries;
+        sps.vui.transfer_characteristics        = avctx->color_trc;
+        sps.vui.matrix_coefficients             = avctx->colorspace;
 
 
-        vui.vui_timing_info_present_flag        = vps.vps_timing_info_present_flag;
-        vui.vui_num_units_in_tick               = vps.vps_num_units_in_tick;
-        vui.vui_time_scale                      = vps.vps_time_scale;
-        vui.vui_poc_proportional_to_timing_flag = vps.vps_poc_proportional_to_timing_flag;
-        vui.vui_num_ticks_poc_diff_one_minus1   = vps.vps_num_ticks_poc_diff_one_minus1;
-        vui.vui_hrd_parameters_present_flag     = 0;
+        sps.vui.vui_timing_info_present_flag        = vps.vps_timing_info_present_flag;
+        sps.vui.vui_num_units_in_tick               = vps.vps_num_units_in_tick;
+        sps.vui.vui_time_scale                      = vps.vps_time_scale;
+        sps.vui.vui_poc_proportional_to_timing_flag = vps.vps_poc_proportional_to_timing_flag;
+        sps.vui.vui_num_ticks_poc_diff_one_minus1   = vps.vps_num_ticks_poc_diff_one_minus1;
+        sps.vui.vui_hrd_parameters_present_flag     = 0;
 
-        vui.bitstream_restriction_flag              = 1;
-        vui.motion_vectors_over_pic_boundaries_flag = 1;
-        vui.restricted_ref_pic_lists_flag           = 1;
-        vui.max_bytes_per_pic_denom                 = 0;
-        vui.max_bits_per_min_cu_denom               = 0;
-        vui.log2_max_mv_length_horizontal           = 15;
-        vui.log2_max_mv_length_vertical             = 15;
+        sps.vui.bitstream_restriction_flag              = 1;
+        sps.vui.motion_vectors_over_pic_boundaries_flag = 1;
+        sps.vui.restricted_ref_pic_lists_flag           = 1;
+        sps.vui.max_bytes_per_pic_denom                 = 0;
+        sps.vui.max_bits_per_min_cu_denom               = 0;
+        sps.vui.log2_max_mv_length_horizontal           = 15;
+        sps.vui.log2_max_mv_length_vertical             = 15;
 
-        Context write_ctx;
+        Context* write_ctx;
         ff_cbs_init(&write_ctx, AV_CODEC_ID_H265, NULL);
 
 
         return HEVC{
             NAL
             {
-                write(&write_ctx, vps.nal_unit_header.nal_unit_type, (void *)&vps.nal_unit_header, AV_CODEC_ID_H265),
-                write(&ctx, vps_p->nal_unit_header.nal_unit_type, (void *)&vps_p->nal_unit_header, AV_CODEC_ID_H265),
+                write_with_context(write_ctx, vps.nal_unit_header.nal_unit_type, (void *)&vps.nal_unit_header, AV_CODEC_ID_H265),
+                write_with_context(ctx, vps_p->nal_unit_header.nal_unit_type, (void *)&vps_p->nal_unit_header, AV_CODEC_ID_H265),
             },
             NAL 
             {
-                write(&write_ctx, sps.nal_unit_header.nal_unit_type, (void *)&sps.nal_unit_header, AV_CODEC_ID_H265),
-                write(&ctx, sps_p->nal_unit_header.nal_unit_type, (void *)&sps_p->nal_unit_header, AV_CODEC_ID_H265),
+                write_with_context(write_ctx, sps.nal_unit_header.nal_unit_type, (void *)&sps.nal_unit_header, AV_CODEC_ID_H265),
+                write_with_context(ctx, sps_p->nal_unit_header.nal_unit_type, (void *)&sps_p->nal_unit_header, AV_CODEC_ID_H265),
             },
         };
     }
 
-    util::Object
+    util::Object*
     read_sps_h264(const AVPacket *packet) 
     {
-        Context ctx;
+        Context* ctx;
         if(ff_cbs_init(&ctx, AV_CODEC_ID_H264, nullptr)) {
             return {};
         }
 
         Fragment frag;
-        int err = ff_cbs_read_packet(ctx), &frag, &*packet);
+        int err = ff_cbs_read_packet(ctx, &frag, &*packet);
 
         if(err < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
@@ -300,32 +302,31 @@ namespace bitstream {
     make_sps_h264(const libav::CodecContext*ctx, 
                   const libav::Packet *packet) 
     {
-        return H264
-        {
-            make_sps_h264(ctx),
-            read_sps_h264(packet),
-        };
+        H264 ret = {0};
+        ret.sps._new  =    make_sps_h264(ctx);
+        ret.sps.old =    read_sps_h264(packet);
+        return ret;
     }
 
     bool 
     validate_sps(libav::Packet* packet, 
                  int codec_id) 
     {
-        Context ctx;
+        Context* ctx;
         if(ff_cbs_init(&ctx, (AVCodecID)codec_id, nullptr)) {
             return false;
         }
 
         Fragment frag;
-        int err = ff_cbs_read_packet(&ctx, &frag, packet);
+        int err = ff_cbs_read_packet(ctx, &frag, packet);
         if(err < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
-            LOG_ERRROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, err));
+            LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, err));
             return false;
         }
 
         if(codec_id == AV_CODEC_ID_H264) {
-            CodedBitstreamH264Context h264 = (CodedBitstreamH264Context *)ctx->priv_data;
+            CodedBitstreamH264Context* h264 = (CodedBitstreamH264Context *)ctx->priv_data;
             if(!h264->active_sps->vui_parameters_present_flag) {
                 return false;
             }

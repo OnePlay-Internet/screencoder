@@ -27,8 +27,8 @@ namespace hwdevice
 
       encoder::Color* color_p;
 
-      directx::d3d11::Buffer* info_scene;
-      directx::d3d11::Buffer* color_matrix;
+      directx::d3d11::Buffer info_scene;
+      directx::d3d11::Buffer color_matrix;
 
       directx::d3d11::InputLayout input_layout;
 
@@ -61,7 +61,14 @@ namespace hwdevice
 
     typedef struct _D3D11DeviceClass {
       platf::HWDeviceClass base;
+
+      void (*init_view_port) (D3D11Device* self,
+                              float width, 
+                              float height);
     }D3D11DeviceClass;
+
+
+
 
 
     D3D11DeviceClass*       d3d11_device_class_init        ();

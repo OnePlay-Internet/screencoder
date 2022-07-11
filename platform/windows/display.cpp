@@ -19,11 +19,14 @@
 #include <common.h>
 
 #include <d3d11_datatype.h>
+#include <windows_helper.h>
 #include <thread>
 
 using namespace std::literals;
 
 
+#define SUNSHINE_ASSETS_DIR
+#define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/shaders/directx"
 
 namespace display{
   HDESK 
@@ -398,6 +401,82 @@ namespace display{
     "DXGI_FORMAT_V208",
     "DXGI_FORMAT_V408"
   };
+  void 
+  cursor_set_pos(GpuCursor* self,
+                 LONG rel_x, 
+                 LONG rel_y, 
+                 bool visible) 
+  {
+      self->cursor_view.TopLeftX = rel_x;
+      self->cursor_view.TopLeftY = rel_y;
 
+      self->visible = visible;
+  }
+
+  void 
+  cursor_set_texture(GpuCursor* self,
+                     LONG width, 
+                     LONG height, 
+                     directx::d3d11::Texture2D texture) 
+  {
+      self->cursor_view.Width  = width;
+      self->cursor_view.Height = height;
+
+      self->texture = texture;
+  }
+
+  GpuCursorClass*     
+  gpu_cursor_class_init()
+  {
+    static bool init = FALSE;
+    static GpuCursorClass klass = {0};
+    if (init)
+      return &klass;
+    
+    klass.set_pos = cursor_set_pos;
+    klass.set_texture = cursor_set_texture;
+    return &klass;
+  }
+
+    display::HLSL*
+    init_hlsl() 
+    {
+      // BOOST_LOG(info) << "Compiling shaders..."sv;
+
+      static bool initialize = false;
+      display::HLSL* hlsl = (display::HLSL*)malloc(sizeof(display::HLSL));
+      memset(hlsl,0,sizeof(display::HLSL));
+
+      if (initialize)
+        return hlsl;
+      
+
+      hlsl->scene_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/SceneVS.hlsl");
+      if(!hlsl->scene_vs_hlsl) {
+        return NULL;
+      }
+
+      hlsl->convert_Y_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertYPS.hlsl");
+      if(!hlsl->convert_Y_ps_hlsl) {
+        return NULL;
+      }
+
+      hlsl->convert_UV_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertUVPS.hlsl");
+      if(!hlsl->convert_UV_ps_hlsl) {
+        return NULL;
+      }
+
+      hlsl->convert_UV_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/ConvertUVVS.hlsl");
+      if(!hlsl->convert_UV_vs_hlsl) {
+        return NULL;
+      }
+
+      hlsl->scene_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ScenePS.hlsl");
+      if(!hlsl->scene_ps_hlsl) {
+        return NULL;
+      }
+      // BOOST_LOG(info) << "Compiled shaders"sv;
+      return hlsl;
+    }    
 } // namespace platf::dxgi
 
