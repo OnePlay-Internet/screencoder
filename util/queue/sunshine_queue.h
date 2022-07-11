@@ -27,7 +27,7 @@ namespace util
 
         bool (*peek) (QueueArray* queue);
 
-        bool (*pop) (QueueArray* queue, util::Object* data);
+        util::Object* (*pop) (QueueArray* queue);
 
         QueueArray* (*init) ();
 

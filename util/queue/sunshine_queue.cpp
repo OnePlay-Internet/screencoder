@@ -50,8 +50,7 @@ namespace util {
 
     bool            queue_array_peek        (QueueArray* queue);
 
-    void            queue_array_pop         (QueueArray* queue, 
-                                             Object* object);
+    Object*          queue_array_pop         (QueueArray* queue);
 
     QueueArray*     queue_array_init        ();
 
@@ -96,11 +95,10 @@ namespace util {
         ObjectContainer* container = queue->first;
         while (!container->next) { container = container->next; }
         
-        ObjectContainer* last = malloc(sizeof(ObjectContainer));
+        ObjectContainer* last = (ObjectContainer*)malloc(sizeof(ObjectContainer));
         memset(last,0,sizeof(ObjectContainer));
-        last->obj->ref_count = obj->ref_count + 1;
-        last->obj->free_func = obj->free_func;
-        last->obj->data = obj->data;
+
+        last->obj  = obj;
         last->next = NULL;
 
         container->next = last;
@@ -120,23 +118,19 @@ namespace util {
     }
 
 
-    bool 
-    queue_array_pop(QueueArray* queue, 
-                    util::Object* obj)
+    util::Object* 
+    queue_array_pop(QueueArray* queue)
     {
         std::lock_guard {queue->_lock};
         if (!queue_array_peek(queue))
-            return false;
+            return NULL;
 
         ObjectContainer* container = queue->first;
-        obj->data = container->obj->data;
-        obj->free_func = container->obj->free_func;
-        obj->ref_count = container->obj->ref_count + obj->ref_count;
-
+        Object *ret = container->obj;
         queue->first = container->next;
         free(container);
         queue->length--;
-        return true;
+        return ret;
     }
 
 
@@ -146,12 +140,8 @@ namespace util {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
         memset(array,0,sizeof(QueueArray));
 
-        array->head = 0;
-        array->tail = 0;
         array->length = 0;
-        array->capacity = BASE_SIZE;
-
-        array->object_array = (util::Object*)malloc((uint)BASE_SIZE * (uint)sizeof(pointer));
+        array->first = NULL;
         return array;
     }
 
@@ -160,7 +150,6 @@ namespace util {
     queue_array_finalize(QueueArray* queue)
     {
         std::lock_guard {queue->_lock};
-        free(queue->object_array);
         free(queue);
     }
 }

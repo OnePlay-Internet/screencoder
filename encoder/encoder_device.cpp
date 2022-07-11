@@ -72,9 +72,9 @@ namespace encoder
             }
         }
 
-        OBJECT_HOLDER(obj);
-        QUEUE_ARRAY_CLASS->pop(packets,obj);
+        util::Object* obj = QUEUE_ARRAY_CLASS->pop(packets);
         Packet* packet    = (Packet*)OBJECT_CLASS->ref(obj);
+
         libav::Packet* av_packet = packet->packet;
         OBJECT_CLASS->unref(obj);
 

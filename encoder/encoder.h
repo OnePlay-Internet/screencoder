@@ -12,8 +12,10 @@
 #ifndef __ENCODER_DATATYPE_H__
 #define __ENCODER_DATATYPE_H__
 
-#include <encoder_d3d11_device.h>
 #include <sunshine_util.h>
+
+#include <sunshine_bitstream.h>
+#include <common.h>
 
 
 
@@ -67,11 +69,33 @@ namespace encoder
         MAX_FLAGS
     }FrameFlags;
 
+    typedef enum _Type
+    {
+        STRING,
+        INT,
+    }Type;
+
+    typedef struct _KeyValue {
+        char* key;
+        Type type;
+        char* string_value;
+        int int_value;
+    }KeyValue;
 
     typedef struct _CodecConfig{
         char* name;
         bool has_qp;
-        int qp;
+
+        /**
+         * @brief 
+         * NULL terminated
+         */
+        KeyValue* qp;
+        /**
+         * @brief 
+         * NULL terminated
+         */
+        KeyValue* options;
         std::bitset<MAX_FLAGS> capabilities;
     }CodecConfig;
 
@@ -83,11 +107,11 @@ namespace encoder
 
         Profile profile;
 
-        AVHWDeviceType dev_type;
-        AVPixelFormat dev_pix_fmt;
+        libav::HWDeviceType dev_type;
+        libav::PixelFormat dev_pix_fmt;
 
-        AVPixelFormat static_pix_fmt;
-        AVPixelFormat dynamic_pix_fmt;
+        libav::PixelFormat static_pix_fmt;
+        libav::PixelFormat dynamic_pix_fmt;
 
         int flags;
 
@@ -95,6 +119,7 @@ namespace encoder
     }Encoder;
 
 
+    platf::PixelFormat  map_pix_fmt     (libav::PixelFormat fmt);
 
 } // namespace error
 

@@ -33,8 +33,7 @@ namespace util
         bool            (*has_data)         (ListObject* list,
                                              int index);
 
-        bool            (*get_data)         (ListObject* list,  
-                                             Object* obj,
+        Object*         (*get_data)         (ListObject* list,  
                                              int index);
 
         int             (*length)           (ListObject*);

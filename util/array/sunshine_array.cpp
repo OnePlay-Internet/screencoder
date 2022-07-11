@@ -10,7 +10,7 @@
  */
 #include <sunshine_array.h>
 #include <sunshine_macro.h>
-
+#include <string.h>
 
 
 
@@ -30,8 +30,8 @@ namespace util
     ListObject*
     list_object_new()
     {
-        ListObject* arr = malloc(sizeof(ListObject));
-        memset(arr,0,sizeof(ListObject))
+        ListObject* arr = (ListObject*)malloc(sizeof(ListObject));
+        memset(arr,0,sizeof(ListObject));
 
         arr->length=0;
         return arr;
@@ -40,10 +40,10 @@ namespace util
     void
     array_object_finalize(ListObject* arr)
     {
-        ObjectContainer* container = array->first;
+        ObjectContainer* container = arr->first;
         while (!container->next) 
         { 
-            OBJECT_CLASS->unref(&container->obj);
+            OBJECT_CLASS->unref(container->obj);
             container = container->next; 
         }
         free(arr);
@@ -60,11 +60,10 @@ namespace util
             while (!container->next) { container = container->next; }
         }
         
-        ObjectContainer* last = malloc(sizeof(ObjectContainer));
+        ObjectContainer* last = (ObjectContainer*)malloc(sizeof(ObjectContainer));
         memset(last,0,sizeof(ObjectContainer));
-        last->obj->ref_count = obj->ref_count + 1;
-        last->obj->free_func = obj->free_func;
-        last->obj->data = obj->data;
+
+        last->obj  = obj;
         last->next = NULL;
 
         if (array->length)
@@ -76,17 +75,23 @@ namespace util
     }
 
     bool
+    array_object_has_data(ListObject* array,
+                          int index)
+    {
+        return index < array->length;
+    }
+
+    Object* 
     array_object_get_data(ListObject* array,
-                          Object* obj,
                           int index)
     {
         if (!array_object_has_data(array,index))
-            return false;
+            return NULL;
         
         int count = 0;
-        ObjectContainer* prev_container,container,next_container;
+        ObjectContainer* prev_container,*container,*next_container;
         container = array->first;
-        while (!container->next || count = index) 
+        while (!container->next || count == index) 
         { 
             prev_container = container;
             container = container->next; 
@@ -95,21 +100,14 @@ namespace util
                 next_container = container->next;
         }
 
-        obj->data = container->obj->data;
-        obj->free_func = container->obj->free_func;
-        obj->ref_count = container->obj->ref_count + obj->ref_count;
+        Object* ret = container->obj;
 
         if(next_container)
             prev_container->next = next_container;
-        return true;
+
+        return ret;
     }
 
-    bool
-    array_object_has_data(ListObject* array,
-                          int index)
-    {
-        return index < array->length;
-    }
 
     int             
     array_object_length(ListObject* array)

@@ -19,9 +19,14 @@
 
 #include <common.h>
 #include <display.h>
+extern "C" {
+#include <libswscale/swscale.h>
+}
 
 #include <thread>
+#include <string.h>
 
+using namespace std::literals;
 
 namespace encoder {
 
@@ -46,7 +51,7 @@ namespace encoder {
         util::QueueArray* packet_queue;
 
         int frame_nr;
-        Config config;
+        Config* config;
         Encoder* encoder;
         platf::Display* display;
         pointer channel_data;
@@ -79,13 +84,13 @@ namespace encoder {
      * @return int 
      */
     int 
-    hwframe_ctx(libav::CodecContext ctx, 
+    hwframe_ctx(libav::CodecContext* ctx, 
                 libav::BufferRef* hwdevice, 
                 libav::PixelFormat format) 
     {
         libav::BufferRef* frame_ref = av_hwframe_ctx_alloc(hwdevice);
 
-        auto frame_ctx               = (AVHWFramesContext *)frame_ref->data;
+        AVHWFramesContext* frame_ctx = (AVHWFramesContext *)frame_ref->data;
         frame_ctx->format            = ctx->pix_fmt;
         frame_ctx->sw_format         = format;
         frame_ctx->height            = ctx->height;
@@ -119,7 +124,7 @@ namespace encoder {
     {
         frame->pts = (int64_t)frame_nr;
 
-        libav::CodecContext* libav_ctx = session->ctx;
+        libav::CodecContext* libav_ctx = (libav::CodecContext*)session->context;
 
         bitstream::NAL sps = session->sps;
         bitstream::NAL vps = session->vps;
@@ -167,16 +172,30 @@ namespace encoder {
             }
 
             packet->replacement_array = session->replacement_array;
-            packet->channel_data = channel_data;
+            packet->user_data = channel_data;
 
-            OBJECT_HOLDER(obj);
-            OBJECT_CLASS->init(obj,packet,sizeof(Packet),packet_class_init()->finalize);
+            util::Object* obj = OBJECT_CLASS->init(packet,sizeof(Packet),packet_class_init()->finalize);
             QUEUE_ARRAY_CLASS->push(packets,obj);
         }
 
         return 0;
     }
 
+    void
+    handle_options(AVDictionary* options, 
+                   KeyValue* keyvalue)
+    {
+        KeyValue* option = keyvalue;
+        while(option) {
+            if(option->type == Type::STRING)
+                av_dict_set(&options,option->key,option->string_value,0);
+
+            if(option->type == Type::INT)
+                av_dict_set_int(&options,option->key,option->int_value,0);
+
+            option++;
+        }
+    }
 
     bool
     make_session(Session* session,   
@@ -187,33 +206,33 @@ namespace encoder {
     {
         bool hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
 
-        CodecConfig* video_format = config.videoFormat == 0 ? &encoder->h264 : &encoder->hevc;
+        CodecConfig* video_format = (config->videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
-            // BOOST_LOG(error) << encoder->name << ": "sv << video_format.name << " mode not supported"sv;
+            // BOOST_LOG(error) << encoder->name << ": "sv << video_format->name << " mode not supported"sv;
             return FALSE;
         }
 
-        if(config.dynamicRange && !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
-            // BOOST_LOG(error) << video_format.name << ": dynamic range not supported"sv;
+        if(config->dynamicRange && !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
+            // BOOST_LOG(error) << video_format->name << ": dynamic range not supported"sv;
             return FALSE;
         }
 
-        AVCodec* codec = avcodec_find_encoder_by_name(video_format.name);
+        AVCodec* codec = avcodec_find_encoder_by_name(video_format->name);
         if(!codec) {
-            // BOOST_LOG(error) << "Couldn't open ["sv << video_format.name << ']';
+            // BOOST_LOG(error) << "Couldn't open ["sv << video_format->name << ']';
             return FALSE;
         }
 
         libav::CodecContext* ctx = avcodec_alloc_context3(codec);
-        ctx->width     = config.width;
-        ctx->height    = config.height;
-        ctx->time_base = AVRational { 1, config.framerate };
-        ctx->framerate = AVRational { config.framerate, 1 };
+        ctx->width     = config->width;
+        ctx->height    = config->height;
+        ctx->time_base = AVRational { 1, config->framerate };
+        ctx->framerate = AVRational { config->framerate, 1 };
 
-        if(config.videoFormat == 0) {
+        if(config->videoFormat == 0) {
             ctx->profile = encoder->profile.h264_high;
         }
-        else if(config.dynamicRange == 0) {
+        else if(config->dynamicRange == 0) {
             ctx->profile = encoder->profile.hevc_main;
         }
         else {
@@ -227,21 +246,21 @@ namespace encoder {
         ctx->gop_size = encoder->flags & LIMITED_GOP_SIZE ? INT16_MAX : INT_MAX;
         ctx->keyint_min = INT_MAX;
 
-        if(config.numRefFrames == 0) {
+        if(config->numRefFrames == 0) {
             ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
         }
         else {
             // Some client decoders have limits on the number of reference frames
-            ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? config.numRefFrames : 0;
+            ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? config->numRefFrames : 0;
         }
 
         ctx->flags |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
         ctx->flags2 |= AV_CODEC_FLAG2_FAST;
 
-        ctx->color_range = (config.encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+        ctx->color_range = (config->encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
 
         int sws_color_space;
-        switch(config.encoderCscMode >> 1) {
+        switch(config->encoderCscMode >> 1) {
         case 0:
         default:
             // Rec. 601
@@ -270,10 +289,10 @@ namespace encoder {
             sws_color_space      = SWS_CS_BT2020;
             break;
         }
-        // BOOST_LOG(info) << "Color range: ["sv << ((config.encoderCscMode & 0x1) ? "JPEG"sv : "MPEG"sv) << ']';
+        // BOOST_LOG(info) << "Color range: ["sv << ((config->encoderCscMode & 0x1) ? "JPEG"sv : "MPEG"sv) << ']';
 
-        AVPixelFormat sw_fmt;
-        if(config.dynamicRange == 0) {
+        libav::PixelFormat sw_fmt;
+        if(config->dynamicRange == 0) {
             sw_fmt = encoder->static_pix_fmt;
         }
         else {
@@ -298,14 +317,14 @@ namespace encoder {
             if(hwframe_ctx(ctx, hwdevice_ctx, sw_fmt)) 
                 return FALSE;
             
-            ctx->slices = config.slicesPerFrame;
+            ctx->slices = config->slicesPerFrame;
         } else /* software */ {
             ctx->pix_fmt = sw_fmt;
 
             // Clients will request for the fewest slices per frame to get the
             // most efficient encode, but we may want to provide more slices than
             // requested to ensure we have enough parallelism for good performance.
-            ctx->slices = std::max(config.slicesPerFrame, config::video.min_threads);
+            ctx->slices = MAX(config->slicesPerFrame, ENCODER_CONFIG->min_threads);
         }
 
         if(!video_format->capabilities[FrameFlags::SLICE]) {
@@ -319,27 +338,20 @@ namespace encoder {
          * @brief 
          * map from config to option here
          */
-        AVDictionary *options { nullptr };
-        for(auto &option : video_format.options) {
-            av_dict_set_int(options);
-            av_dict_set_int(options);
-            av_dict_set_int(options);
-            av_dict_set(options);
-            av_dict_set(options);
-        }
-
+        AVDictionary *options = NULL;
+        handle_options(options,video_format->options);
         if(video_format->capabilities[FrameFlags::CBR]) {
-            auto bitrate        = config.bitrate * (hardware ? 1000 : 800); // software bitrate overshoots by ~20%
+            auto bitrate        = config->bitrate * (hardware ? 1000 : 800); // software bitrate overshoots by ~20%
             ctx->rc_max_rate    = bitrate;
             ctx->rc_buffer_size = bitrate / 10;
             ctx->bit_rate       = bitrate;
             ctx->rc_min_rate    = bitrate;
         }
-        else if(video_format.qp) {
-            handle_option(*video_format.qp);
+        else if(video_format->has_qp) {
+            handle_options(options,video_format->qp);
         }
         else {
-            BOOST_LOG(error) << "Couldn't set video quality: encoder "sv << encoder->name << " doesn't support qp"sv;
+            LOG_ERROR("Couldn't set video quality");
             return FALSE;
         }
 
@@ -347,7 +359,7 @@ namespace encoder {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             // BOOST_LOG(error)
             // << "Could not open codec ["sv
-            // << video_format.name << "]: "sv
+            // << video_format->name << "]: "sv
             // << av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status);
             return FALSE;
         }
@@ -384,22 +396,25 @@ namespace encoder {
 
         device->klass->set_colorspace(device,sws_color_space, ctx->color_range);
 
-        session->ctx = ctx;
+        session->context = ctx;
         session->device = device;
         // 0 ==> don't inject, 1 ==> inject for h264, 2 ==> inject for hevc
-        session->inject = (1 - (int)video_format->capabilities[FrameFlags::VUI_PARAMETERS]) * (1 + config.videoFormat);
+        session->inject = (1 - (int)video_format->capabilities[FrameFlags::VUI_PARAMETERS]) * (1 + config->videoFormat);
 
         // TODO
         if(!video_format->capabilities[FrameFlags::NALU_PREFIX_5b]) 
         {
             char* hevc_nalu = "\000\000\000\001(";
             char* h264_nalu = "\000\000\000\001e";
-            char* nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
+            char* nalu_prefix = config->videoFormat ? hevc_nalu : h264_nalu;
 
             OBJECT_MALLOC(obj,sizeof(Replace),temp);
+            OBJECT_DUPLICATE(old_obj,sizeof(char),nalu_prefix,temp1);
+            OBJECT_DUPLICATE(new_obj,strlen(nalu_prefix),nalu_prefix,temp2);
 
-            ((Replace*)temp)->old = nalu_prefix.substr(1);
-            ((Replace*)temp)->new = nalu_prefix;
+
+            ((Replace*)temp)->old = old_obj;
+            ((Replace*)temp)->_new = new_obj;
 
             LIST_OBJECT_CLASS->emplace_back(session->replacement_array,obj);
         }
@@ -424,7 +439,7 @@ namespace encoder {
         SyncSession* encode_session = (SyncSession*)malloc(sizeof(SyncSession));
         memset(encode_session,0,sizeof(SyncSession));
 
-        platf::PixelFormat pix_fmt = ctx->config.dynamicRange == 0 ? 
+        platf::PixelFormat pix_fmt = ctx->config->dynamicRange == 0 ? 
                                         map_pix_fmt(ctx->encoder->static_pix_fmt) : 
                                         map_pix_fmt(ctx->encoder->dynamic_pix_fmt);
 
@@ -433,7 +448,7 @@ namespace encoder {
         if(!hwdevice) 
             return FALSE;
 
-        if(!make_session(&encode_session->session, ctx->encoder,ctx->config, img.width, img.height, hwdevice))
+        if(!make_session(&encode_session->session, ctx->encoder,ctx->config, img->width, img->height, hwdevice))
             return FALSE;
 
         encode_session->ctx = ctx;
@@ -441,9 +456,9 @@ namespace encoder {
     }
 
     void
-    free_synced_session(SyncSession* ss)
+    free_synced_session(void* data)
     {
-        free(ss);
+        free(data);
     }
 
 
@@ -461,9 +476,8 @@ namespace encoder {
                         util::QueueArray* encode_session_ctx_queue)
     {
         while(QUEUE_ARRAY_CLASS->peek(encode_session_ctx_queue)) {
-            OBJECT_HOLDER(obj);
-            QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue,obj);
-            SyncSessionContext* encode_session_ctx = OBJECT_CLASS->ref(obj);
+            util::Object* obj = QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue);
+            SyncSessionContext* encode_session_ctx = (SyncSessionContext*)OBJECT_CLASS->ref(obj);
 
             if(!encode_session_ctx) 
                 return platf::Capture::error;
@@ -473,8 +487,7 @@ namespace encoder {
             if(!encode_session) 
                 return platf::Capture::error;
             
-            OBJECT_HOLDER(obj2);
-            OBJECT_CLASS->init(obj2,encode_session,sizeof(SyncSession),free_synced_session);
+            util::Object* obj2 = OBJECT_CLASS->init(encode_session,sizeof(SyncSession),free_synced_session);
 
             LIST_OBJECT_CLASS->emplace_back(synced_sessions,obj2);
             LIST_OBJECT_CLASS->emplace_back(synced_session_ctxs,obj);
@@ -484,8 +497,7 @@ namespace encoder {
 
         while (LIST_OBJECT_CLASS->has_data(synced_sessions,0))
         {
-            OBJECT_HOLDER(obj);
-            LIST_OBJECT_CLASS->get_data(synced_sessions,obj,0);
+            util::Object* obj = LIST_OBJECT_CLASS->get_data(synced_sessions,0);
             SyncSession* pos = (SyncSession*) OBJECT_CLASS->ref(obj);
 
             // get frame from device
@@ -498,8 +510,8 @@ namespace encoder {
             if(IS_INVOKED(ctx->shutdown_event)) {
                 // Let waiting thread know it can delete shutdown_event
                 RAISE_EVENT(ctx->join_event);
-                array_object_finalize(synced_sessions);
-                array_object_finalize(synced_session_ctxs);
+                LIST_OBJECT_CLASS->finalize(synced_sessions);
+                LIST_OBJECT_CLASS->finalize(synced_session_ctxs);
                 return platf::Capture::error;
             }
 
@@ -535,7 +547,7 @@ namespace encoder {
 
             OBJECT_CLASS->unref(obj);
         };
-        return img;
+        return platf::Capture::ok;
     }
 
 
@@ -585,14 +597,14 @@ namespace encoder {
         {
             if(!LIST_OBJECT_CLASS->length(synced_session_ctxs)) 
             {
-                OBJECT_HOLDER(obj);
-                QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue,obj);
+                util::Object* obj = QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue);
                 ctx = (SyncSessionContext*) (OBJECT_CLASS->ref(obj));
 
                 if(!ctx) 
                     return Status::ok;
 
-                LIST_OBJECT_CLASS->emplace_back(synced_session_ctxs,ctx);
+                OBJECT_CLASS->unref(obj);
+                LIST_OBJECT_CLASS->emplace_back(synced_session_ctxs,obj);
             }
         }
 
@@ -605,19 +617,19 @@ namespace encoder {
         // create one session for easch synced session context
         while(LIST_OBJECT_CLASS->has_data(synced_session_ctxs,0)) 
         {
-            OBJECT_HOLDER(obj);
-            OBJECT_HOLDER(ss_obj);
-            LIST_OBJECT_CLASS->get_data(synced_session_ctxs,obj,0);
+            util::Object* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
 
-            SyncSessionContext* ctx = OBJECT_CLASS->ref(obj);
+            SyncSessionContext* ctx = (SyncSessionContext*)OBJECT_CLASS->ref(obj);
             SyncSession *synced_session = make_synced_session(img, ctx);
 
             if(!synced_session) 
                 return Status::error;
 
-            OBJECT_CLASS->init(ss_obj,synced_session,sizeof(SyncSession),free_synced_session);
-            LIST_OBJECT_CLASS->emplace_back(synced_sessions,obj);
-            OBJECT_CLASS->unref(ss_obj);
+            {
+                util::Object* ss_obj = OBJECT_CLASS->init(synced_session,sizeof(SyncSession),free_synced_session);
+                LIST_OBJECT_CLASS->emplace_back(synced_sessions,ss_obj);
+                OBJECT_CLASS->unref(ss_obj);
+            }
             OBJECT_CLASS->unref(obj);
         }
 
@@ -626,7 +638,7 @@ namespace encoder {
         while(TRUE) {
             // cursor
             // run image capture in while loop, 
-            auto status = ctx->display->klass->capture(ctx->display,on_image_snapshoot, img, TRUE);
+            Status status = (Status)ctx->display->klass->capture(ctx->display,on_image_snapshoot, img, TRUE);
             // return for timeout status
             switch(status) {
                 case Status::reinit:
@@ -653,7 +665,7 @@ namespace encoder {
             char** display_names  = platf::display_names(map_dev_type(encoder->dev_type));
 
             if(!display_names) 
-                display_names = ENCODER_CONFIG->output_name;
+                chosen_display = ENCODER_CONFIG->output_name;
 
             int count = 0;
             while (*(display_names+count))
@@ -666,8 +678,8 @@ namespace encoder {
             }
 
             // reset display every 200ms until display is ready
-            while(ctx->sync_session_ctx_queue.running()) {
-                reset_display(disp, encoder->dev_type, chosen_display, ENCODER_CONFIG->framerate);
+            while(ctx->sync_session_ctx_queue) {
+                disp = reset_display(encoder->dev_type, chosen_display, ENCODER_CONFIG->framerate);
                 if(disp) 
                     break;
 
@@ -685,8 +697,7 @@ namespace encoder {
         {
             while (!QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue)) { }
 
-            OBJECT_HOLDER(obj);
-            QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue,obj);
+            util::Object* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
             if (!obj->data)
                 goto done;
             
@@ -703,24 +714,21 @@ namespace encoder {
         
         while (LIST_OBJECT_CLASS->has_data(synced_session_ctxs,0))
         {
-            OBJECT_HOLDER(obj);
-            LIST_OBJECT_CLASS->get_data(synced_session_ctxs,obj,0);
+            util::Object* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
             SyncSessionContext* ss_ctx = (SyncSessionContext*) OBJECT_CLASS->ref(obj);
 
             RAISE_EVENT(ss_ctx->shutdown_event);
             RAISE_EVENT(ss_ctx->join_event);
-            OBJECT_CLASS->unref(obj)
+            OBJECT_CLASS->unref(obj);
         }
 
         while (QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue))
         {
-            OBJECT_HOLDER(obj);
-            QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue,obj);
+            util::Object* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
             SyncSessionContext* ss_ctx = (SyncSessionContext*) OBJECT_CLASS->ref(obj);
             RAISE_EVENT(ss_ctx->shutdown_event);
             RAISE_EVENT(ss_ctx->join_event);
             OBJECT_CLASS->unref(obj);
-            i++;
         }
     }
 
@@ -754,11 +762,12 @@ namespace encoder {
         ss_ctx.join_event = join_event;
         ss_ctx.packet_queue = packet_queue;
         ss_ctx.frame_nr = 1;
-        ss_ctx.config = ENCODER_CONFIG;
+
+        // TODO
+        // ss_ctx.config = ;
         ss_ctx.channel_data = data;
 
-        OBJECT_HOLDER(obj);
-        OBJECT_CLASS->init(obj,&ss_ctx,sizeof(SyncSessionContext),DO_NOTHING);
+        util::Object* obj = OBJECT_CLASS->init(&ss_ctx,sizeof(SyncSessionContext),DO_NOTHING);
         QUEUE_ARRAY_CLASS->push(ctx.sync_session_ctx_queue,obj);
 
         // Wait for join signal
@@ -779,9 +788,9 @@ namespace encoder {
             case AV_PIX_FMT_P010:
                 return platf::PixelFormat::p010;
             default:
-                return platf::PixelFormat::unknown;
+                return platf::PixelFormat::unknown_pixelformat;
         }
 
-        return platf::PixelFormat::unknown;
+        return platf::PixelFormat::unknown_pixelformat;
     }
 }

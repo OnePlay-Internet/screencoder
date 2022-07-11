@@ -21,6 +21,7 @@ struct AVPacket;
 
 namespace libav
 {
+    typedef AVHWDeviceType      HWDeviceType;
     typedef AVPacket            Packet;
     typedef AVFrame             Frame;
     typedef AVCodecContext      CodecContext;

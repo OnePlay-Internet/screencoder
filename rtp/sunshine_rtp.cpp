@@ -79,8 +79,7 @@ namespace rtp
             if(IS_INVOKED(shutdown_event))
                 break;
 
-            OBJECT_HOLDER(obj);
-            QUEUE_ARRAY_CLASS->pop(packets,obj);
+            util::Object* obj = QUEUE_ARRAY_CLASS->pop(packets);
             encoder::Packet* video_packet = (encoder::Packet*)OBJECT_CLASS->ref(obj);
 
             auto session = (Session*)video_packet->user_data;
@@ -102,8 +101,7 @@ namespace rtp
 
             if(av_packet->flags & AV_PKT_FLAG_KEY) {
                 while(LIST_OBJECT_CLASS->has_data(video_packet->replacement_array,0)) {
-                    OBJECT_HOLDER(obj);
-                    LIST_OBJECT_CLASS->get_data(video_packet->replacement_array,obj,0);
+                    util::Object* obj = LIST_OBJECT_CLASS->get_data(video_packet->replacement_array,0);
 
                     encoder::Replace* replacement = (encoder::Replace*) OBJECT_CLASS->ref(obj);
                     pointer frame_old = replacement.old;

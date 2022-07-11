@@ -27,8 +27,6 @@ include_directories(third-party/miniupnp)
 
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
-set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost COMPONENTS log filesystem REQUIRED)
 
 list(APPEND SUNSHINE_COMPILE_OPTIONS -Wall -Wno-missing-braces -Wno-maybe-uninitialized -Wno-sign-compare)
 
@@ -55,35 +53,16 @@ add_compile_definitions(SUNSHINE_PLATFORM="windows")
 # TODO
 # add_subdirectory(tools) #This is temporary, only tools for Windows are needed, for now
 
-include_directories(third-party/ViGEmClient/include)
 
-if(NOT DEFINED SUNSHINE_ICON_PATH)
-	set(SUNSHINE_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/sunshine.ico")
-endif()
-configure_file(sunshine/platform/windows/windows.rs.in windows.rc @ONLY)
-set(PLATFORM_TARGET_FILES
-	"${CMAKE_CURRENT_BINARY_DIR}/windows.rc"
-	sunshine/platform/windows/publish.cpp
-	sunshine/platform/windows/misc.cpp
-	sunshine/platform/windows/input.cpp
-	sunshine/platform/windows/display_base.cpp
-	sunshine/platform/windows/display_vram.cpp
-	sunshine/platform/windows/display_ram.cpp
-	sunshine/platform/windows/audio.cpp
 
-	third-party/ViGEmClient/src/ViGEmClient.cpp
-	)
-
-set(PLATFORM_INCLUDE_DIRS
-	sunshine/platform/windows
-	third-party/ViGEmClient/include/ViGEm)
-
-set(OPENSSL_LIBRARIES
-	libssl.a
-	libcrypto.a)
+set(PLATFORM_INCLUDE_DIR
+	${SUNSHINE_PREPARED_BINARIES}/platform
+	${SUNSHINE_PREPARED_BINARIES}/platform/windows
+    )
 
 set(FFMPEG_INCLUDE_DIRS
 	${SUNSHINE_PREPARED_BINARIES}/include)
+
 set(FFMPEG_LIBRARIES
 	${SUNSHINE_PREPARED_BINARIES}/lib/libavcodec.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libavdevice.a
@@ -108,43 +87,41 @@ list(PREPEND PLATFORM_LIBRARIES
 	d3d11 dxgi D3DCompiler
 	setupapi
 	dwmapi
-	)
+)
 
-set_source_files_properties(third-party/ViGEmClient/src/ViGEmClient.cpp PROPERTIES COMPILE_DEFINITIONS "UNICODE=1;ERROR_INVALID_DEVICE_OBJECT_PARAMETER=650")
-set_source_files_properties(third-party/ViGEmClient/src/ViGEmClient.cpp PROPERTIES COMPILE_FLAGS "-Wno-unknown-pragmas -Wno-misleading-indentation -Wno-class-memaccess")
-
-
-
-
-
-
-configure_file(version.h.in version.h @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 file(GLOB UTIL_SOURCE_LIST 
-	sunshine/src/util/*.cpp
+	util/*.cpp
+	util/queue/*.cpp
+	util/object/*.cpp
+	util/macro/*.cpp
+	util/log/*.cpp
+	util/event/*.cpp
+	util/error/*.cpp
+	util/datatype/*.cpp
+	util/avcodec/*.cpp
+	util/array/*.cpp
 )
-file(GLOB HTTP_SOURCE_LIST 
-	sunshine/src/http/*.cpp
+
+file(GLOB ENCODER_SOURCE_LIST 
+	encoder/*.cpp
+	d3d11/*.cpp
+	bitstream/*.cpp
 )
-file(GLOB AUDIO_SOURCE_LIST 
-	sunshine/src/audio/*.cpp
+
+file(GLOB RTP_SOURCE_LIST 
+	rtp/*.cpp
 )
-file(GLOB VIDEO_SOURCE_LIST 
-	sunshine/src/video/*.cpp
-)
-file(GLOB RTSP_SOURCE_LIST 
-	sunshine/src/rstp/*.cpp
-)
+
 file(GLOB CONFIG_SOURCE_LIST 
-	sunshine/src/config/*.cpp
+	config/*.cpp
 )
-file(GLOB INPUT_SOURCE_LIST 
-	sunshine/src/input/*.cpp
+file(GLOB PLATFORM_SOURCE_LIST 
+	platform/*.cpp
+	platform/windows/*.cpp
 )
-file(GLOB LOGGER_SOURCE_LIST 
-	sunshine/src/log/*.cpp
-)
+
 file(GLOB THIRDPARTY_SOURCE_LIST 
 	third-party/moonlight-common-c/reedsolomon/rs.c
 	third-party/moonlight-common-c/src/RtspParser.c
@@ -152,32 +129,37 @@ file(GLOB THIRDPARTY_SOURCE_LIST
 
 set(SUNSHINE_TARGET_FILES
 	${UTIL_SOURCE_LIST}
-	${HTTP_SOURCE_LIST}
-	${VIDEO_SOURCE_LIST}
-	${LOGGER_SOURCE_LIST}
-	${INPUT_SOURCE_LIST}
-	${AUDIO_SOURCE_LIST}
+	${ENCODER_SOURCE_LIST}
+	${RTP_SOURCE_LIST}
 	${CONFIG_SOURCE_LIST}
-	${RTSP_SOURCE_LIST}
 	${THIRDPARTY_SOURCE_LIST}
-	${PLATFORM_TARGET_FILES}
-	)
-
-set_source_files_properties(sunshine/src/util/upnp.cpp 
-	PROPERTIES COMPILE_FLAGS -Wno-pedantic)
+	${PLATFORM_SOURCE_LIST}
+)
 
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/config
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/audio
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/video
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/input
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/http
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/rstp
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/log
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/singleton
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/thread
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/header/util
-  ${CMAKE_CURRENT_SOURCE_DIR}/sunshine/platform
+  ${CMAKE_CURRENT_SOURCE_DIR}/config
+  ${CMAKE_CURRENT_SOURCE_DIR}/audio
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoder
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoder/bitstream
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoder/d3d11
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/input
+  ${CMAKE_CURRENT_SOURCE_DIR}/rtp
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/util
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/queue
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/object
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/macro
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/log
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/event
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/error
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/datatype
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/avcodec
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/array
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/platform
+  ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows
 
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party
   ${CMAKE_CURRENT_SOURCE_DIR}/third-party/cbs/include
@@ -202,51 +184,28 @@ else()
 	list(APPEND SUNSHINE_COMPILE_OPTIONS -O3)
 endif()
 
-if(NOT SUNSHINE_ASSETS_DIR)
-	set(SUNSHINE_ASSETS_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets")
-endif()
-
-if(NOT SUNSHINE_CONFIG_DIR)
-	set(SUNSHINE_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/config")
-endif()
 
 list(APPEND CBS_EXTERNAL_LIBRARIES
 	cbs)
 
 list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
-		libminiupnpc-static
-		${CBS_EXTERNAL_LIBRARIES}
-		${CMAKE_THREAD_LIBS_INIT}
-		enet
-		opus
-		${FFMPEG_LIBRARIES}
-		${Boost_LIBRARIES}
-		${OPENSSL_LIBRARIES}
-		${PLATFORM_LIBRARIES}
-		)
-
-list(APPEND SUNSHINE_DEFINITIONS SUNSHINE_ASSETS_DIR="${SUNSHINE_ASSETS_DIR}")
-list(APPEND SUNSHINE_DEFINITIONS SUNSHINE_CONFIG_DIR="${SUNSHINE_CONFIG_DIR}")
+    ${CBS_EXTERNAL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+    enet
+    opus
+    ${FFMPEG_LIBRARIES}
+    ${PLATFORM_LIBRARIES}
+)
 
 add_executable(sunshine 
-	examples/sunshine/main.cpp
+	main.cpp
 	${SUNSHINE_TARGET_FILES}
 )
 
-add_library(sunshinesdk STATIC 
-	${SUNSHINE_TARGET_FILES}
-)
 
 target_link_libraries(sunshine ${SUNSHINE_EXTERNAL_LIBRARIES} ${EXTRA_LIBS})
 target_compile_definitions(sunshine PUBLIC ${SUNSHINE_DEFINITIONS})
 set_target_properties(sunshine PROPERTIES CXX_STANDARD 17
-                            VERSION ${PROJECT_VERSION}
-                            SOVERSION ${PROJECT_VERSION_MAJOR}
-                            )
-
-target_link_libraries(sunshinesdk ${SUNSHINE_EXTERNAL_LIBRARIES} ${EXTRA_LIBS})
-target_compile_definitions(sunshinesdk PUBLIC ${SUNSHINE_DEFINITIONS})
-set_target_properties(sunshinesdk PROPERTIES CXX_STANDARD 17
                             VERSION ${PROJECT_VERSION}
                             SOVERSION ${PROJECT_VERSION_MAJOR}
                             )
@@ -256,15 +215,9 @@ if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
-if(APPLE)
-	target_link_options(sunshine PRIVATE LINKER:-sectcreate,__TEXT,__info_plist,${APPLE_PLIST_FILE})
-	target_link_options(sunshinesdk PRIVATE LINKER:-sectcreate,__TEXT,__info_plist,${APPLE_PLIST_FILE})
-endif()
-
 foreach(flag IN LISTS SUNSHINE_COMPILE_OPTIONS)
 	list(APPEND SUNSHINE_COMPILE_OPTIONS_CUDA "$<$<COMPILE_LANGUAGE:CUDA>:--compiler-options=${flag}>")
 endforeach()
 
 target_compile_options(sunshine PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SUNSHINE_COMPILE_OPTIONS}>;$<$<COMPILE_LANGUAGE:CUDA>:${SUNSHINE_COMPILE_OPTIONS_CUDA};-std=c++17>)
-target_compile_options(sunshinesdk PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SUNSHINE_COMPILE_OPTIONS}>;$<$<COMPILE_LANGUAGE:CUDA>:${SUNSHINE_COMPILE_OPTIONS_CUDA};-std=c++17>)
 

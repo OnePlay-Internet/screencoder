@@ -60,7 +60,7 @@ namespace encoder
     typedef struct _PacketClass{
         Packet* (*init)     ();
 
-        void    (*finalize) (Packet* packet);
+        void    (*finalize) (void* packet);
     }PacketClass;    
     
     

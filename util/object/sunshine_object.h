@@ -18,8 +18,6 @@
 
 #define OBJECT_CLASS         util::object_class_init() 
 
-#define OBJECT_HOLDER(x)     util::Object* x = NULL;
-
 
 /**
  * @brief 
@@ -27,23 +25,20 @@
  * y: object data size
  * z: object data pointer
  */
-#define OBJECT_MALLOC(x,y,z) OBJECT_HOLDER(x); \
-                             pointer z = (pointer)malloc( y );  \
+#define OBJECT_MALLOC(x,y,z) pointer z = (pointer)malloc( y );  \
                              memset(z,0,y); \
-                             OBJECT_CLASS->init(x,z,y,free) 
+                             util::Object* x = OBJECT_CLASS->init(z,y,free) 
 
 
 /**
  * @brief 
  * x: object name
  * y: object data size
- * z: object data pointer
+ * z: object data source
  */
-#define OBJECT_DUPLICATE(x,y,z) OBJECT_HOLDER(z); \
-                                pointer ptr = (pointer)malloc( y );  \
-                                memset(ptr,0,y); \
-                                memcpy(ptr,x,y); \
-                                OBJECT_CLASS->init(z,ptr,y,free) \
+#define OBJECT_DUPLICATE(x,y,z,ptr) pointer ptr = (pointer)malloc( y );  \
+                                    memcpy(ptr,z,y); \
+                                    util::Object* x = OBJECT_CLASS->init(ptr,y,free) \
 
 namespace util 
 {
@@ -63,11 +58,13 @@ namespace util
         pointer data;
     }Object;
 
-    typedef struct _ObjectContainer {
+    typedef struct _ObjectContainer ObjectContainer;
+
+    struct _ObjectContainer {
         Object* obj;
 
-        Object* next;
-    }ObjectContainer;
+        ObjectContainer* next;
+    };
 
     typedef struct _ObjectClass {
         pointer (*ref)      (Object* obj);
@@ -76,8 +73,7 @@ namespace util
 
         void    (*unref)    (Object* obj);
 
-        void    (*init)     (Object* obj, 
-                             pointer data,
+        Object* (*init)     (pointer data,
                              uint size,
                              ObjectFreeFunc func);
         

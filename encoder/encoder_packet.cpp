@@ -17,8 +17,6 @@
 
 namespace encoder
 {
-
-
     Packet* 
     packet_init()
     {
@@ -28,10 +26,10 @@ namespace encoder
     }
 
     void    
-    packet_finalize(Packet* packet)
+    packet_finalize(void* packet)
     {
-        av_packet_unref(packet->packet);
-        array_object_finalize(packet->replacement_array);
+        av_packet_unref(((Packet*)packet)->packet);
+        array_object_finalize(((Packet*)packet)->replacement_array);
     }
 
 

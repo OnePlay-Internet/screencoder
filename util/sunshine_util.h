@@ -19,5 +19,7 @@
 #include <sunshine_log.h>
 #include <sunshine_error.h>
 #include <sunshine_event.h>
+#include <avcodec_datatype.h>
+
 
 #endif

@@ -97,13 +97,13 @@ namespace encoder {
             break;
         })
 
-        BOOST_LOG(info);
-        BOOST_LOG(info) << "//////////////////////////////////////////////////////////////"sv;
-        BOOST_LOG(info) << "//                                                          //"sv;
-        BOOST_LOG(info) << "// Ignore any errors mentioned above, they are not relevant //"sv;
-        BOOST_LOG(info) << "//                                                          //"sv;
-        BOOST_LOG(info) << "//////////////////////////////////////////////////////////////"sv;
-        BOOST_LOG(info);
+        // BOOST_LOG(info);
+        // BOOST_LOG(info) << "//////////////////////////////////////////////////////////////"sv;
+        // BOOST_LOG(info) << "//                                                          //"sv;
+        // BOOST_LOG(info) << "// Ignore any errors mentioned above, they are not relevant //"sv;
+        // BOOST_LOG(info) << "//                                                          //"sv;
+        // BOOST_LOG(info) << "//////////////////////////////////////////////////////////////"sv;
+        // BOOST_LOG(info);
 
         if(encoders.empty()) {
             if(config::video.encoder.empty()) {

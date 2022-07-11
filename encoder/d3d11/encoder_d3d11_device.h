@@ -13,14 +13,14 @@
 #include <sunshine_util.h>
 #include <encoder.h>
 
-#ifdef _WIN32
-extern "C" {
-#include <libavutil/hwcontext_d3d11va.h>
-}
-#endif
 
 #define NVENC encoder::make_d3d11_encoder()
 
-encoder::Encoder* encoder::make_d3d11_encoder();
+namespace encoder
+{
+    Encoder* make_d3d11_encoder();
+
+}
+
 
 #endif

@@ -22,21 +22,7 @@ namespace util
     void    object_unref (Object* obj);
     Object* object_init (pointer data, ObjectFreeFunc free);
 
-    ObjectClass*
-    object_class_init()
-    {
-        static bool initialized = false;
-        static ObjectClass klass = {0};
-        if (initialized)
-            return &klass;
 
-        klass.init  = object_init;
-        klass.unref = object_unref;
-        klass.ref   = object_ref;
-        klass.size  = object_size;
-        initialized = true;
-        return &klass;
-    }
 
     pointer 
     object_ref (Object* obj)
@@ -51,7 +37,8 @@ namespace util
         return ((byte*)obj->data) + obj->size;
     }
 
-    pointer 
+    
+    uint
     object_size (Object* obj)
     {
         return obj->size;
@@ -68,19 +55,37 @@ namespace util
         }
     }
 
-    void
-    object_init (Object* object,
-                 pointer data, 
+    Object* 
+    object_init (pointer data, 
                  uint size,
                  ObjectFreeFunc free_func)
     {
-        object = malloc(sizeof(Object));
+        Object* object = (Object*)malloc(sizeof(Object));
         memset(object,0,sizeof(Object));
 
-        obj->data = data;
-        obj->free_func = free_func;
-        obj->size = size,
-        obj->ref_count = 1;
-        return;
+        object->data = data;
+        object->free_func = free_func;
+        object->size = size,
+        object->ref_count = 1;
+        return object;
+    }
+
+
+
+
+    ObjectClass*
+    object_class_init()
+    {
+        static bool initialized = false;
+        static ObjectClass klass = {0};
+        if (initialized)
+            return &klass;
+
+        klass.init  = object_init;
+        klass.unref = object_unref;
+        klass.ref   = object_ref;
+        klass.size  = object_size;
+        initialized = true;
+        return &klass;
     }
 } // namespace object

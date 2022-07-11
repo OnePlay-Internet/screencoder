@@ -12,8 +12,9 @@
 #include <mutex>
 #include <string>
 #include <avcodec_datatype.h>
+#include <d3d11_datatype.h>
+#include <encoder_packet.h>
 
-#include <utility.h>
 
 namespace platf {
     typedef enum _MemoryType {
@@ -29,7 +30,7 @@ namespace platf {
         yuv420p10,
         nv12,
         p010,
-        unknown
+        unknown_pixelformat
     }PixelFormat;
 
     typedef enum _Capture{
@@ -47,6 +48,11 @@ namespace platf {
         int32 row_pitch;
     }Image;
 
+    typedef struct _HWDeviceClass HWDeviceClass;
+
+    typedef struct _DisplayClass DisplayClass;
+
+    typedef struct _Display      Display;
 
     typedef struct _HWDevice {
         HWDeviceClass* klass;
@@ -54,7 +60,7 @@ namespace platf {
         libav::Frame* frame;
     }HWDevice;
 
-    typedef struct _HWDeviceClass {
+    struct _HWDeviceClass {
         HWDevice* (*init)       (platf::Display* display, 
                                  directx::d3d11::Device device_p, 
                                  directx::d3d11::DeviceContext device_ctx_p,
@@ -73,7 +79,7 @@ namespace platf {
         void (*set_colorspace)  (HWDevice* self,
                                  uint32 colorspace, 
                                  uint32 color_range);
-    }HWDeviceClass;
+    };
 
 
     /**
@@ -86,21 +92,22 @@ namespace platf {
      *    Returns the image object that should be filled next.
      *    This may or may not be the image send with the callback
      */
-    typedef void (*SnapshootCallback) (Image* img,
+    typedef Capture (*SnapshootCallback) (Image* img,
                                        util::ListObject* synced_sessions,
                                        util::ListObject* synced_session_ctxs,
                                        util::QueueArray* encode_session_ctx_queue);
 
-    typedef struct _Display {
+
+    struct _Display {
         DisplayClass* klass;
 
         // Offsets for when streaming a specific monitor. By default, they are 0.
         int offset_x, offset_y;
         int env_width, env_height;
         int width, height;
-    }Display;
+    };
 
-    typedef struct _DisplayClass {
+    struct _DisplayClass {
         Display*    (*init)             (int framerate, 
                                          char* display_name);
 
@@ -113,9 +120,6 @@ namespace platf {
 
         void        (*free)             (Display* self);
 
-        int         (*dummy_img)        (Display* self
-                                         Image* img);
-
         HWDevice*   (*make_hwdevice)    (Display* self,
                                          PixelFormat pix_fmt);
         
@@ -127,8 +131,8 @@ namespace platf {
         Capture     (*snapshot)         (Display* self,
                                          platf::Image *img_base, 
                                          std::chrono::milliseconds timeout, 
-                                         bool cursor_visible) 
-    }DisplayClass;
+                                         bool cursor_visible); 
+    };
 
 
     /**
@@ -153,7 +157,7 @@ namespace platf {
      * 
      * @return Color* 
      */
-    Color*                  get_color     ();
+    encoder::Color*                  get_color     ();
 } // namespace platf
 
 #endif //SUNSHINE_COMMON_H

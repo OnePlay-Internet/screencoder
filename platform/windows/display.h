@@ -4,6 +4,7 @@
 
 #ifndef SUNSHINE_DISPLAY_H
 #define SUNSHINE_DISPLAY_H
+#include <sunshine_util.h>
 
 #include <d3d11.h>
 #include <d3d11_4.h>
@@ -12,8 +13,6 @@
 #include <dxgi.h>
 #include <dxgi1_2.h>
 
-#include <sunshine_util.h>
-#include <utility.h>
 
 #include <d3d11_datatype.h>
 #include <common.h>
