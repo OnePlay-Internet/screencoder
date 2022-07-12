@@ -73,7 +73,7 @@ namespace bitstream {
         }
     }
 
-    util::Object*
+    util::Buffer*
     write_with_context(Context *cbs_ctx, 
           uint8 nal, 
           void *uh, 
@@ -94,11 +94,11 @@ namespace bitstream {
             return {};
         }
 
-        OBJECT_DUPLICATE(obj,frag.data_size,frag.data,temp);
+        BUFFER_DUPLICATE(obj,frag.data_size,frag.data,temp);
         return obj;
     }
 
-    util::Object*
+    util::Buffer*
     write(uint8 nal, 
           void *uh, 
           libav::CodecID codec_id) 
@@ -108,8 +108,8 @@ namespace bitstream {
         return write_with_context(cbs_ctx, nal, uh, codec_id);
     }
 
-    util::Object*
-    make_sps_h264(const AVCodecContext *ctx) 
+    util::Buffer*
+    make_sps_h264_buffer(const AVCodecContext *ctx) 
     {
         H264RawSPS sps {};
 
@@ -276,7 +276,7 @@ namespace bitstream {
         };
     }
 
-    util::Object*
+    util::Buffer*
     read_sps_h264(const AVPacket *packet) 
     {
         Context* ctx;
@@ -303,7 +303,7 @@ namespace bitstream {
                   const libav::Packet *packet) 
     {
         H264 ret = {0};
-        ret.sps._new  =    make_sps_h264(ctx);
+        ret.sps._new  =  make_sps_h264_buffer(ctx);
         ret.sps.old =    read_sps_h264(packet);
         return ret;
     }

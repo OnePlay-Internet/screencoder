@@ -71,91 +71,15 @@ namespace rtp
         Socket video_sock {io};
     }BroadcastContext;
 
-    /**
-     * @brief 
-     * return character position which substring start inside string
-     * @param string 
-     * @param sub_string 
-     * @return uint 
-     */
-    uint
-    search(char* string, char* sub_string)
-    {
-        int ret = 0;
-        while (*(string + ret))
-        {
-            int i = 0;
-            while (*(sub_string + i) == *(string + ret + i))
-            {
-                if (!*(sub_string + i + 1))
-                    return ret;
-                i++;
-            }
-            ret++;
-        }
-        return ret;
-    }
-    
-    char*
-    replace(char* original, 
-            char* old, 
-            char* _new) 
-    {
-        uint replace_size = strlen(original) - strlen(old) + MAX(strlen(old),strlen(_new));
-        char* replaced = (char*)malloc(replace_size);
-        memset((void*)replace,0,replace_size);
 
-        uint inserter = search(original,old);
-        memcpy(replaced,original,inserter);
-        uint origin_found = inserter;
 
-        if(inserter != strlen(original)) {
-            // std::copy(std::begin(_new), std::end(_new), std::back_inserter(replaced));
-            // std::copy(next + old.size(), end, std::back_inserter(replaced));
-            memcpy(replaced + inserter, _new, strlen(_new));
-            inserter += strlen(_new);
-            memcpy(replaced + inserter, original + strlen(old) + (size_t)origin_found, strlen(_new));
-        }
-        return replaced;
-    }
-
-    typedef void (*InsertAction) (pointer data);
-
-    char*
-    insert(uint64 insert_size, 
-           uint64 slice_size, 
-           char* data,
-           InsertAction action) 
-    {
-        // auto pad      = strlen(data) % slice_size != 0;
-        // auto elements = strlen(data) / slice_size + (pad ? 1 : 0);
-
-        char* result = NULL;
-        // (char*)malloc(elements * insert_size + (uint64)strlen(data));
-
-        // char* next = data;
-        // for(auto x = 0; x < elements - 1; ++x) {
-        //     void *p = &result[x * (insert_size + slice_size)];
-        //     action(p);
-
-        //     memcpy(next, next + slice_size, (char *)p + insert_size);
-        //     next += slice_size;
-        // }
-
-        // auto x  = elements - 1;
-        // void *p = &result[x * (insert_size + slice_size)];
-
-        // action(p);
-
-        // std::copy(next, data + strlen(data), (char *)p + insert_size);
-
-        return result;
-    }
 
     void
-    insert_action(pointer p)
+    insert_action(util::Buffer* buf,
+                  int index, int max_index )
     {
-        VideoPacketRaw* video_packet = (VideoPacketRaw*)p;
+        int size;
+        VideoPacketRaw* video_packet = (VideoPacketRaw*)BUFFER_CLASS->ref(buf,&size);
         video_packet->packet.flags = FLAG_CONTAINS_PIC_DATA;
     }
 
@@ -174,64 +98,67 @@ namespace rtp
             if(IS_INVOKED(shutdown_event))
                 break;
 
-            util::Object* obj = QUEUE_ARRAY_CLASS->pop(packets);
-            encoder::Packet* video_packet = (encoder::Packet*)OBJECT_CLASS->ref(obj);
+            int size;
+            util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
+            encoder::Packet* video_packet = (encoder::Packet*)BUFFER_CLASS->ref(video_packet_buffer,&size);
+            if(size != sizeof(encoder::Packet))
+            {
+                LOG_ERROR("wrong datatype");
+            }
 
             auto session = (Session*)video_packet->user_data;
             auto lowseq  = session->video.lowseq;
 
 
-            libav::Packet* av_packet = (libav::Packet*)video_packet->packet;
+            util::Buffer* av_packet_buffer = (util::Buffer*) video_packet->packet;
+            libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(av_packet_buffer,NULL);
 
 
-            uint  inserter = 0;
-            char* payload = (char*)av_packet;
-            char* payload_new;
-
-            char* nv_packet_header = "\0017charss";
-
-
-            // TODO
-            // std::copy(std::begin(nv_packet_header), std::end(nv_packet_header), std::back_inserter(payload_new));
-            // std::copy(std::begin(payload), std::end(payload), std::back_inserter(payload_new));
-
-            memcpy(payload_new,nv_packet_header,strlen(nv_packet_header));
-            inserter += strlen(nv_packet_header);
-            memcpy(payload_new,payload,strlen(payload));
-            inserter += strlen(payload);
-
-            payload = payload_new;
+            const char* nv_packet_header = "\0017charss";
+            util::Buffer* nv_header = BUFFER_CLASS->init((pointer)nv_packet_header,strlen(nv_packet_header),DO_NOTHING);
+            util::Buffer* payload = BUFFER_CLASS->merge(nv_header,av_packet_buffer);
 
             if(av_packet->flags & AV_PKT_FLAG_KEY) {
                 while(LIST_OBJECT_CLASS->has_data(video_packet->replacement_array,0)) {
-                    util::Object* obj = LIST_OBJECT_CLASS->get_data(video_packet->replacement_array,0);
+                    util::Buffer* replace_buffer= LIST_OBJECT_CLASS->get_data(video_packet->replacement_array,0);
 
-                    encoder::Replace* replacement = (encoder::Replace*) OBJECT_CLASS->ref(obj);
-                    pointer frame_old = OBJECT_CLASS->ref(replacement->old);
-                    pointer frame_new = OBJECT_CLASS->ref(replacement->_new);
+                    int size;
+                    encoder::Replace* replacement = (encoder::Replace*) BUFFER_CLASS->ref(replace_buffer,&size);
+                    if(size != sizeof(encoder::Replace))
+                    {
+                        LOG_ERROR("wrong datatype");
+                    }
 
                     // TODO : reimplement replace
-                    payload_new = replace((char*)payload, (char*)frame_old, (char*)frame_new);
+                    util::Buffer* payload_new = BUFFER_CLASS->replace(payload, replacement->old, replacement->_new);
+                    BUFFER_CLASS->unref(payload);
                     payload     = payload_new;
                 }
             }
+            BUFFER_CLASS->unref(av_packet_buffer);
+            BUFFER_CLASS->unref(video_packet_buffer);
 
-            // insert packet headers
-            auto blocksize         = session->config.packetsize + MAX_RTP_HEADER_SIZE;
-            auto payload_blocksize = blocksize - sizeof(VideoPacketRaw);
 
-            payload_new = insert(sizeof(VideoPacketRaw), payload_blocksize, payload, insert_action);
-            payload = payload_new;
+            {
+                // insert packet headers
+                int blocksize         = session->config.packetsize + MAX_RTP_HEADER_SIZE;
+                int payload_blocksize = blocksize - sizeof(VideoPacketRaw);
+                util::Buffer* payload_new = BUFFER_CLASS->insert((uint64)sizeof(VideoPacketRaw), (uint64)payload_blocksize, payload, insert_action);
+                BUFFER_CLASS->unref(payload);
+                payload = payload_new;
+            }
 
             try 
             {
-                sock->send_to(boost::asio::buffer(std::string_view {payload,strlen(payload)}), session->video.peer);
+                std::string_view buf = std::string_view ((char*)payload,(int)BUFFER_CLASS->size(payload));
+                sock->send_to(boost::asio::buffer(buf), session->video.peer);
                 session->video.lowseq = lowseq;
             } catch(const std::exception &e) {
                 LOG_ERROR((char*)e.what());
                 std::this_thread::sleep_for(100ms);
             }
-            OBJECT_CLASS->unref(obj);
+
+            BUFFER_CLASS->unref(payload);
         }
         RAISE_EVENT(shutdown_event);
     }

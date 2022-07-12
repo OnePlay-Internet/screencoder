@@ -23,11 +23,11 @@ namespace util
     typedef struct _QueueArray QueueArray;
 
     typedef struct _QueueArrayClass{
-        bool (*push) (QueueArray* queue, util::Object* data);
+        bool (*push) (QueueArray* queue, util::Buffer* data);
 
         bool (*peek) (QueueArray* queue);
 
-        util::Object* (*pop) (QueueArray* queue);
+        util::Buffer* (*pop) (QueueArray* queue);
 
         QueueArray* (*init) ();
 

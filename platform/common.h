@@ -11,7 +11,6 @@
 #include <functional>
 #include <mutex>
 #include <string>
-#include <avcodec_datatype.h>
 #include <d3d11_datatype.h>
 #include <encoder_packet.h>
 

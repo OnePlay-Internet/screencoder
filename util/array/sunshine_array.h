@@ -28,12 +28,12 @@ namespace util
         void            (*finalize)         (ListObject* list);
 
         void            (*emplace_back)     (ListObject* list,
-                                             Object* obj);
+                                             Buffer* obj);
 
         bool            (*has_data)         (ListObject* list,
                                              int index);
 
-        Object*         (*get_data)         (ListObject* list,  
+        Buffer*         (*get_data)         (ListObject* list,  
                                              int index);
 
         int             (*length)           (ListObject*);

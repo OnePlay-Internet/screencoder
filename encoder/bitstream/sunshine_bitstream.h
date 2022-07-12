@@ -12,13 +12,11 @@
 #define __SUNSHINE_BITSTREAM_H__
 #include <sunshine_util.h>
 
-#include <avcodec_datatype.h>
 
-namespace bitstream
-{
+namespace bitstream {
     typedef struct _NAL {
-        util::Object* _new;
-        util::Object* old;
+        util::Buffer* _new;
+        util::Buffer* old;
     }NAL;
 
     typedef struct _HEVC {

@@ -11,6 +11,7 @@
 
 #include <sunshine_object.h>
 #include <sunshine_datatype.h>
+#include <sunshine_macro.h>
 #include <cstdlib>
 #include <string.h>
 #include <mutex>
@@ -18,34 +19,46 @@
 namespace util 
 {
 
-    pointer object_ref (Object* obj);
-    void    object_unref (Object* obj);
-    Object* object_init (pointer data, ObjectFreeFunc free);
 
 
 
     pointer 
-    object_ref (Object* obj)
+    object_ref (Buffer* obj,
+                int* size)
     {
         obj->ref_count++;
+        if (size)
+            *size = obj->size;
+        
         return obj->data;
     }
 
+    Buffer*
+    buffer_merge(Buffer* buffer,
+                 Buffer* inserter)
+    {
+        uint new_size = buffer->size+inserter->size;
+        pointer new_ptr = malloc(new_size);
+        memcpy(new_ptr,buffer,buffer->size);
+        memcpy(new_ptr+buffer->size,inserter,inserter->size);
+        return BUFFER_CLASS->init(new_ptr,new_size,free);
+    }
+
     pointer 
-    object_end_pointer (Object* obj)
+    object_end_pointer (Buffer* obj)
     {
         return ((byte*)obj->data) + obj->size;
     }
 
     
     uint
-    object_size (Object* obj)
+    object_size (Buffer* obj)
     {
         return obj->size;
     }
 
     void    
-    object_unref (Object* obj)
+    object_unref (Buffer* obj)
     {
         obj->ref_count--;
         if (!obj->ref_count)
@@ -55,13 +68,13 @@ namespace util
         }
     }
 
-    Object* 
+    Buffer* 
     object_init (pointer data, 
                  uint size,
-                 ObjectFreeFunc free_func)
+                 BufferFreeFunc free_func)
     {
-        Object* object = (Object*)malloc(sizeof(Object));
-        memset(object,0,sizeof(Object));
+        Buffer* object = (Buffer*)malloc(sizeof(Buffer));
+        memset(object,0,sizeof(Buffer));
 
         object->data = data;
         object->free_func = free_func;
@@ -70,14 +83,128 @@ namespace util
         return object;
     }
 
+    /**
+     * @brief 
+     * |---------------------buffer--------------------------------|
+     * |----------|----------|----------|----------|----------|----|
+     * |<--slice->|
+     * |---|----------|---|----------|---|----------|---|----------|---|----------|---|----|
+     * |<->| <-- insert                  |<--slice->|                                                                 
+     * |-----------------------------------return_buffer-----------------------------------|
+     * @param insert_size 
+     * @param slice_size 
+     * @param data 
+     * @param action 
+     * @return char* 
+     */
+    util::Buffer*
+    insert(uint64 insert_size, 
+           uint64 slice_size, 
+           util::Buffer* data,
+           InsertAction action) 
+    {
+        int pad     =  data->size % (int)slice_size ;
+        int elements = data->size / slice_size + ((pad != 0) ? 1 : 0);
+
+        BUFFER_MALLOC(ret,elements * insert_size + data->size,ptr);
+
+        byte* next = (byte*)data->data;
+        for(int x = 0; x < elements; ++x) {
+            pointer p = ptr + (x * (insert_size + slice_size));
+
+            Buffer* buf = BUFFER_CLASS->init(p,insert_size,DO_NOTHING);
+            action(buf,x,elements);
+            BUFFER_CLASS->unref(buf);
+
+            /**
+             * @brief 
+             * copy slice from source to destination
+             * p + insertsize
+             */
+            int copy_size;
+            if (x == (elements - 1) && pad != 0)
+                copy_size = pad;
+            else
+                copy_size = slice_size;
+
+            memcpy(p + insert_size,next, slice_size);
+            next += slice_size;
+        }
+        return ret;
+    }
+
+
+    /**
+     * @brief 
+     * return character position which substring start inside string
+     * @param string 
+     * @param substring 
+     * @return uint 
+     */
+    uint
+    search(util::Buffer* string, 
+           util::Buffer* substring)
+    {
+        int size_string, size_substring;
+        byte* string_ptr = (byte*)BUFFER_CLASS->ref(string,&size_string);
+        byte* substring_ptr = (byte*)BUFFER_CLASS->ref(substring,&size_substring);
+
+        int ret = 1;
+        while (ret < size_string)
+        {
+            int i = 1;
+            while (*(substring_ptr + i) == *(string_ptr + ret + i))
+            {
+                if (i = size_substring)
+                    return ret;
+
+                i++;
+            }
+            ret++;
+        }
+        BUFFER_CLASS->unref(string);
+        BUFFER_CLASS->unref(substring);
+        return ret;
+    }
+    
+    util::Buffer*
+    replace(util::Buffer* original, 
+            util::Buffer* old, 
+            util::Buffer* _new) 
+    {
+        int size_origin, size_old, size_new;
+        byte* origin_ptr = (byte*)BUFFER_CLASS->ref(original,&size_origin);
+        byte* old_ptr = (byte*)BUFFER_CLASS->ref(old,&size_old);
+        byte* new_ptr = (byte*)BUFFER_CLASS->ref(_new,&size_new);
+
+        uint replace_size = size_origin - size_old + MAX(size_old,size_new);
+        BUFFER_MALLOC(ret,replace_size,replaced);
+
+        uint inserter = search(original,old);
+        memcpy(replaced,original,inserter);
+        uint origin_found = inserter;
+
+        if(inserter != size_origin) {
+            // std::copy(std::begin(_new), std::end(_new), std::back_inserter(replaced));
+            // std::copy(next + old.size(), end, std::back_inserter(replaced));
+            memcpy(replaced + inserter, _new, size_new);
+            inserter += size_new;
+            memcpy(replaced + inserter, original + size_old + origin_found, size_new);
+        }
+
+        BUFFER_CLASS->unref(original);
+        BUFFER_CLASS->unref(_new);
+        BUFFER_CLASS->unref(old);
+        return ret;
+    }
 
 
 
-    ObjectClass*
+    BufferClass*
     object_class_init()
     {
         static bool initialized = false;
-        static ObjectClass klass = {0};
+        static BufferClass klass = {0};
         if (initialized)
             return &klass;
 
@@ -85,6 +212,9 @@ namespace util
         klass.unref = object_unref;
         klass.ref   = object_ref;
         klass.size  = object_size;
+        klass.merge = buffer_merge;
+        klass.replace = replace;
+        klass.insert  = insert;
         initialized = true;
         return &klass;
     }

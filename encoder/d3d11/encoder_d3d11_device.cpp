@@ -12,7 +12,6 @@
 #include <sunshine_util.h>
 
 #include <encoder.h>
-#include <avcodec_datatype.h>
 #include <encoder.h>
 #include <common.h>
 

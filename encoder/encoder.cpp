@@ -138,8 +138,9 @@ namespace encoder {
         }
 
         while(ret >= 0) {
+            int temp;
             Packet* packet    = packet_class_init()->init();
-            libav::Packet* av_packet = packet->packet;
+            libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(packet->packet,&temp);
 
             ret = avcodec_receive_packet(libav_ctx, av_packet);
 
@@ -158,14 +159,14 @@ namespace encoder {
                     sps = hevc.sps;
                     vps = hevc.vps;
 
-                    OBJECT_MALLOC(obj,sizeof(Replace),ptr);
+                    BUFFER_MALLOC(obj,sizeof(Replace),ptr);
                     ((Replace*)ptr)->old = vps.old;
                     ((Replace*)ptr)->_new = vps._new;
                     LIST_OBJECT_CLASS->emplace_back(session->replacement_array,obj);
                 }
 
                 session->inject = 0;
-                OBJECT_MALLOC(obj,sizeof(Replace),ptr);
+                BUFFER_MALLOC(obj,sizeof(Replace),ptr);
                 ((Replace*)ptr)->old = sps.old;
                 ((Replace*)ptr)->_new = sps._new;
                 LIST_OBJECT_CLASS->emplace_back(session->replacement_array,obj);
@@ -174,7 +175,7 @@ namespace encoder {
             packet->replacement_array = session->replacement_array;
             packet->user_data = channel_data;
 
-            util::Object* obj = OBJECT_CLASS->init(packet,sizeof(Packet),packet_class_init()->finalize);
+            util::Buffer* obj = BUFFER_CLASS->init(packet,sizeof(Packet),packet_class_init()->finalize);
             QUEUE_ARRAY_CLASS->push(packets,obj);
         }
 
@@ -408,9 +409,9 @@ namespace encoder {
             char* h264_nalu = "\000\000\000\001e";
             char* nalu_prefix = config->videoFormat ? hevc_nalu : h264_nalu;
 
-            OBJECT_MALLOC(obj,sizeof(Replace),temp);
-            OBJECT_DUPLICATE(old_obj,sizeof(char),nalu_prefix,temp1);
-            OBJECT_DUPLICATE(new_obj,strlen(nalu_prefix),nalu_prefix,temp2);
+            BUFFER_MALLOC(obj,sizeof(Replace),temp);
+            BUFFER_DUPLICATE(old_obj,sizeof(char),nalu_prefix,temp1);
+            BUFFER_DUPLICATE(new_obj,strlen(nalu_prefix),nalu_prefix,temp2);
 
 
             ((Replace*)temp)->old = old_obj;
@@ -476,8 +477,15 @@ namespace encoder {
                         util::QueueArray* encode_session_ctx_queue)
     {
         while(QUEUE_ARRAY_CLASS->peek(encode_session_ctx_queue)) {
-            util::Object* obj = QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue);
-            SyncSessionContext* encode_session_ctx = (SyncSessionContext*)OBJECT_CLASS->ref(obj);
+            util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue);
+
+            int size;
+            SyncSessionContext* encode_session_ctx = (SyncSessionContext*)BUFFER_CLASS->ref(obj,&size);
+            if(size != sizeof(SyncSessionContext))
+            {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
 
             if(!encode_session_ctx) 
                 return platf::Capture::error;
@@ -487,18 +495,24 @@ namespace encoder {
             if(!encode_session) 
                 return platf::Capture::error;
             
-            util::Object* obj2 = OBJECT_CLASS->init(encode_session,sizeof(SyncSession),free_synced_session);
+            util::Buffer* obj2 = BUFFER_CLASS->init(encode_session,sizeof(SyncSession),free_synced_session);
 
             LIST_OBJECT_CLASS->emplace_back(synced_sessions,obj2);
             LIST_OBJECT_CLASS->emplace_back(synced_session_ctxs,obj);
-            OBJECT_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj);
         }
 
 
         while (LIST_OBJECT_CLASS->has_data(synced_sessions,0))
         {
-            util::Object* obj = LIST_OBJECT_CLASS->get_data(synced_sessions,0);
-            SyncSession* pos = (SyncSession*) OBJECT_CLASS->ref(obj);
+            util::Buffer* obj = LIST_OBJECT_CLASS->get_data(synced_sessions,0);
+
+            int size;
+            SyncSession* pos = (SyncSession*) BUFFER_CLASS->ref(obj,&size);
+            if(size != sizeof(SyncSession)) {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
 
             // get frame from device
             libav::Frame* frame = pos->session.device->frame;
@@ -545,7 +559,7 @@ namespace encoder {
             frame->key_frame = 0;
 
 
-            OBJECT_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj);
         };
         return platf::Capture::ok;
     }
@@ -597,14 +611,20 @@ namespace encoder {
         {
             if(!LIST_OBJECT_CLASS->length(synced_session_ctxs)) 
             {
-                util::Object* obj = QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue);
-                ctx = (SyncSessionContext*) (OBJECT_CLASS->ref(obj));
+                util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(encode_session_ctx_queue);
+
+                int size;
+                ctx = (SyncSessionContext*) BUFFER_CLASS->ref(obj,&size);
+                if (size != sizeof(SyncSessionContext))
+                {
+                    LOG_ERROR("wrong datatype");
+                }
 
                 if(!ctx) 
                     return Status::ok;
 
-                OBJECT_CLASS->unref(obj);
                 LIST_OBJECT_CLASS->emplace_back(synced_session_ctxs,obj);
+                BUFFER_CLASS->unref(obj);
             }
         }
 
@@ -617,20 +637,26 @@ namespace encoder {
         // create one session for easch synced session context
         while(LIST_OBJECT_CLASS->has_data(synced_session_ctxs,0)) 
         {
-            util::Object* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
+            util::Buffer* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
 
-            SyncSessionContext* ctx = (SyncSessionContext*)OBJECT_CLASS->ref(obj);
+            int size;
+            SyncSessionContext* ctx = (SyncSessionContext*)BUFFER_CLASS->ref(obj,&size);
+            if(size != sizeof(SyncSessionContext)) {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
+
             SyncSession *synced_session = make_synced_session(img, ctx);
 
             if(!synced_session) 
                 return Status::error;
 
             {
-                util::Object* ss_obj = OBJECT_CLASS->init(synced_session,sizeof(SyncSession),free_synced_session);
+                util::Buffer* ss_obj = BUFFER_CLASS->init(synced_session,sizeof(SyncSession),free_synced_session);
                 LIST_OBJECT_CLASS->emplace_back(synced_sessions,ss_obj);
-                OBJECT_CLASS->unref(ss_obj);
+                BUFFER_CLASS->unref(ss_obj);
             }
-            OBJECT_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj);
         }
 
         // return status
@@ -697,7 +723,7 @@ namespace encoder {
         {
             while (!QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue)) { }
 
-            util::Object* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
+            util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
             if (!obj->data)
                 goto done;
             
@@ -714,21 +740,34 @@ namespace encoder {
         
         while (LIST_OBJECT_CLASS->has_data(synced_session_ctxs,0))
         {
-            util::Object* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
-            SyncSessionContext* ss_ctx = (SyncSessionContext*) OBJECT_CLASS->ref(obj);
+            util::Buffer* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
+
+            int size;
+            SyncSessionContext* ss_ctx = (SyncSessionContext*) BUFFER_CLASS->ref(obj,&size);
+            if(size != sizeof(SyncSessionContext)) {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
 
             RAISE_EVENT(ss_ctx->shutdown_event);
             RAISE_EVENT(ss_ctx->join_event);
-            OBJECT_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj);
         }
 
         while (QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue))
         {
-            util::Object* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
-            SyncSessionContext* ss_ctx = (SyncSessionContext*) OBJECT_CLASS->ref(obj);
+            util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
+
+            int size;
+            SyncSessionContext* ss_ctx = (SyncSessionContext*) BUFFER_CLASS->ref(obj,&size);
+            if(size != sizeof(SyncSessionContext)) {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
+
             RAISE_EVENT(ss_ctx->shutdown_event);
             RAISE_EVENT(ss_ctx->join_event);
-            OBJECT_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj);
         }
     }
 
@@ -767,7 +806,7 @@ namespace encoder {
         // ss_ctx.config = ;
         ss_ctx.channel_data = data;
 
-        util::Object* obj = OBJECT_CLASS->init(&ss_ctx,sizeof(SyncSessionContext),DO_NOTHING);
+        util::Buffer* obj = BUFFER_CLASS->init(&ss_ctx,sizeof(SyncSessionContext),DO_NOTHING);
         QUEUE_ARRAY_CLASS->push(ctx.sync_session_ctx_queue,obj);
 
         // Wait for join signal
@@ -839,11 +878,26 @@ namespace encoder {
             }
         }
 
-        util::Object* obj = QUEUE_ARRAY_CLASS->pop(packets);
-        Packet* packet    = (Packet*)OBJECT_CLASS->ref(obj);
+        util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(packets);
 
-        libav::Packet* av_packet = packet->packet;
-        OBJECT_CLASS->unref(obj);
+        int size;
+        Packet* packet    = (Packet*)BUFFER_CLASS->ref(obj,&size);
+        if(size != sizeof(Packet)) {
+            LOG_ERROR("wrong datatype");
+            return -1;
+        }
+
+        util::Buffer* av_buffer = packet->packet;
+        BUFFER_CLASS->unref(obj);
+
+        libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(av_buffer,&size);
+        if (size != sizeof(libav::Packet))
+        {
+            LOG_ERROR("wrong datatype");
+            return -1;
+        }
+        
+
 
         if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
             // BOOST_LOG(error) << "First packet type is not an IDR frame"sv;
@@ -864,6 +918,7 @@ namespace encoder {
         // if(std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) 
         //     flag |= ValidateFlags::NALU_PREFIX_5b;
 
+        BUFFER_CLASS->unref(av_buffer);
         return flag;
     }
 }

@@ -21,7 +21,7 @@ namespace util
      * 
      */
     struct _ListObject{
-        ObjectContainer* first;
+        BufferLL* first;
 
         uint length;
     };      
@@ -40,10 +40,10 @@ namespace util
     void
     array_object_finalize(ListObject* arr)
     {
-        ObjectContainer* container = arr->first;
+        BufferLL* container = arr->first;
         while (!container->next) 
         { 
-            OBJECT_CLASS->unref(container->obj);
+            BUFFER_CLASS->unref(container->obj);
             container = container->next; 
         }
         free(arr);
@@ -51,17 +51,17 @@ namespace util
 
     void
     array_object_emplace_back(ListObject* array,
-                              Object* obj)
+                              Buffer* obj)
     {
-        ObjectContainer* container = NULL;
+        BufferLL* container = NULL;
         if (array->length)
         {
             container = array->first;
             while (!container->next) { container = container->next; }
         }
         
-        ObjectContainer* last = (ObjectContainer*)malloc(sizeof(ObjectContainer));
-        memset(last,0,sizeof(ObjectContainer));
+        BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
+        memset(last,0,sizeof(BufferLL));
 
         last->obj  = obj;
         last->next = NULL;
@@ -81,7 +81,7 @@ namespace util
         return index < array->length;
     }
 
-    Object* 
+    Buffer* 
     array_object_get_data(ListObject* array,
                           int index)
     {
@@ -89,7 +89,7 @@ namespace util
             return NULL;
         
         int count = 0;
-        ObjectContainer* prev_container,*container,*next_container;
+        BufferLL* prev_container,*container,*next_container;
         container = array->first;
         while (!container->next || count == index) 
         { 
@@ -100,7 +100,7 @@ namespace util
                 next_container = container->next;
         }
 
-        Object* ret = container->obj;
+        Buffer* ret = container->obj;
 
         if(next_container)
             prev_container->next = next_container;

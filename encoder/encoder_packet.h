@@ -11,7 +11,6 @@
 
 #ifndef __ENCODER_PACKET_H__
 #define __ENCODER_PACKET_H__
-#include <avcodec_datatype.h>
 #include <sunshine_util.h>
 
 
@@ -25,8 +24,8 @@ using float2 = float[2];
 namespace encoder
 {
     typedef struct _Replace {
-        util::Object* old;
-        util::Object* _new;
+        util::Buffer* old;
+        util::Buffer* _new;
     }Replace;
 
     typedef struct _Config{
@@ -50,7 +49,11 @@ namespace encoder
     }Color;
 
     typedef struct _Packet{
-        libav::Packet* packet;
+        /**
+         * @brief 
+         * libav::Packet
+         */
+        util::Buffer* packet;
         
         util::ListObject* replacement_array;
 

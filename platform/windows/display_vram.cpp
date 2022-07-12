@@ -3,8 +3,6 @@
 #include <codecvt>
 #include <sunshine_util.h>
 
-#include <avcodec_datatype.h>
-#include <avcodec_datatype.h>
 #include <string.h>
 
 #include <encoder_packet.h>
@@ -109,7 +107,7 @@ namespace vram {
       if(frame_info.PointerShapeBufferSize > 0) {
         DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
 
-        OBJECT_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
+        BUFFER_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
 
         UINT dummy;
         status = self->base.dup.dup->GetFramePointerShape(img_object->size, img_ptr, &dummy, &shape_info);
@@ -287,7 +285,7 @@ namespace vram {
 
       img->display     = platf_disp;
 
-      OBJECT_MALLOC(dummy_obj,img_base->row_pitch * platf_disp->height,dummy_data);
+      BUFFER_MALLOC(dummy_obj,img_base->row_pitch * platf_disp->height,dummy_data);
       D3D11_SUBRESOURCE_DATA data {
         dummy_data,
         (UINT)img_base->row_pitch

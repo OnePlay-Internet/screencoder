@@ -62,8 +62,8 @@ namespace helper
       directx::d3d11::BlendState blend;
       auto status = device->CreateBlendState(&bdesc, &blend);
       if(status) {
-        // BOOST_LOG(error) << "Failed to create blend state: [0x"sv << util::hex(status).to_string_view() << ']';
-        return nullptr;
+        LOG_ERROR("Failed to create blend state");
+        return NULL;
       }
 
       return blend;
@@ -72,11 +72,11 @@ namespace helper
 
 
     byte*
-    make_cursor_image(util::Object* img_obj, 
+    make_cursor_image(util::Buffer* img_obj, 
                       DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info) 
     {
       // TODO
-      byte* img_data = (byte*)OBJECT_CLASS->ref(img_obj);
+      byte* img_data = (byte*)BUFFER_CLASS->ref(img_obj,NULL);
       const uint32 black       = 0xFF000000;
       const uint32 white       = 0xFFFFFFFF;
       const uint32 transparent = 0;

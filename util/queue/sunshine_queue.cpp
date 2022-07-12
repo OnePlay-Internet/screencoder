@@ -41,16 +41,16 @@ namespace util {
          * @brief 
          * 
          */
-        ObjectContainer* first;
+        BufferLL* first;
     };
 
 
     bool            queue_array_push        (QueueArray* queue, 
-                                             Object* object);
+                                             Buffer* object);
 
     bool            queue_array_peek        (QueueArray* queue);
 
-    Object*          queue_array_pop         (QueueArray* queue);
+    Buffer*          queue_array_pop         (QueueArray* queue);
 
     QueueArray*     queue_array_init        ();
 
@@ -89,14 +89,14 @@ namespace util {
      */
     bool            
     queue_array_push(QueueArray* queue, 
-                     util::Object* obj)
+                     util::Buffer* obj)
     {
         std::lock_guard {queue->_lock};
-        ObjectContainer* container = queue->first;
+        BufferLL* container = queue->first;
         while (!container->next) { container = container->next; }
         
-        ObjectContainer* last = (ObjectContainer*)malloc(sizeof(ObjectContainer));
-        memset(last,0,sizeof(ObjectContainer));
+        BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
+        memset(last,0,sizeof(BufferLL));
 
         last->obj  = obj;
         last->next = NULL;
@@ -118,15 +118,15 @@ namespace util {
     }
 
 
-    util::Object* 
+    util::Buffer* 
     queue_array_pop(QueueArray* queue)
     {
         std::lock_guard {queue->_lock};
         if (!queue_array_peek(queue))
             return NULL;
 
-        ObjectContainer* container = queue->first;
-        Object *ret = container->obj;
+        BufferLL* container = queue->first;
+        Buffer *ret = container->obj;
         queue->first = container->next;
         free(container);
         queue->length--;

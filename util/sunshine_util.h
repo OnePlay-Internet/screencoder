@@ -11,6 +11,7 @@
 #ifndef __SUNSHINE_UTIL_H___
 #define __SUNSHINE_UTIL_H___
 
+#include <avcodec_wrapper.h>
 #include <sunshine_datatype.h>
 #include <sunshine_object.h>
 #include <sunshine_array.h>
@@ -19,7 +20,6 @@
 #include <sunshine_log.h>
 #include <sunshine_error.h>
 #include <sunshine_event.h>
-#include <avcodec_datatype.h>
 
 
 #endif

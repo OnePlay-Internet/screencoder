@@ -16,7 +16,7 @@
 #include <sunshine_datatype.h>
 #include <string>
 
-#define OBJECT_CLASS         util::object_class_init() 
+#define BUFFER_CLASS         util::object_class_init() 
 
 
 /**
@@ -25,9 +25,9 @@
  * y: object data size
  * z: object data pointer
  */
-#define OBJECT_MALLOC(x,y,z) pointer z = (pointer)malloc( y );  \
+#define BUFFER_MALLOC(x,y,z) pointer z = (pointer)malloc( y );  \
                              memset(z,0,y); \
-                             util::Object* x = OBJECT_CLASS->init(z,y,free) 
+                             util::Buffer* x = BUFFER_CLASS->init(z,y,free) 
 
 
 /**
@@ -36,18 +36,20 @@
  * y: object data size
  * z: object data source
  */
-#define OBJECT_DUPLICATE(x,y,z,ptr) pointer ptr = (pointer)malloc( y );  \
+#define BUFFER_DUPLICATE(x,y,z,ptr) pointer ptr = (pointer)malloc( y );  \
                                     memcpy(ptr,z,y); \
-                                    util::Object* x = OBJECT_CLASS->init(ptr,y,free) \
+                                    util::Buffer* x = BUFFER_CLASS->init(ptr,y,free) \
 
 namespace util 
 {
-    typedef void (*ObjectFreeFunc) (pointer data);
+    typedef void (*BufferFreeFunc) (pointer data);
 
     typedef struct _Object{
         uint ref_count;
 
-        ObjectFreeFunc free_func;
+        bool free_lock;
+
+        BufferFreeFunc free_func;
 
         uint size;
 
@@ -56,32 +58,50 @@ namespace util
          * should not be used directly
          */
         pointer data;
-    }Object;
+    }Buffer;
 
-    typedef struct _ObjectContainer ObjectContainer;
+    typedef struct _BufferLL BufferLL;
 
-    struct _ObjectContainer {
-        Object* obj;
+    struct _BufferLL {
+        Buffer* obj;
 
-        ObjectContainer* next;
+        BufferLL* next;
     };
 
-    typedef struct _ObjectClass {
-        pointer (*ref)      (Object* obj);
+    typedef void (*InsertAction) (util::Buffer* buf,
+                                  int index,
+                                  int index_total);
 
-        pointer (*end_ptr)  (Object* obj);
+    typedef struct _BufferClass {
+        pointer (*ref)      (Buffer* obj,
+                             int* size);
 
-        void    (*unref)    (Object* obj);
+        Buffer* (*merge)   (Buffer* self,
+                             Buffer* inserter);
 
-        Object* (*init)     (pointer data,
+        Buffer* (*replace)  (util::Buffer* original, 
+                            util::Buffer* old, 
+                            util::Buffer* _new) ;
+
+        Buffer* (*insert)   (uint64 insert_size, 
+                             uint64 slice_size, 
+                             util::Buffer* data,
+                             InsertAction action);
+
+        pointer (*end_ptr)  (Buffer* obj);
+
+        void    (*unref)    (Buffer* obj);
+
+        Buffer* (*init)     (pointer data,
                              uint size,
-                             ObjectFreeFunc func);
+                             BufferFreeFunc func);
         
-        uint    (*size)     (Object* obj);
-    } ObjectClass;
+        uint    (*size)     (Buffer* obj);
+    } BufferClass;
+
 
     
-    ObjectClass*        object_class_init       ();
+    BufferClass*        object_class_init       ();
 } // namespace queue
 
 

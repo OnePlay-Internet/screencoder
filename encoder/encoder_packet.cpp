@@ -9,7 +9,6 @@
  * 
  */
 
-#include <avcodec_datatype.h>
 #include <encoder_packet.h>
 
 #include <sunshine_util.h>
@@ -21,15 +20,20 @@ namespace encoder
     packet_init()
     {
         Packet* pk = (Packet*)malloc(sizeof(Packet));
-        pk->packet = av_packet_alloc();
         pk->replacement_array = LIST_OBJECT_CLASS->init();
+
+        libav::Packet* av_packet = av_packet_alloc();
+        pk->packet = BUFFER_CLASS->init(av_packet,sizeof(libav::Packet),libav::packet_free_func);
+        return pk;
     }
 
     void    
     packet_finalize(void* packet)
     {
-        av_packet_unref(((Packet*)packet)->packet);
-        LIST_OBJECT_CLASS->finalize(((Packet*)packet)->replacement_array);
+        Packet* self = ((Packet*)packet);
+        BUFFER_CLASS->unref(self->packet);
+        LIST_OBJECT_CLASS->finalize(self->replacement_array);
+        free(packet);
     }
 
 
@@ -41,6 +45,8 @@ namespace encoder
         if (initialize)
             return &klass;
         
+        klass.init = packet_init;
+        klass.finalize = packet_finalize;
         initialize = true;
         return &klass;
     }

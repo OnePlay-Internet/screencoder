@@ -25,7 +25,7 @@ namespace util
     void            
     raise_event(Broadcaster* broadcaster)
     {
-        Object* obj = OBJECT_CLASS->init((pointer)true,sizeof(bool),DO_NOTHING);
+        Buffer* obj = BUFFER_CLASS->init((pointer)true,sizeof(bool),DO_NOTHING);
         QUEUE_ARRAY_CLASS->push(broadcaster,obj);
     }
 
