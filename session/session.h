@@ -9,17 +9,20 @@
  * 
  */
 
-#include __SUNSHINE_CAPTURER_H__
+#ifndef __SUNSHINE_CAPTURER_H__
 #define __SUNSHINE_CAPTURER_H__
 
 
 #include <sunshine_util.h>
+#include <sunshine_config.h>
 
 
-namespace singleton
+namespace session
 {
     typedef struct _Capturer
     {
+        config::Encoder* config;
+
         util::Broadcaster* shutdown_event;
         util::Broadcaster* idr_event;
 
@@ -30,6 +33,7 @@ namespace singleton
 
     }Capturer;
     
+    typedef struct _Session Session;
     
 } // namespace singleton
 

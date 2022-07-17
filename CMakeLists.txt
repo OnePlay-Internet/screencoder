@@ -7,7 +7,6 @@ set(SUNSHINE_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 
 # Ugly hack to compile with #include <qos2.h>
-add_subdirectory(third-party/moonlight-common-c/enet)
 add_compile_definitions(
 	QOS_FLOWID=UINT32
 	PQOS_FLOWID=UINT32*
@@ -18,12 +17,6 @@ set(UPNPC_BUILD_SHARED OFF CACHE BOOL "no shared libraries")
 set(UPNPC_BUILD_TESTS OFF CACHE BOOL "Don't build tests for miniupnpc")
 set(UPNPC_BUILD_SAMPLE OFF CACHE BOOL "Don't build samples for miniupnpc")
 set(UPNPC_NO_INSTALL ON CACHE BOOL "Don't install any libraries build for miniupnpc")
-
-# uncomment for new build
-# add_subdirectory(third-party/miniupnp/miniupnpc)
-# add_subdirectory(third-party/moonlight-common-c/enet)
-# add_subdirectory(third-party/Simple-Web-Server)
-
 
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -98,10 +91,8 @@ file(GLOB UTIL_SOURCE_LIST
 	util/queue/*.cpp
 	util/object/*.cpp
 	util/macro/*.cpp
-	util/log/*.cpp
-	util/error/*.cpp
 	util/event/*.cpp
-	util/error/*.cpp
+	util/log/*.cpp
 	util/datatype/*.cpp
 	util/avcodec/*.cpp
 	util/array/*.cpp
@@ -126,21 +117,15 @@ file(GLOB PLATFORM_SOURCE_LIST
 	platform/windows/*.cpp
 )
 
-file(GLOB THIRDPARTY_SOURCE_LIST 
-	third-party/moonlight-common-c/reedsolomon/rs.c
-	third-party/moonlight-common-c/src/RtspParser.c
-)
 
 set(SUNSHINE_TARGET_FILES
 	${UTIL_SOURCE_LIST}
 	${ENCODER_SOURCE_LIST}
 	${RTP_SOURCE_LIST}
 	${CONFIG_SOURCE_LIST}
-	${THIRDPARTY_SOURCE_LIST}
 	${PLATFORM_SOURCE_LIST}
 )
 
-add_subdirectory(third-party/cbs)
 
 
 include_directories(
@@ -158,9 +143,8 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/util/queue
   ${CMAKE_CURRENT_SOURCE_DIR}/util/object
   ${CMAKE_CURRENT_SOURCE_DIR}/util/macro
-  ${CMAKE_CURRENT_SOURCE_DIR}/util/log
   ${CMAKE_CURRENT_SOURCE_DIR}/util/event
-  ${CMAKE_CURRENT_SOURCE_DIR}/util/error
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/log
   ${CMAKE_CURRENT_SOURCE_DIR}/util/datatype
   ${CMAKE_CURRENT_SOURCE_DIR}/util/avcodec
   ${CMAKE_CURRENT_SOURCE_DIR}/util/array
@@ -168,13 +152,6 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/platform
   ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/third-party
-  ${CMAKE_CURRENT_SOURCE_DIR}/third-party/cbs/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/third-party/cbs/include/cbs
-  ${CMAKE_CURRENT_SOURCE_DIR}/third-party/moonlight-common-c/enet/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/third-party/moonlight-common-c/reedsolomon
-  ${CMAKE_CURRENT_SOURCE_DIR}/third-party/moonlight-common-c/src
-  
   ${FFMPEG_INCLUDE_DIRS}
   ${PLATFORM_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIR}
@@ -194,15 +171,10 @@ else()
 endif()
 
 
-list(APPEND CBS_EXTERNAL_LIBRARIES
-	cbs
-)
 
 list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
     ${CBS_EXTERNAL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
-    enet
-    opus
     ${FFMPEG_LIBRARIES}
     ${PLATFORM_LIBRARIES}
     ${Boost_LIBRARIES}

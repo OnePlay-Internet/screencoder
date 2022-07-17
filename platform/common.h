@@ -123,8 +123,11 @@ namespace platf {
                                          PixelFormat pix_fmt);
         
         Capture     (*capture)          (Display* self,
-                                         SnapshootCallback snapshot_cb, 
                                          Image* img, 
+                                         SnapshootCallback snapshot_cb, 
+                                         util::ListObject* synced_sessions,
+                                         util::ListObject* synced_session_ctxs,
+                                         util::QueueArray* encode_session_ctx_queue,
                                          bool cursor);
 
         Capture     (*snapshot)         (Display* self,

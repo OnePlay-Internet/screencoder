@@ -15,7 +15,7 @@
 
 #include <common.h>
 #include <sunshine_config.h>
-#include <sunshine_bitstream.h>
+#include <encoder_validate.h>
 #include <encoder.h>
 
 

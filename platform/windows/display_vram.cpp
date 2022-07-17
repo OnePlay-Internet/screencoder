@@ -43,8 +43,11 @@ namespace vram {
      */
     platf::Capture 
     display_vram_capture(platf::Display* disp,
-                        platf::SnapshootCallback snapshot_cb, 
                         platf::Image* img, 
+                        platf::SnapshootCallback snapshot_cb, 
+                        util::ListObject* synced_sessions,
+                        util::ListObject* synced_session_ctxs,
+                        util::QueueArray* encode_session_ctx_queue,
                         bool cursor) 
     {
         DisplayVram* self = (DisplayVram*) disp; 
@@ -65,11 +68,10 @@ namespace vram {
               std::this_thread::sleep_for(1ms);
               continue;
             case platf::Capture::ok:
-              // TODO
-              // snapshot_cb(img,self,encoder,);
+              snapshot_cb(img,synced_sessions,synced_session_ctxs,encode_session_ctx_queue);
               break;
             default:
-              // BOOST_LOG(error) << "Unrecognized capture status ["sv << (int)status << ']';
+              LOG_ERROR("Unrecognized capture status"); 
               return status;
           }
         }
@@ -112,11 +114,13 @@ namespace vram {
         UINT dummy;
         status = self->base.dup.dup->GetFramePointerShape(img_object->size, img_ptr, &dummy, &shape_info);
         if(FAILED(status)) {
-          // BOOST_LOG(error) << "Failed to get new pointer shape [0x"sv << util::hex(status).to_string_view() << ']';
+          LOG_ERROR("Failed to get new pointer shape");
           return platf::Capture::error;
         }
 
-        byte* cursor_img = helper::make_cursor_image((byte*)img_ptr, shape_info);
+        int cursor_size;
+        util::Buffer* cursor_buf = helper::make_cursor_image(img_object, shape_info);
+        void* cursor_img = BUFFER_CLASS->ref(cursor_buf,&cursor_size);
 
         D3D11_SUBRESOURCE_DATA data {
           cursor_img,
@@ -128,8 +132,7 @@ namespace vram {
         D3D11_TEXTURE2D_DESC t {};
         t.Width            = shape_info.Width;
 
-        // TODO
-        // t.Height           = strlen(cursor_img) / data.SysMemPitch;
+        t.Height           = cursor_size / data.SysMemPitch;
         t.MipLevels        = 1;
         t.ArraySize        = 1;
         t.SampleDesc.Count = 1;
@@ -152,7 +155,9 @@ namespace vram {
 
         // Free resources before allocating on the next line.
         // TODO
-        // self->cursor.input_res.reset();
+        self->cursor.input_res->Release();
+        self->cursor.input_res = NULL;
+
         status = self->base.device->CreateShaderResourceView(texture, &desc, &self->cursor.input_res);
         if(FAILED(status)) {
           // BOOST_LOG(error) << "Failed to create cursor shader resource view [0x"sv << util::hex(status).to_string_view() << ']';

@@ -9,12 +9,12 @@
  * 
  */
 
-#ifndef __ENCODER_DATATYPE_H__
-#define __ENCODER_DATATYPE_H__
+#ifndef __ENCODER_H__
+#define __ENCODER_H__
 
 #include <sunshine_util.h>
 
-#include <sunshine_bitstream.h>
+#include <encoder_validate.h>
 #include <common.h>
 
 
@@ -24,15 +24,6 @@ namespace encoder
     typedef struct _Session {
         libav::CodecContext* context;
         platf::HWDevice* device;
-
-        /**
-         * @brief 
-         * Replace
-         */
-        util::ListObject* replacement_array;
-
-        bitstream::NAL sps;
-        bitstream::NAL vps;
 
         int inject;
     }Session;

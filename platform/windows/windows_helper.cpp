@@ -15,18 +15,19 @@ extern "C" {
 namespace helper
 {
     directx::d3d11::Buffer
-    make_buffer(directx::d3d11::Device device, 
-                char* t) 
+    convert_to_d3d11_buffer(directx::d3d11::Device device, 
+                util::Buffer* buffer) 
     {
-      // TODO
+      int size;
+      pointer ptr = BUFFER_CLASS->ref(buffer,&size);
       D3D11_BUFFER_DESC buffer_desc {
-        strlen(t),
+        size,
         D3D11_USAGE_IMMUTABLE,
         D3D11_BIND_CONSTANT_BUFFER
       };
 
       D3D11_SUBRESOURCE_DATA init_data {
-        &t
+        ptr
       };
 
       directx::d3d11::Buffer buf_p;
@@ -36,6 +37,7 @@ namespace helper
         return NULL;
       }
 
+      BUFFER_CLASS->unref(buffer);
       return buf_p;
     }
 
@@ -71,36 +73,35 @@ namespace helper
 
 
 
-    byte*
+    util::Buffer*
     make_cursor_image(util::Buffer* img_obj, 
                       DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info) 
     {
-      // TODO
-      byte* img_data = (byte*)BUFFER_CLASS->ref(img_obj,NULL);
+      int size;
+      uint32* img_data = (uint32*)BUFFER_CLASS->ref(img_obj,&size);
       const uint32 black       = 0xFF000000;
       const uint32 white       = 0xFFFFFFFF;
       const uint32 transparent = 0;
 
       switch(shape_info.Type) {
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR:
-
-          // TODO
-          // std::for_each((std::uint32_t *)std::begin(img_data), (std::uint32_t *)std::end(img_data), [](auto &pixel) {
-          //   if(pixel & 0xFF000000) {
-          //     pixel = transparent;
-          //   }
-          // });
-
+          for (int i = 0; i < size; i++)
+          {
+            uint32 *pixel = (img_data + i);
+            if(*pixel & 0xFF000000) {
+              *pixel = transparent;
+            }
+          }
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
-          // TODO
-          // return img_data;
+          return img_obj;
         default:
           break;
       }
 
       shape_info.Height /= 2;
 
-      byte* cursor_img = (byte*)malloc(shape_info.Width * shape_info.Height * 4);
+      BUFFER_MALLOC(ret,shape_info.Width * shape_info.Height * 4,cursor_img);
+
       auto bytes       = shape_info.Pitch * shape_info.Height;
 
       auto pixel_begin = (uint32 *)cursor_img;
@@ -145,10 +146,9 @@ namespace helper
               *left_p = black;
             }
 
-            // TODO
-            // if(bottom_p < (std::uint32_t *)(cursor_img)) {
-            //   *bottom_p = black;
-            // }
+            if(bottom_p < (uint32*)(cursor_img)) {
+              *bottom_p = black;
+            }
 
             if(column != shape_info.Width - 1) {
               *right_p = black;
@@ -163,7 +163,7 @@ namespace helper
         ++xor_mask;
       }
 
-      return cursor_img;
+      return ret;
     }
 
     directx::d3d::Blob 

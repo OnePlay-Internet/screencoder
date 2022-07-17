@@ -14,11 +14,20 @@
 #include <sunshine_rtp.h>
 
 extern "C" {
-#include <RtpAudioQueue.h>
-#include <Video.h>
-#include <rs.h>
-}
+// this function implementation has already been defined in avio_internal.h: line 186
+// we breaked the rule to use this
 
+/**
+ * Open a write only packetized memory stream with a maximum packet
+ * size of 'max_packet_size'.  The stream is stored in a memory buffer
+ * with a big-endian 4 byte header giving the packet size in bytes.
+ *
+ * @param s new IO context
+ * @param max_packet_size maximum packet size (must be > 0)
+ * @return zero if no error.
+ */
+int ffio_open_dyn_packet_buf(AVIOContext **, int);
+}
 
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
@@ -28,60 +37,85 @@ using namespace std::literals;
 
 namespace rtp
 {
-    typedef boost::asio::ip::udp::endpoint Endpoint;
-    typedef boost::asio::ip::udp::socket   Socket;
-    typedef boost::asio::ip::udp           Udp;
-    typedef boost::asio::io_service        IO;
-    typedef boost::system::error_code      Error;
+    typedef struct sockaddr_in SocketAddress;
 
     typedef struct _Video {
         int lowseq;
-        Endpoint peer;
+        SocketAddress receiver;
+
+        SOCKET rtpSocket;
+        unsigned short port;
+
+        int mtu;
+        libav::FormatContext* context;
+
         util::Broadcaster* idr_event;
     }Video;
-
-    typedef struct _VideoPacketRaw {
-        RTP_PACKET rtp;
-
-        char reserved[4];
-
-        NV_VIDEO_PACKET packet;
-    }VideoPacketRaw;
-
-
-    struct _Session {
-        Config config;
-
-        std::thread videoThread;
-
-        util::QueueArray* mail;
-
-        util::Broadcaster* shutdown_event;
-
-        State state;
-
-        Video video;
-    };
 
     typedef struct _BroadcastContext {
         std::thread video_thread;
 
-        IO io;
+        Video video;
 
-        Socket video_sock {io};
+        State state;
     }BroadcastContext;
 
 
-
-
-    void
-    insert_action(util::Buffer* buf,
-                  int index, int max_index )
+    /**
+     * @brief 
+     * 
+     * @param ctx 
+     * @param streamid 
+     * @param buf 
+     * @param buflen 
+     * @return int 
+     */
+    int
+    rtp_write_bindata(BroadcastContext *ctx, 
+                      util::Buffer* buf) 
     {
-        int size;
-        VideoPacketRaw* video_packet = (VideoPacketRaw*)BUFFER_CLASS->ref(buf,&size);
-        video_packet->packet.flags = FLAG_CONTAINS_PIC_DATA;
+        int i, pktlen, buflen;
+        byte* data = (byte*)BUFFER_CLASS->ref(buf,&buflen);
+        SocketAddress sin;
+
+        if(!data)
+            return 0;
+        if(buflen < 4)
+            return buflen;
+
+        memcpy(&sin,&ctx->video.receiver, sizeof(sin));
+        sin.sin_port = ctx->video.port;
+
+        
+        // XXX: buffer is the reuslt from avio_open_dyn_buf.
+        // Multiple RTP packets can be placed in a single buffer.
+        // Format == 4-bytes (big-endian) packet size + packet-data
+        // |----|--------------|----|-----------------------------------|
+        //  val1 <------val--->
+        // 4-bytes
+        i = 0;
+        while(i < buflen) {
+            // calculate pktsize
+            pktlen  = (data[i+0] << 24);
+            pktlen += (data[i+1] << 16);
+            pktlen += (data[i+2] << 8);
+            pktlen += (data[i+3]);
+            
+            // continue for empty packet
+            if(pktlen == 0) {
+                i += 4;
+                continue;
+            }
+
+            sendto(ctx->video.rtpSocket, (const char*) &data[i+4], pktlen, 0, 
+                &sin, sizeof(SocketAddress));
+            i += (4+pktlen);
+        }
+        BUFFER_CLASS->unref(buf);
+        return i;
     }
+
+
 
     /**
      * @brief 
@@ -89,14 +123,18 @@ namespace rtp
      * @param sock 
      */
     void 
-    videoBroadcastThread(Socket *sock) 
+    videoBroadcastThread(BroadcastContext* ctx) 
     {
         util::QueueArray* packets;
         util::Broadcaster* shutdown_event;
 
+
         while(QUEUE_ARRAY_CLASS->peek(packets)) {
             if(IS_INVOKED(shutdown_event))
                 break;
+
+            int iolen;
+            byte* iobuf;
 
             int size;
             util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
@@ -104,62 +142,38 @@ namespace rtp
             if(size != sizeof(encoder::Packet))
             {
                 LOG_ERROR("wrong datatype");
+                goto done;
             }
 
-            auto session = (Session*)video_packet->user_data;
-            auto lowseq  = session->video.lowseq;
-
+            Session* session = (Session*)video_packet->user_data;
 
             util::Buffer* av_packet_buffer = (util::Buffer*) video_packet->packet;
             libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(av_packet_buffer,NULL);
 
 
-            const char* nv_packet_header = "\0017charss";
-            util::Buffer* nv_header = BUFFER_CLASS->init((pointer)nv_packet_header,strlen(nv_packet_header),DO_NOTHING);
-            util::Buffer* payload = BUFFER_CLASS->merge(nv_header,av_packet_buffer);
-
-            if(av_packet->flags & AV_PKT_FLAG_KEY) {
-                while(LIST_OBJECT_CLASS->has_data(video_packet->replacement_array,0)) {
-                    util::Buffer* replace_buffer= LIST_OBJECT_CLASS->get_data(video_packet->replacement_array,0);
-
-                    int size;
-                    encoder::Replace* replacement = (encoder::Replace*) BUFFER_CLASS->ref(replace_buffer,&size);
-                    if(size != sizeof(encoder::Replace))
-                    {
-                        LOG_ERROR("wrong datatype");
-                    }
-
-                    // TODO : reimplement replace
-                    util::Buffer* payload_new = BUFFER_CLASS->replace(payload, replacement->old, replacement->_new);
-                    BUFFER_CLASS->unref(payload);
-                    payload     = payload_new;
-                }
+            // TODO
+            if(ffio_open_dyn_packet_buf(ctx->video.context,ctx->video.mtu) < 0){
+                LOG_ERROR("buffer allocation failed");
+                goto done;
+            }           
+            if(av_write_frame(ctx->video.context, av_packet) != 0) {
+                LOG_ERROR("write failed");
+                goto done;
             }
+            iolen = avio_close_dyn_buf(ctx->video.context, &iobuf);
+            util::Buffer* avbuf = BUFFER_CLASS->init((pointer)iobuf,iolen,av_free);
+
+            if(rtp_write_bindata(ctx,avbuf) < 0) {
+                LOG_ERROR("RTP write failed.");
+                goto done;
+            }
+
+
+            BUFFER_CLASS->unref(avbuf);
             BUFFER_CLASS->unref(av_packet_buffer);
             BUFFER_CLASS->unref(video_packet_buffer);
-
-
-            {
-                // insert packet headers
-                int blocksize         = session->config.packetsize + MAX_RTP_HEADER_SIZE;
-                int payload_blocksize = blocksize - sizeof(VideoPacketRaw);
-                util::Buffer* payload_new = BUFFER_CLASS->insert((uint64)sizeof(VideoPacketRaw), (uint64)payload_blocksize, payload, insert_action);
-                BUFFER_CLASS->unref(payload);
-                payload = payload_new;
-            }
-
-            try 
-            {
-                std::string_view buf = std::string_view ((char*)payload,(int)BUFFER_CLASS->size(payload));
-                sock->send_to(boost::asio::buffer(buf), session->video.peer);
-                session->video.lowseq = lowseq;
-            } catch(const std::exception &e) {
-                LOG_ERROR((char*)e.what());
-                std::this_thread::sleep_for(100ms);
-            }
-
-            BUFFER_CLASS->unref(payload);
         }
+    done:
         RAISE_EVENT(shutdown_event);
     }
 

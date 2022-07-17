@@ -16,13 +16,13 @@
 
 namespace helper
 {
-    directx::d3d11::Buffer make_buffer          (directx::d3d11::Device device, 
-                                                 char* t);
+    directx::d3d11::Buffer convert_to_d3d11_buffer          (directx::d3d11::Device device, 
+                                                 util::Buffer* t);
 
     directx::d3d11::BlendState make_blend       (directx::d3d11::Device device, 
                                                  bool enable);
 
-    byte*                   make_cursor_image   (byte* img_data, 
+    util::Buffer*           make_cursor_image   (util::Buffer* img_data, 
                                                  DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info);
         
 

@@ -18,7 +18,6 @@
 #include <sunshine_queue.h>
 #include <sunshine_macro.h>
 #include <sunshine_log.h>
-#include <sunshine_error.h>
 #include <sunshine_event.h>
 
 

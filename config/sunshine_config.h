@@ -11,42 +11,32 @@
 #ifndef __SUNSHINE_CONFIG_H__
 #define __SUNSHINE_CONFIG_H__
 
-#define ENCODER_CONFIG          config::get_encoder_config()
+#define ENCODER_CONFIG          config::get_encoder_config(0,nullptr)
+
+
+
 
 namespace config
 {
+    typedef struct NVidia {
+        int preset;
+        int rc;
+        int coder;
+
+        /**
+         * @brief 
+         * For software encoder
+         */
+        int min_threads; // Minimum number of threads/slices for CPU encoding
+    };
+
     typedef struct _Encoder{
         // ffmpeg params
         int qp; // higher == more compression and less quality
 
         int hevc_mode;
 
-        int min_threads; // Minimum number of threads/slices for CPU encoding
-
-        struct {
-            char* preset;
-            char* tune;
-        } sw;
-
-        struct {
-            int preset;
-            int rc;
-            int coder;
-        } nv;
-
-        struct {
-            int quality;
-            int rc_h264;
-            int rc_hevc;
-            int coder;
-        } amd;
-
-        struct {
-            int allow_sw;
-            int require_sw;
-            int realtime;
-            int coder;
-        } vt;
+        NVidia nv;
 
         char* encoder;
         char* adapter_name;
@@ -56,7 +46,7 @@ namespace config
         bool dwmflush;
     }Encoder;
 
-    Encoder*       get_encoder_config       ();
+    Encoder*       get_encoder_config       (int argc, char** argv);
 }
 
 

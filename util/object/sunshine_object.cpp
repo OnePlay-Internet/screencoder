@@ -185,8 +185,6 @@ namespace util
         uint origin_found = inserter;
 
         if(inserter != size_origin) {
-            // std::copy(std::begin(_new), std::end(_new), std::back_inserter(replaced));
-            // std::copy(next + old.size(), end, std::back_inserter(replaced));
             memcpy(replaced + inserter, _new, size_new);
             inserter += size_new;
             memcpy(replaced + inserter, original + size_old + origin_found, size_new);
@@ -215,6 +213,7 @@ namespace util
         klass.merge = buffer_merge;
         klass.replace = replace;
         klass.insert  = insert;
+        klass.search = search;
         initialized = true;
         return &klass;
     }

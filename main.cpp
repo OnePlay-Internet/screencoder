@@ -8,11 +8,15 @@
  * @copyright Copyright (c) 2022
  * 
  */
-
+#include <encoder_packet.h>
+#include <typeinfo>
+#include <iostream>
 
 
 int 
 main(int argc, char const *argv[])
 {
+    encoder::Config* conf;
+    std::cout << typeid((encoder::Packet*)conf).name() << std::endl;
     return 0;
 }

@@ -52,12 +52,12 @@ namespace encoder {
     libav::BufferRef* 
     dxgi_make_hwdevice_ctx(platf::HWDevice *hwdevice_ctx) 
     {
-        libav::BufferRef* ctx_buf { av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA) };
-        auto ctx = (AVD3D11VADeviceContext *)((AVHWDeviceContext *)ctx_buf->data)->hwctx;
+        libav::BufferRef* ctx_buf = (libav::BufferRef*)av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA);
+        AVD3D11VADeviceContext* ctx = (AVD3D11VADeviceContext *)((AVHWDeviceContext *)ctx_buf->data)->hwctx;
+        memset((pointer) ctx, 0, sizeof (AVD3D11VADeviceContext));
 
-        std::fill_n((std::uint8_t *)ctx, sizeof(AVD3D11VADeviceContext), 0);
 
-        auto device = (ID3D11Device *)hwdevice_ctx->data;
+        ID3D11Device *device = (ID3D11Device *)hwdevice_ctx->data;
 
         device->AddRef();
         ctx->device = device;
@@ -66,7 +66,7 @@ namespace encoder {
         ctx->lock     = DO_NOTHING;
         ctx->unlock   = DO_NOTHING;
 
-        auto err = av_hwdevice_ctx_init(ctx_buf);
+        int err = av_hwdevice_ctx_init(ctx_buf);
         if(err) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, err));

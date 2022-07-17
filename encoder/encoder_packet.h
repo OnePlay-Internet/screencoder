@@ -23,11 +23,6 @@ using float2 = float[2];
 
 namespace encoder
 {
-    typedef struct _Replace {
-        util::Buffer* old;
-        util::Buffer* _new;
-    }Replace;
-
     typedef struct _Config{
         int width;
         int height;
@@ -54,8 +49,6 @@ namespace encoder
          * libav::Packet
          */
         util::Buffer* packet;
-        
-        util::ListObject* replacement_array;
 
         pointer user_data;
     }Packet;

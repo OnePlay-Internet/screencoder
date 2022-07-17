@@ -14,10 +14,15 @@
 namespace config
 {
     Encoder*       
-    get_encoder_config()
+    get_encoder_config(int argc,char** argv)
     {
-        // TODO
+        static bool init = false;
         static Encoder encoder;
+        if (!argc && !argv && init)
+            return &encoder;
+            
+        
+        init = true;
         return &encoder;
     }
 

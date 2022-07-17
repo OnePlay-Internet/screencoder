@@ -14,6 +14,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 }
 
 
@@ -30,6 +31,8 @@ namespace libav
     typedef AVBufferRef         BufferRef;
     typedef AVPixelFormat       PixelFormat;
     typedef AVCodecID           CodecID;
+
+    typedef AVFormatContext     FormatContext;
 } // namespace libav
 
 

@@ -31,12 +31,6 @@ namespace display {
     }HLSL;
 
 
-    typedef struct _Cursor {
-        byte* img_data;
-        DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info;
-        int x, y;
-        bool visible;
-    }Cursor;
 
     typedef struct _GpuCursor {
         directx::d3d11::Texture2D texture;
@@ -86,6 +80,13 @@ namespace display {
         D3D_FEATURE_LEVEL feature_level;
     }DisplayBase;
 
+    typedef struct _Cursor {
+        byte* img_data;
+        DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info;
+        int x, y;
+        bool visible;
+    }Cursor;
+
     typedef struct _DisplayRam{
       DisplayBase base;
       Cursor cursor;
@@ -103,7 +104,7 @@ namespace display {
      */
     int             display_base_init           (DisplayBase* self,
                                                  int framerate, 
-                                                 const char* display_name);
+                                                 char* display_name);
 
     HLSL*          init_hlsl                    (); 
 } // namespace platf::dxgi

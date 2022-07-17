@@ -9,9 +9,7 @@
  * 
  */
 #include <sunshine_queue.h>
-#include <sunshine_log.h>
 #include <sunshine_macro.h>
-#include <sunshine_error.h>
 #include <sunshine_datatype.h>
 #include <sunshine_object.h>
 #include <sunshine_object.h>

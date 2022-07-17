@@ -6,6 +6,7 @@
                 "C:/msys64/mingw64/include/**",
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/util/avcodec/**",
+                "${workspaceFolder}/encoder/bitstream/**"
             ],
             "defines": [
                 "_DEBUG",

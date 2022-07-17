@@ -20,8 +20,6 @@ namespace encoder
     packet_init()
     {
         Packet* pk = (Packet*)malloc(sizeof(Packet));
-        pk->replacement_array = LIST_OBJECT_CLASS->init();
-
         libav::Packet* av_packet = av_packet_alloc();
         pk->packet = BUFFER_CLASS->init(av_packet,sizeof(libav::Packet),libav::packet_free_func);
         return pk;
@@ -32,7 +30,6 @@ namespace encoder
     {
         Packet* self = ((Packet*)packet);
         BUFFER_CLASS->unref(self->packet);
-        LIST_OBJECT_CLASS->finalize(self->replacement_array);
         free(packet);
     }
 

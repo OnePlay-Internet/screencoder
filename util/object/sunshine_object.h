@@ -49,8 +49,16 @@ namespace util
 
         bool free_lock;
 
+        /**
+         * @brief 
+         * should not be used directly
+         */
         BufferFreeFunc free_func;
 
+        /**
+         * @brief 
+         * should not be used directly
+         */
         uint size;
 
         /**
@@ -87,6 +95,9 @@ namespace util
                              uint64 slice_size, 
                              util::Buffer* data,
                              InsertAction action);
+
+        uint    (*search)   (util::Buffer* string, 
+                             util::Buffer* substring);
 
         pointer (*end_ptr)  (Buffer* obj);
 

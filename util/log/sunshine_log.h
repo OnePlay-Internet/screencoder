@@ -8,13 +8,16 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#ifndef __SUNSHINE_LOG_H__
-#define __SUNSHINE_LOG_H__
+#ifndef __SUNSHINE_ERROR_H__
+#define __SUNSHINE_ERROR_H__
 
-#include <sunshine_error.h>
-
-
-#define LOG_ERROR(content)  error::new_error(__FILE__,__LINE__,"error",content);
+namespace error
+{
+    void  log(char* file,
+              int line,
+              char* level,
+              char* message);
+} // namespace error
 
 
 #endif

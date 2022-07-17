@@ -21,10 +21,13 @@
 #include <d3d11_datatype.h>
 #include <windows_helper.h>
 #include <thread>
+#include <cstdlib>
+#include <string.h>
 
 using namespace std::literals;
 
 
+// TODO: setup shader dir
 #define SUNSHINE_ASSETS_DIR
 #define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/shaders/directx"
 
@@ -50,11 +53,27 @@ namespace display{
   }
 
 
+  bool 
+  string_compare(char* a, char* b){
+    int i = 0;
+    if (strlen(a) != strlen(b))
+      return false;
+    
+    while (*(a + i) == *(b + i))
+    {
+      i++;
+    }
+
+    if (strlen(a) == i)
+      return true;  
+    else
+      return false;
+  }
 
   int
   display_base_init(DisplayBase* self,
                     int framerate, 
-                    const char* display_name) 
+                    char* display_name) 
   {
     // Ensure we can duplicate the current display
     syncThreadDesktop();
@@ -79,9 +98,9 @@ namespace display{
       directx::dxgi::Adapter adapter_temp = adapter_p;
       adapter_temp->GetDesc1(&adapter_desc);
 
-      // TODO
-      if(!ENCODER_CONFIG->adapter_name && 
-          adapter_desc.Description != (WCHAR*)ENCODER_CONFIG->adapter_name) 
+      char str[100] = {0};
+      wcstombs(str, adapter_desc.Description, 12);
+      if(!ENCODER_CONFIG->adapter_name && string_compare(str,ENCODER_CONFIG->adapter_name)) 
       {
           continue;
       }
@@ -91,8 +110,9 @@ namespace display{
         DXGI_OUTPUT_DESC desc;
         output->GetDesc(&desc);
 
-        // TODO
-        if(!ENCODER_CONFIG->output_name && desc.DeviceName != (WCHAR*)display_name) {
+        char str2[100] = {0};
+        wcstombs(str2, desc.DeviceName, 12);
+        if(!ENCODER_CONFIG->output_name && string_compare(str2,display_name)) {
           continue;
         }
 
@@ -232,16 +252,16 @@ namespace display{
 
     // Try to reduce latency
     {
-      directx::dxgi::Device1 dxgi{};
+      directx::dxgi::Device1 dxgi = {0};
       status = self->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
       if(FAILED(status)) {
-        // BOOST_LOG(error) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Failed to query DXGI interface from device ");
         return -1;
       }
 
       status = dxgi->SetMaximumFrameLatency(1);
       if(FAILED(status)) {
-        // BOOST_LOG(warning) << "Failed to set maximum frame latency [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Failed to set maximum frame latency");
       }
     }
 
@@ -251,7 +271,7 @@ namespace display{
       directx::dxgi::Output1 output1 = {0};
       status = self->output->QueryInterface(IID_IDXGIOutput1, (void **)&output1);
       if(FAILED(status)) {
-        // BOOST_LOG(error) << "Failed to query IDXGIOutput1 from the output"sv;
+        LOG_ERROR("Failed to query IDXGIOutput1 from the output");
         return -1;
       }
 
@@ -265,9 +285,10 @@ namespace display{
       }
 
       if(FAILED(status)) {
-        // BOOST_LOG(error) << "DuplicateOutput Failed [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("DuplicateOutput Failed [0x");
         return -1;
       }
+      output1->Release();
     }
 
     DXGI_OUTDUPL_DESC dup_desc;

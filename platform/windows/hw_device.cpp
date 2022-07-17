@@ -81,11 +81,13 @@ namespace hwdevice
       hw->img.base.row_pitch   = out_width * 4;
       hw->img.base.pixel_pitch = 4;
 
-      float info_in[16 / sizeof(float)] { 1.0f / (float)out_width }; //aligned to 16-byte
-      hw->info_scene = helper::make_buffer(device, (char*)info_in);
+      int inf_size = 16 / sizeof(float);
+      float info_in[inf_size] { 1.0f / (float)out_width }; //aligned to 16-byte
+      util::Buffer* buf = BUFFER_CLASS->init(info_in,inf_size,DO_NOTHING);
+      hw->info_scene = helper::convert_to_d3d11_buffer(device, buf);
 
       if(!info_in) {
-        // BOOST_LOG(error) << "Failed to create info scene buffer"sv;
+        LOG_ERROR("Failed to create info scene buffer");
         return -1;
       }
 
@@ -182,8 +184,9 @@ namespace hwdevice
       }
 
 
-      // TODO
-      self->color_matrix = helper::make_buffer(device_p, (char*)(platf::get_color() + 0));
+      encoder::Color* color = platf::get_color();
+      util::Buffer* buf = BUFFER_CLASS->init(color,sizeof(encoder::Color),DO_NOTHING);
+      self->color_matrix = helper::convert_to_d3d11_buffer(device_p, buf);
       if(!self->color_matrix) {
         // BOOST_LOG(error) << "Failed to create color matrix buffer"sv;
         return NULL;
@@ -252,7 +255,9 @@ namespace hwdevice
         ++self->color_p;
       }
 
-      directx::d3d11::Buffer color_matrix = (directx::d3d11::Buffer)helper::make_buffer((directx::d3d11::Device)self->base.data, (char*)self->color_p);
+
+      util::Buffer* buf = BUFFER_CLASS->init(colors,sizeof(encoder::Color),DO_NOTHING);
+      directx::d3d11::Buffer color_matrix = (directx::d3d11::Buffer)helper::convert_to_d3d11_buffer((directx::d3d11::Device)self->base.data, buf);
       if(!color_matrix) {
         // BOOST_LOG(warning) << "Failed to create color matrix"sv;
         return;
@@ -272,7 +277,6 @@ namespace hwdevice
     hw_device_convert(platf::HWDevice* dev,
                       platf::Image* img_base) 
     {
-        // TODO
         D3D11Device* self = (D3D11Device*)dev;
         ImageD3D* img = (ImageD3D*)img_base;
 

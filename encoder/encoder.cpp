@@ -12,8 +12,8 @@
 
 #include <sunshine_util.h>
 
-#include <sunshine_bitstream.h>
 #include <encoder_packet.h>
+#include <encoder_validate.h>
 #include <encoder_d3d11_device.h>
 #include <sunshine_config.h>
 
@@ -21,6 +21,7 @@
 #include <display.h>
 extern "C" {
 #include <libswscale/swscale.h>
+#include <libavcodec/avcodec.h>
 }
 
 #include <thread>
@@ -126,9 +127,6 @@ namespace encoder {
 
         libav::CodecContext* libav_ctx = (libav::CodecContext*)session->context;
 
-        bitstream::NAL sps = session->sps;
-        bitstream::NAL vps = session->vps;
-
         /* send the frame to the encoder */
         auto ret = avcodec_send_frame(libav_ctx, frame);
         if(ret < 0) {
@@ -151,28 +149,12 @@ namespace encoder {
 
             if(session->inject) {
                 if(session->inject == 1) {
-                    bitstream::H264 h264 = bitstream::make_sps_h264(libav_ctx, av_packet);
-                    sps = h264.sps;
+                    //H264
                 } else {
-                    bitstream::HEVC hevc = bitstream::make_sps_hevc(libav_ctx, av_packet);
-
-                    sps = hevc.sps;
-                    vps = hevc.vps;
-
-                    BUFFER_MALLOC(obj,sizeof(Replace),ptr);
-                    ((Replace*)ptr)->old = vps.old;
-                    ((Replace*)ptr)->_new = vps._new;
-                    LIST_OBJECT_CLASS->emplace_back(session->replacement_array,obj);
+                    //H265
                 }
-
-                session->inject = 0;
-                BUFFER_MALLOC(obj,sizeof(Replace),ptr);
-                ((Replace*)ptr)->old = sps.old;
-                ((Replace*)ptr)->_new = sps._new;
-                LIST_OBJECT_CLASS->emplace_back(session->replacement_array,obj);
             }
 
-            packet->replacement_array = session->replacement_array;
             packet->user_data = channel_data;
 
             util::Buffer* obj = BUFFER_CLASS->init(packet,sizeof(Packet),packet_class_init()->finalize);
@@ -320,12 +302,13 @@ namespace encoder {
             
             ctx->slices = config->slicesPerFrame;
         } else /* software */ {
-            ctx->pix_fmt = sw_fmt;
+            // TODO software 
+            // ctx->pix_fmt = sw_fmt;
 
-            // Clients will request for the fewest slices per frame to get the
-            // most efficient encode, but we may want to provide more slices than
-            // requested to ensure we have enough parallelism for good performance.
-            ctx->slices = MAX(config->slicesPerFrame, ENCODER_CONFIG->min_threads);
+            // // Clients will request for the fewest slices per frame to get the
+            // // most efficient encode, but we may want to provide more slices than
+            // // requested to ensure we have enough parallelism for good performance.
+            // ctx->slices = MAX(config->slicesPerFrame, ENCODER_CONFIG->min_threads);
         }
 
         if(!video_format->capabilities[FrameFlags::SLICE]) {
@@ -400,25 +383,13 @@ namespace encoder {
         session->context = ctx;
         session->device = device;
         // 0 ==> don't inject, 1 ==> inject for h264, 2 ==> inject for hevc
-        session->inject = (1 - (int)video_format->capabilities[FrameFlags::VUI_PARAMETERS]) * (1 + config->videoFormat);
 
-        // TODO
-        if(!video_format->capabilities[FrameFlags::NALU_PREFIX_5b]) 
-        {
-            char* hevc_nalu = "\000\000\000\001(";
-            char* h264_nalu = "\000\000\000\001e";
-            char* nalu_prefix = config->videoFormat ? hevc_nalu : h264_nalu;
-
-            BUFFER_MALLOC(obj,sizeof(Replace),temp);
-            BUFFER_DUPLICATE(old_obj,sizeof(char),nalu_prefix,temp1);
-            BUFFER_DUPLICATE(new_obj,strlen(nalu_prefix),nalu_prefix,temp2);
+        // if VUI param are set, then no need to inject
+        // if VUI param are note set, then set inject option based on video format
+        session->inject = (1 - (int)video_format->capabilities[FrameFlags::VUI_PARAMETERS]) * 
+                          (1 + config->videoFormat);
 
 
-            ((Replace*)temp)->old = old_obj;
-            ((Replace*)temp)->_new = new_obj;
-
-            LIST_OBJECT_CLASS->emplace_back(session->replacement_array,obj);
-        }
 
         return TRUE;
     }
@@ -634,7 +605,7 @@ namespace encoder {
             return Status::error;
         }
 
-        // create one session for easch synced session context
+        // create one session for each synced session context
         while(LIST_OBJECT_CLASS->has_data(synced_session_ctxs,0)) 
         {
             util::Buffer* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
@@ -664,7 +635,10 @@ namespace encoder {
         while(TRUE) {
             // cursor
             // run image capture in while loop, 
-            Status status = (Status)ctx->display->klass->capture(ctx->display,on_image_snapshoot, img, TRUE);
+            Status status = (Status)ctx->display->klass->capture(ctx->display, img,on_image_snapshoot,
+                    synced_sessions,
+                    synced_session_ctxs, 
+                    encode_session_ctx_queue,TRUE);
             // return for timeout status
             switch(status) {
                 case Status::reinit:
@@ -719,17 +693,16 @@ namespace encoder {
             }
         }
 
-        // TODO: foreach instead
         {
-            while (!QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue)) { }
-
-            util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
-            if (!obj->data)
-                goto done;
-            
-            ((SyncSessionContext*)obj->data)->encoder = encoder;
-            ((SyncSessionContext*)obj->data)->display = disp;
-            QUEUE_ARRAY_CLASS->push(ctx->sync_session_ctx_queue,obj);
+            while (!QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue)) {
+                util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
+                if (!obj->data)
+                    goto done;
+                
+                ((SyncSessionContext*)obj->data)->encoder = encoder;
+                ((SyncSessionContext*)obj->data)->display = disp;
+                QUEUE_ARRAY_CLASS->push(ctx->sync_session_ctx_queue,obj);
+            }
         }
 
         // run encoder in infinite loop
@@ -802,8 +775,7 @@ namespace encoder {
         ss_ctx.packet_queue = packet_queue;
         ss_ctx.frame_nr = 1;
 
-        // TODO
-        // ss_ctx.config = ;
+        ss_ctx.config = &config;
         ss_ctx.channel_data = data;
 
         util::Buffer* obj = BUFFER_CLASS->init(&ss_ctx,sizeof(SyncSessionContext),DO_NOTHING);
@@ -905,20 +877,22 @@ namespace encoder {
         }
 
         int flag = 0;
-        if(bitstream::validate_sps(av_packet, config->videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
+        if(bitstream::validate_packet(av_packet, config->videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
             flag |= ValidateFlags::VUI_PARAMS;
         }
 
         char* hevc_nalu = "\000\000\000\001(";
         char* h264_nalu = "\000\000\000\001e";
         char* nalu_prefix = config->videoFormat ? hevc_nalu : h264_nalu;
-        std::string_view payload { (char *)av_packet->data, (std::size_t)av_packet->size };
+        util::Buffer* payload = BUFFER_CLASS->init(av_packet->data,av_packet->size,DO_NOTHING);
+        util::Buffer* pref =  BUFFER_CLASS->init(nalu_prefix,strlen(nalu_prefix),DO_NOTHING);
 
-        // TODO search
-        // if(std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) 
-        //     flag |= ValidateFlags::NALU_PREFIX_5b;
+        if(BUFFER_CLASS->search(payload,pref) != BUFFER_CLASS->size(payload))
+            flag |= ValidateFlags::NALU_PREFIX_5B;
 
         BUFFER_CLASS->unref(av_buffer);
+        BUFFER_CLASS->unref(payload);
+        BUFFER_CLASS->unref(pref);
         return flag;
     }
 }

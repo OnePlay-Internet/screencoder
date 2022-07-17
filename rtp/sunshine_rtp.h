@@ -21,7 +21,6 @@ namespace rtp
         int controlProtocolType;
     }Config;
 
-    typedef struct _Session Session;
 
 
     enum State {
