@@ -15,6 +15,11 @@
 #include <sunshine_rtp.h>
 #include <sunshine_config.h>
 
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#include <stdio.h>
+
+
 extern "C" {
 // this function implementation has already been defined in avio_internal.h: line 186
 // we breaked the rule to use this
@@ -31,8 +36,6 @@ extern "C" {
 int ffio_open_dyn_packet_buf(AVIOContext **, int);
 }
 
-#include <boost/asio.hpp>
-#include <boost/asio/buffer.hpp>
 #include <thread>
 
 using namespace std::literals;
@@ -41,13 +44,17 @@ namespace rtp
 {
     typedef struct sockaddr_in SocketAddress;
 
-    typedef struct _Video {
+    typedef struct _UDPConn{
+        unsigned short port;
         SocketAddress receiver;
         SOCKET rtpSocket;
-
-        unsigned short port;
-
         int mtu;
+        bool active;
+    }UDPConn;
+
+
+    typedef struct _Video {
+        UDPConn conn;
 
         util::Broadcaster* idr_event;
     }Video;
@@ -63,61 +70,29 @@ namespace rtp
     }BroadcastContext;
 
 
+
     static bool
-    setup_receiver(Video* video)
+    rtp_open_internal(UDPConn* conn) 
     {
-        // Declare variables
-        SOCKET ListenSocket;
-        SocketAddress saServer;
-        hostent* localHost;
-        char* localIP;
+        memset(&conn->receiver,0, sizeof(SocketAddress));
+        conn->rtpSocket= socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-        // Create a listening socket
-        ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if(conn->rtpSocket < 0)
+            return FALSE;
 
-        // Get the local host information
-        localHost = gethostbyname("");
-        localIP = inet_ntoa (*(struct in_addr *)*localHost->h_addr_list);
-
-        // Set up the sockaddr structure
-        saServer.sin_family = AF_INET;
-        saServer.sin_addr.s_addr = inet_addr(localIP);
-        saServer.sin_port = htons(5150);
-
-        // Bind the listening socket using the
-        // information in the sockaddr structure
-        bind( ListenSocket,(SOCKADDR*) &saServer, sizeof(saServer) );
-    }
-
-
-    static int
-    rtp_open_internal(unsigned short *port) 
-    {
-        SOCKET s;
-        SocketAddress sin;
-        int sinlen;
-        bzero(&sin, sizeof(sin));
-        if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-            return -1;
-        sin.sin_family = AF_INET;
-        if(bind(s, (SocketAddress*) &sin, sizeof(sin)) < 0) {
-            close(s);
-            return -1;
-        }
-        sinlen = sizeof(sin);
-        if(getsockname(s, (SocketAddress*) &sin, &sinlen) < 0) {
-            close(s);
-            return -1;
-        }
-        *port = ntohs(sin.sin_port);
-        return s;
+        conn->receiver.sin_family = AF_INET;
+        conn->receiver.sin_port = htons(conn->port); 
+        conn->receiver.sin_addr.s_addr = inet_addr("localhost"); 
+        conn->active = TRUE;
+        return TRUE;
     }
 
     static int
     rtp_close_ports(BroadcastContext* ctx) 
     {
-        if(ctx->video.port != 0)
-            close(ctx->video.port);
+        //TODO
+        // if(ctx->video.conn.port != 0)
+            // fclose(ctx->video.conn.port);
 
         return 0;
     }
@@ -126,11 +101,10 @@ namespace rtp
     rtp_open_ports(BroadcastContext* ctx) 
     {
         // initialized?
-        if(ctx->video.rtpSocket != 0)
+        if(ctx->video.conn.active)
             return 0;
 
-        ctx->video.rtpSocket = rtp_open_internal(&ctx->video.port);
-        if(ctx->video.rtpSocket < 0)
+        if(!rtp_open_internal(&ctx->video.conn))
             return -1;
 
         LOG_INFO("Opened RTP port");
@@ -151,7 +125,7 @@ namespace rtp
     rtp_stream_run_first_time(BroadcastContext *ctx, 
                               encoder::Session* session) 
     {
-        if(ffio_open_dyn_packet_buf(session->format_context->pb, ENCODER_CONFIG->mtu) < 0) {
+        if(ffio_open_dyn_packet_buf(&session->format_context->pb, session->format_context->packet_size) < 0) {
             LOG_ERROR("cannot open dynamic packet buffer\n");
             return -1;
         }
@@ -162,13 +136,13 @@ namespace rtp
         }
 
         // write header
-        if(avformat_write_header(ctx->video.context, NULL) < 0) {
+        if(avformat_write_header(session->format_context, NULL) < 0) {
             LOG_ERROR("Cannot write stream");
             return -1;
         }
 
         byte* dummybuf;
-        avio_close_dyn_buf(ctx->video.context, &dummybuf);
+        avio_close_dyn_buf(session->format_context->pb, &dummybuf);
         av_free(dummybuf);
         return 0;
     }
@@ -196,8 +170,7 @@ namespace rtp
         if(buflen < 4)
             return buflen;
 
-        memcpy(&sin,&ctx->video.receiver, sizeof(sin));
-        sin.sin_port = ctx->video.port;
+        memcpy(&sin,&ctx->video.conn.receiver, sizeof(SocketAddress));
 
         
         // XXX: buffer is the reuslt from avio_open_dyn_buf.
@@ -220,8 +193,8 @@ namespace rtp
                 continue;
             }
 
-            sendto(ctx->video.rtpSocket, (const char*) &data[i+4], pktlen, 0, 
-                &sin, sizeof(SocketAddress));
+            sendto(ctx->video.conn.rtpSocket, (const char*) &data[i+4], pktlen, 0, 
+                (sockaddr*)((pointer)&sin), sizeof(SocketAddress));
             i += (4+pktlen);
         }
         BUFFER_CLASS->unref(buf);
@@ -280,7 +253,7 @@ namespace rtp
                         session->stream->time_base);
             }
             // TODO
-            if(ffio_open_dyn_packet_buf(session->format_context->pb,ctx->video.mtu) < 0){
+            if(ffio_open_dyn_packet_buf(&session->format_context->pb,session->format_context->packet_size) < 0){
                 LOG_ERROR("buffer allocation failed");
                 goto done;
             }           
@@ -318,9 +291,11 @@ namespace rtp
     start_broadcast(util::Broadcaster* shutdown_event,
                     util::QueueArray* packet_queue) 
     {
-        BroadcastContext ctx = {0};
+        BroadcastContext ctx;
+        memset(&ctx,0,sizeof(BroadcastContext));
+        ctx.video.conn.port = ENCODER_CONFIG->rtp.port;
         ctx.packet_queue = packet_queue;
         ctx.shutdown_event = shutdown_event;
-        ctx->video_thread = std::thread { videoBroadcastThread, &ctx};
+        ctx.video_thread = std::thread { videoBroadcastThread, &ctx};
     }
 } // namespace rtp

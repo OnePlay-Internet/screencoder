@@ -27,6 +27,10 @@ namespace config
         int coder;
     }Nvidia;
 
+    typedef struct _RTP {
+        int port;
+    }RTP;
+
     typedef struct SW {
         /**
          * @brief 
@@ -42,6 +46,8 @@ namespace config
         int hevc_mode;
 
         Nvidia nv;
+        RTP rtp;
+        
         encoder::Config *encoder_config;
 
         char* encoder;
@@ -52,6 +58,9 @@ namespace config
         int packet_size;
         int framerate;
         bool dwmflush;
+
+
+
     }Encoder;
 
     Encoder*       get_encoder_config       (int argc, char** argv);

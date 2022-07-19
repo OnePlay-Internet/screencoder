@@ -35,9 +35,10 @@ namespace session {
     void
     start_session(Session* session)
     {
+        // TODO
         encoder::capture(session->shutdown_event,
                          session->packet_queue,
-                         session->config,
+                         NULL,
                          session);
 
         rtp::start_broadcast(session->shutdown_event,

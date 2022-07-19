@@ -45,9 +45,7 @@ namespace vram {
     display_vram_capture(platf::Display* disp,
                         platf::Image* img, 
                         platf::SnapshootCallback snapshot_cb, 
-                        util::ListObject* synced_sessions,
-                        util::ListObject* synced_session_ctxs,
-                        util::QueueArray* encode_session_ctx_queue,
+                        pointer data,
                         bool cursor) 
     {
         DisplayVram* self = (DisplayVram*) disp; 
@@ -68,7 +66,7 @@ namespace vram {
               std::this_thread::sleep_for(1ms);
               continue;
             case platf::Capture::ok:
-              snapshot_cb(img,synced_sessions,synced_session_ctxs,encode_session_ctx_queue);
+              snapshot_cb(img,data);
               break;
             default:
               LOG_ERROR("Unrecognized capture status"); 

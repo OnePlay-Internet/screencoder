@@ -26,12 +26,14 @@ namespace session
         util::Broadcaster* shutdown_event;
         util::Broadcaster* idr_event;
 
-        util::QueueArray* packet_queue
+        util::QueueArray* packet_queue;
     }Session;
     
 
-    void        init_session        (Session* session);
+    void        init_session        (Session* session,
+                                     config::Encoder* config);
 
+    void        start_session       (Session* session);
 
         
 } // namespace singleton

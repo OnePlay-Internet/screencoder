@@ -59,10 +59,10 @@ set(FFMPEG_INCLUDE_DIRS
 	${SUNSHINE_PREPARED_BINARIES}/include)
 
 set(FFMPEG_LIBRARIES
+	${SUNSHINE_PREPARED_BINARIES}/lib/libavformat.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libavcodec.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libavdevice.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libavfilter.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libavformat.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libavutil.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libpostproc.a
 	${SUNSHINE_PREPARED_BINARIES}/lib/libswresample.a
@@ -82,6 +82,10 @@ list(PREPEND PLATFORM_LIBRARIES
 	d3d11 dxgi D3DCompiler
 	setupapi
 	dwmapi
+	bz2
+	Secur32
+	swresample
+	Bcrypt
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -112,6 +116,10 @@ file(GLOB CONFIG_SOURCE_LIST
 	config/*.cpp
 )
 
+file(GLOB SESSION_SOURCE_LIST 
+	session/*.cpp
+)
+
 file(GLOB PLATFORM_SOURCE_LIST 
 	platform/*.cpp
 	platform/windows/*.cpp
@@ -120,6 +128,7 @@ file(GLOB PLATFORM_SOURCE_LIST
 
 set(SUNSHINE_TARGET_FILES
 	${UTIL_SOURCE_LIST}
+	${SESSION_SOURCE_LIST}
 	${ENCODER_SOURCE_LIST}
 	${RTP_SOURCE_LIST}
 	${CONFIG_SOURCE_LIST}
@@ -138,6 +147,7 @@ include_directories(
 
   ${CMAKE_CURRENT_SOURCE_DIR}/input
   ${CMAKE_CURRENT_SOURCE_DIR}/rtp
+  ${CMAKE_CURRENT_SOURCE_DIR}/session
 
   ${CMAKE_CURRENT_SOURCE_DIR}/util
   ${CMAKE_CURRENT_SOURCE_DIR}/util/queue

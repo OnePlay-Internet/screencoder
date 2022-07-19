@@ -37,7 +37,7 @@ namespace libav
     typedef AVCodecID           CodecID;
     typedef AVCodecContext      CodecContext;
 
-    typedef AVFormat            Format;
+    typedef AVOutputFormat      OutputFormat;
     typedef AVFormatContext     FormatContext;
 } // namespace libav
 

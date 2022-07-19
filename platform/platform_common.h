@@ -68,7 +68,7 @@ namespace platf {
         int (*convert)          (HWDevice* self,
                                  Image* img);
 
-        int (*finalize)         (HWDevice* self);
+        void (*finalize)         (HWDevice* self);
         /**
          * @brief 
          * do the conversion from ImageD3D to libav::Frame
@@ -93,9 +93,7 @@ namespace platf {
      *    This may or may not be the image send with the callback
      */
     typedef Capture (*SnapshootCallback) (Image* img,
-                                       util::ListObject* synced_sessions,
-                                       util::ListObject* synced_session_ctxs,
-                                       util::QueueArray* encode_session_ctx_queue);
+                                          pointer data);
 
 
     struct _Display {
@@ -126,9 +124,7 @@ namespace platf {
         Capture     (*capture)          (Display* self,
                                          Image* img, 
                                          SnapshootCallback snapshot_cb, 
-                                         util::ListObject* synced_sessions,
-                                         util::ListObject* synced_session_ctxs,
-                                         util::QueueArray* encode_session_ctx_queue,
+                                         pointer data,
                                          bool cursor);
 
         Capture     (*snapshot)         (Display* self,

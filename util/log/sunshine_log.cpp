@@ -9,6 +9,7 @@
  * 
  */
 #include <sunshine_log.h>
+#include <cstdio>
 
 namespace error
 {
@@ -17,7 +18,7 @@ namespace error
              char* level,
              char* message)
     {
-        // TODO
+        printf("%s : %d : %s : %s\n",file,line,level,message);
         return;
     }
     

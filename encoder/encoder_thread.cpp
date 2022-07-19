@@ -117,12 +117,12 @@ namespace encoder {
      */
     int 
     encode(int frame_nr, 
-           SyncSession* sync_session, 
+           util::Buffer* sync_session, 
            libav::Frame* frame, 
            util::QueueArray* packets, 
            void *channel_data) 
     {
-        Session* session = (Session*)BUFFER_CLASS->ref(sync_session->session,NULL);
+        Session* session = (Session*)BUFFER_CLASS->ref(sync_session,NULL);
         libav::CodecContext* libav_ctx = session->context;
         frame->pts = (int64_t)frame_nr;
 
@@ -154,7 +154,7 @@ namespace encoder {
 
 
         // we pass the reference of session to packet
-        packet->session = sync_session->session;
+        packet->session = sync_session;
         packet->user_data = channel_data;
 
         util::Buffer* obj = BUFFER_CLASS->init(packet,sizeof(Packet),packet_class_init()->finalize);
@@ -194,13 +194,14 @@ namespace encoder {
 
         // format specific index
         st->id = 0;
-        if(ctx->flags & AVFMT_GLOBALHEADER) {
-            st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-        }
+        // TODO what is CODEC_FLAG_GLOBAL_HEADER
+        // if(ctx->flags & AVFMT_GLOBALHEADER) {
+        //     st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+        // }
             
-        // should we always set global header?
-        if(codec->id == AV_CODEC_ID_H264) 
-            st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+        // // should we always set global header?
+        // if(codec->id == AV_CODEC_ID_H264) 
+        //     st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
         return st;
     }
@@ -219,35 +220,34 @@ namespace encoder {
         CodecConfig* video_format = (config->videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
             LOG_ERROR("encoder not supported");
-            goto failed;
+            return NULL;
         }
 
         if(config->dynamicRange && !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
             LOG_ERROR("dynamic range not supported");
-            goto failed;
+            return NULL;
         }
 
         libav::Codec* codec = avcodec_find_encoder_by_name(video_format->name);
         if(!codec) {
             LOG_ERROR("Couldn't create encoder");
-            goto failed;
+            return NULL;
         }
-        libav::Format* format = av_guess_format("rtp", NULL, NULL);
+        libav::OutputFormat* format = av_guess_format("rtp", NULL, NULL);
         if(!format) {
             LOG_ERROR("Couldn't create rtppay");
-            goto failed;
+            return NULL;
         }
 
         libav::FormatContext* fmtctx = avformat_alloc_context();
+        libav::Stream* stream = rtp_avformat_new_stream(fmtctx,codec);
         fmtctx->oformat = format;
 
 		if(fmtctx->packet_size > 0) 
-			fmtctx->packet_size = MAX(ENCODER_CONFIG->mtu,fmtctx->packet_size);
+			fmtctx->packet_size = MAX(ENCODER_CONFIG->packet_size,fmtctx->packet_size);
 		else 
-			fmtctx->packet_size = ctx->mtu;
-		
+			fmtctx->packet_size = ENCODER_CONFIG->packet_size;
 
-        libav::Stream* stream = rtp_avformat_new_stream(fmtctx,codec);
         libav::CodecContext* ctx = stream->codec;
         ctx->width     = config->width;
         ctx->height    = config->height;
@@ -333,11 +333,11 @@ namespace encoder {
 
             libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(hwdevice);
             if(!buf_or_error)
-                goto failed;
+                return NULL;
 
             hwdevice_ctx = buf_or_error;
             if(hwframe_ctx(ctx, hwdevice_ctx, sw_fmt) != 0) 
-                goto failed;
+                return NULL;
             
             ctx->slices = config->slicesPerFrame;
         } else /* software */ {
@@ -375,16 +375,16 @@ namespace encoder {
         }
         else {
             LOG_ERROR("Couldn't set video quality");
-            goto failed;
+            return NULL;
         }
 
-        if(auto status = avcodec_open2(ctx, codec, &options)) {
+        if(int status = avcodec_open2(ctx, codec, &options)) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             // BOOST_LOG(error)
             // << "Could not open codec ["sv
             // << video_format->name << "]: "sv
             // << av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status);
-            goto failed;
+            return NULL;
         }
 
         libav::Frame* frame = av_frame_alloc();
@@ -414,12 +414,12 @@ namespace encoder {
         }
 
         if(device->klass->set_frame(device,frame)) 
-            goto failed;
+            return NULL;
         
 
         device->klass->set_colorspace(device,sws_color_space, ctx->color_range);
 
-        session->pts = frame->ptx;
+        session->pts = frame->pts;
         session->format_context = fmtctx;
         session->stream = stream;
         session->context = ctx;
@@ -438,10 +438,6 @@ namespace encoder {
             session->inject = 0;
 
         return session;
-    
-    failed:
-        free(session);
-        return NULL;
     }
 
     void
@@ -492,9 +488,10 @@ namespace encoder {
      */
     platf::Capture
     on_image_snapshoot (platf::Image* img,
-                        SyncSession* syncsession)
+                        pointer data)
     {
-        Session* session = (Session*)BUFFER_CLASS->ref(syncsession,NULL);
+        SyncSession* syncsession = (SyncSession*)data;
+        Session* session = (Session*)BUFFER_CLASS->ref(syncsession->session,NULL);
         // get frame from device
         libav::Frame* frame = session->device->frame;
 
@@ -518,25 +515,26 @@ namespace encoder {
         if(session->device->klass->convert(session->device,img)) {
             LOG_ERROR("Could not convert image");
             RAISE_EVENT(ctx->shutdown_event);
-            continue;
+            return platf::Capture::error;
         }
 
         // encode
         if(encode(ctx->frame_nr++, 
-                    syncsession, 
+                    syncsession->session, 
                     frame, 
                     ctx->packet_queue, 
                     ctx->channel_data)) 
         {
             LOG_ERROR("Could not encode video packet");
             RAISE_EVENT(ctx->shutdown_event);
-            continue;
+            return platf::Capture::error;
         }
 
         // reset keyframe attribute
         frame->pict_type = AV_PICTURE_TYPE_NONE;
         frame->key_frame = 0;
 
+        BUFFER_CLASS->unref(syncsession->session);
         return platf::Capture::ok;
     }
 
@@ -586,12 +584,15 @@ namespace encoder {
         if(!img || ctx->display->klass->dummy_img(ctx->display,img)) 
             return Status::error;
 
-        if(!make_synced_session(synced_session,img, ctx))
+        if(!make_synced_session(&synced_session,img, ctx))
             return Status::error;
 
         // cursor
         // run image capture in while loop, 
-        return (Status)ctx->display->klass->capture(ctx->display, img,on_image_snapshoot, synced_session, TRUE);
+        return (Status)ctx->display->klass->capture(ctx->display, 
+                                                    img,
+                                                    (platf::SnapshootCallback)on_image_snapshoot, 
+                                                    (pointer)&synced_session, TRUE);
     }
 
     /**
@@ -626,7 +627,7 @@ namespace encoder {
             }
 
             // reset display every 200ms until display is ready
-            while(ctx->sync_session_ctx_queue) {
+            while(!IS_INVOKED(ctx->shutdown_event)) {
                 disp = reset_display(encoder->dev_type, chosen_display, ENCODER_CONFIG->framerate);
                 if(disp) 
                     break;
@@ -647,41 +648,8 @@ namespace encoder {
 
         // run encoder in infinite loop
         while(encode_run_sync(ctx) == Status::reinit) {}
-
         done:
-        QUEUE_ARRAY_CLASS->stop(ctx->sync_session_ctx_queue);
-        
-        while (LIST_OBJECT_CLASS->has_data(synced_session_ctxs,0))
-        {
-            util::Buffer* obj = LIST_OBJECT_CLASS->get_data(synced_session_ctxs,0);
-
-            int size;
-            SyncSessionContext* ss_ctx = (SyncSessionContext*) BUFFER_CLASS->ref(obj,&size);
-            if(size != sizeof(SyncSessionContext)) {
-                LOG_ERROR("wrong datatype");
-                continue;
-            }
-
-            RAISE_EVENT(ss_ctx->shutdown_event);
-            RAISE_EVENT(ss_ctx->join_event);
-            BUFFER_CLASS->unref(obj);
-        }
-
-        while (QUEUE_ARRAY_CLASS->peek(ctx->sync_session_ctx_queue))
-        {
-            util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(ctx->sync_session_ctx_queue);
-
-            int size;
-            SyncSessionContext* ss_ctx = (SyncSessionContext*) BUFFER_CLASS->ref(obj,&size);
-            if(size != sizeof(SyncSessionContext)) {
-                LOG_ERROR("wrong datatype");
-                continue;
-            }
-
-            RAISE_EVENT(ss_ctx->shutdown_event);
-            RAISE_EVENT(ss_ctx->join_event);
-            BUFFER_CLASS->unref(obj);
-        }
+        RAISE_EVENT(ctx->shutdown_event);
     }
 
     /**
@@ -695,7 +663,7 @@ namespace encoder {
     void 
     capture( util::Broadcaster* shutdown_event,
              util::QueueArray* packet_queue,
-             Config config,
+             Config* config,
              pointer data) 
     {
         util::Broadcaster* join_event = NEW_EVENT;
@@ -710,7 +678,7 @@ namespace encoder {
         ss_ctx.packet_queue = packet_queue;
         ss_ctx.frame_nr = 1;
 
-        ss_ctx.config = &config;
+        ss_ctx.config = config;
         ss_ctx.channel_data = data;
         captureThreadSync(&ss_ctx);
 
@@ -758,8 +726,7 @@ namespace encoder {
             return -1;
         }
 
-        Session* session = NULL;
-        make_session(session, encoder, config, disp->width, disp->height, hwdevice);
+        Session* session = make_session(encoder, config, disp->width, disp->height, hwdevice);
         if(!session) {
             return -1;
         }
@@ -778,7 +745,11 @@ namespace encoder {
 
         util::QueueArray* packets = QUEUE_ARRAY_CLASS->init();
         while(!QUEUE_ARRAY_CLASS->peek(packets)) {
-            if(encode(1, session, frame, packets, NULL)) {
+            if(encode(1, 
+                BUFFER_CLASS->init(session,sizeof(Session),session_finalize), 
+                frame, 
+                packets, NULL)) 
+            {
                 return -1;
             }
         }
@@ -805,12 +776,12 @@ namespace encoder {
 
 
         if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
-            // BOOST_LOG(error) << "First packet type is not an IDR frame"sv;
+            LOG_ERROR("First packet type is not an IDR frame");
             return -1;
         }
 
         int flag = 0;
-        if(bitstream::validate_packet(av_packet, config->videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
+        if(encoder::validate_packet(av_packet, config->videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
             flag |= ValidateFlags::VUI_PARAMS;
         }
 

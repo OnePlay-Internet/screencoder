@@ -141,7 +141,7 @@ namespace encoder
      */
     void                capture          (util::Broadcaster* shutdown_event,
                                           util::QueueArray* packet_queue,
-                                          Config config,
+                                          Config* config,
                                           pointer data);
 } // namespace error
 

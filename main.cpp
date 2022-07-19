@@ -8,15 +8,18 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <encoder_packet.h>
 #include <typeinfo>
 #include <iostream>
+#include <sunshine_session.h>
 
 
 int 
 main(int argc, char const *argv[])
 {
-    encoder::Config* conf;
-    std::cout << typeid((encoder::Packet*)conf).name() << std::endl;
+    session::Session sess;
+    memset(&sess,0,sizeof(session::Session));
+
+    session::init_session(&sess,NULL);
+    session::start_session(&sess);
     return 0;
 }

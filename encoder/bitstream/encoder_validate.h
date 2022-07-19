@@ -17,7 +17,7 @@ namespace encoder {
     /**
      * Check if SPS->VUI is present
      */
-    bool        validate_packet         (const libav::Packet *packet, 
+    bool        validate_packet         (libav::Packet *packet, 
                                          int codec_id); 
 } // namespace bitstream
 
