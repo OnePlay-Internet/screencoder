@@ -11,9 +11,9 @@
 #include <encoder_d3d11_device.h>
 #include <sunshine_util.h>
 
-#include <encoder.h>
-#include <encoder.h>
-#include <common.h>
+#include <encoder_thread.h>
+#include <encoder_thread.h>
+#include <platform_common.h>
 
 #include <sunshine_config.h>
 

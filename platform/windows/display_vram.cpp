@@ -16,12 +16,12 @@ extern "C" {
 
 
 #include <d3d11_datatype.h>
-#include <common.h>
+#include <platform_common.h>
 #include <display.h>
 #include <display_vram.h>
 #include <windows_helper.h>
 #include <hw_device.h>
-#include <encoder.h>
+#include <encoder_thread.h>
 #include <thread>
 
 

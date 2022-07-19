@@ -9,9 +9,11 @@
  * 
  */
 #include <encoder_packet.h>
+#include <encoder_thread.h>
 #include <sunshine_util.h>
 
 #include <sunshine_rtp.h>
+#include <sunshine_config.h>
 
 extern "C" {
 // this function implementation has already been defined in avio_internal.h: line 186
@@ -40,14 +42,12 @@ namespace rtp
     typedef struct sockaddr_in SocketAddress;
 
     typedef struct _Video {
-        int lowseq;
         SocketAddress receiver;
-
         SOCKET rtpSocket;
+
         unsigned short port;
 
         int mtu;
-        libav::FormatContext* context;
 
         util::Broadcaster* idr_event;
     }Video;
@@ -55,10 +55,123 @@ namespace rtp
     typedef struct _BroadcastContext {
         std::thread video_thread;
 
-        Video video;
+        util::Broadcaster* shutdown_event;
 
-        State state;
+        util::QueueArray* packet_queue;
+
+        Video video;
     }BroadcastContext;
+
+
+    static bool
+    setup_receiver(Video* video)
+    {
+        // Declare variables
+        SOCKET ListenSocket;
+        SocketAddress saServer;
+        hostent* localHost;
+        char* localIP;
+
+        // Create a listening socket
+        ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+        // Get the local host information
+        localHost = gethostbyname("");
+        localIP = inet_ntoa (*(struct in_addr *)*localHost->h_addr_list);
+
+        // Set up the sockaddr structure
+        saServer.sin_family = AF_INET;
+        saServer.sin_addr.s_addr = inet_addr(localIP);
+        saServer.sin_port = htons(5150);
+
+        // Bind the listening socket using the
+        // information in the sockaddr structure
+        bind( ListenSocket,(SOCKADDR*) &saServer, sizeof(saServer) );
+    }
+
+
+    static int
+    rtp_open_internal(unsigned short *port) 
+    {
+        SOCKET s;
+        SocketAddress sin;
+        int sinlen;
+        bzero(&sin, sizeof(sin));
+        if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+            return -1;
+        sin.sin_family = AF_INET;
+        if(bind(s, (SocketAddress*) &sin, sizeof(sin)) < 0) {
+            close(s);
+            return -1;
+        }
+        sinlen = sizeof(sin);
+        if(getsockname(s, (SocketAddress*) &sin, &sinlen) < 0) {
+            close(s);
+            return -1;
+        }
+        *port = ntohs(sin.sin_port);
+        return s;
+    }
+
+    static int
+    rtp_close_ports(BroadcastContext* ctx) 
+    {
+        if(ctx->video.port != 0)
+            close(ctx->video.port);
+
+        return 0;
+    }
+
+    int
+    rtp_open_ports(BroadcastContext* ctx) 
+    {
+        // initialized?
+        if(ctx->video.rtpSocket != 0)
+            return 0;
+
+        ctx->video.rtpSocket = rtp_open_internal(&ctx->video.port);
+        if(ctx->video.rtpSocket < 0)
+            return -1;
+
+        LOG_INFO("Opened RTP port");
+        return 0;
+    }
+
+
+
+    /**
+     * @brief 
+     * 
+     * @param ctx 
+     * @param sin 
+     * @param codec
+     * @return int 
+     */
+    static int
+    rtp_stream_run_first_time(BroadcastContext *ctx, 
+                              encoder::Session* session) 
+    {
+        if(ffio_open_dyn_packet_buf(session->format_context->pb, ENCODER_CONFIG->mtu) < 0) {
+            LOG_ERROR("cannot open dynamic packet buffer\n");
+            return -1;
+        }
+
+        if(rtp_open_ports(ctx) < 0) {
+            LOG_ERROR("RTP: open ports failed");
+            return -1;
+        }
+
+        // write header
+        if(avformat_write_header(ctx->video.context, NULL) < 0) {
+            LOG_ERROR("Cannot write stream");
+            return -1;
+        }
+
+        byte* dummybuf;
+        avio_close_dyn_buf(ctx->video.context, &dummybuf);
+        av_free(dummybuf);
+        return 0;
+    }
 
 
     /**
@@ -125,42 +238,60 @@ namespace rtp
     void 
     videoBroadcastThread(BroadcastContext* ctx) 
     {
-        util::QueueArray* packets;
-        util::Broadcaster* shutdown_event;
+        util::QueueArray* packets = ctx->packet_queue;
+        util::Broadcaster* shutdown_event = ctx->shutdown_event;
 
 
         while(QUEUE_ARRAY_CLASS->peek(packets)) {
+            util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
             if(IS_INVOKED(shutdown_event))
                 break;
 
-            int iolen;
-            byte* iobuf;
+
 
             int size;
-            util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
             encoder::Packet* video_packet = (encoder::Packet*)BUFFER_CLASS->ref(video_packet_buffer,&size);
-            if(size != sizeof(encoder::Packet))
-            {
+            if(size != sizeof(encoder::Packet)) {
                 LOG_ERROR("wrong datatype");
-                goto done;
+                continue;
             }
 
-            Session* session = (Session*)video_packet->user_data;
+            encoder::Session* session = (encoder::Session*)BUFFER_CLASS->ref(video_packet->session,&size);
+            if(size != sizeof(encoder::Session)) {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
 
-            util::Buffer* av_packet_buffer = (util::Buffer*) video_packet->packet;
-            libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(av_packet_buffer,NULL);
+            libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(video_packet->packet,&size);
+            if(size != sizeof(libav::Packet)) {
+                LOG_ERROR("wrong datatype");
+                continue;
+            }
 
+            static bool init = false;
+            if(!init) 
+                rtp_stream_run_first_time(ctx,session);
 
+            init = true;
+
+            if(av_packet->pts != (int64) AV_NOPTS_VALUE) {
+                av_packet->pts = av_rescale_q(session->pts,
+                        session->context->time_base,
+                        session->stream->time_base);
+            }
             // TODO
-            if(ffio_open_dyn_packet_buf(ctx->video.context,ctx->video.mtu) < 0){
+            if(ffio_open_dyn_packet_buf(session->format_context->pb,ctx->video.mtu) < 0){
                 LOG_ERROR("buffer allocation failed");
                 goto done;
             }           
-            if(av_write_frame(ctx->video.context, av_packet) != 0) {
+            if(av_write_frame(session->format_context, av_packet) != 0) {
                 LOG_ERROR("write failed");
                 goto done;
             }
-            iolen = avio_close_dyn_buf(ctx->video.context, &iobuf);
+
+            int iolen;
+            byte* iobuf;
+            iolen = avio_close_dyn_buf(session->format_context->pb, &iobuf);
             util::Buffer* avbuf = BUFFER_CLASS->init((pointer)iobuf,iolen,av_free);
 
             if(rtp_write_bindata(ctx,avbuf) < 0) {
@@ -170,7 +301,6 @@ namespace rtp
 
 
             BUFFER_CLASS->unref(avbuf);
-            BUFFER_CLASS->unref(av_packet_buffer);
             BUFFER_CLASS->unref(video_packet_buffer);
         }
     done:
@@ -185,15 +315,12 @@ namespace rtp
      * @return int 
      */
     int 
-    start_broadcast(BroadcastContext *ctx) 
+    start_broadcast(util::Broadcaster* shutdown_event,
+                    util::QueueArray* packet_queue) 
     {
-        Error ec;
-        ctx->video_sock.open(Udp::v4(),ec);
-        if(ec) {
-            LOG_ERROR("could not open port");
-            return -1;
-        }
-        ctx->video_thread = std::thread { videoBroadcastThread, &ctx->video_sock };
-        ctx->io.run();
+        BroadcastContext ctx = {0};
+        ctx.packet_queue = packet_queue;
+        ctx.shutdown_event = shutdown_event;
+        ctx->video_thread = std::thread { videoBroadcastThread, &ctx};
     }
 } // namespace rtp

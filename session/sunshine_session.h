@@ -19,22 +19,21 @@
 
 namespace session
 {
-    typedef struct _Capturer
+    typedef struct _Session
     {
         config::Encoder* config;
 
         util::Broadcaster* shutdown_event;
         util::Broadcaster* idr_event;
 
-        util::QueueArray* packet_queue;
-
-        util::QueueArray* capture_context_queue;
-        util::QueueArray* capture_context_queue;
-
-    }Capturer;
+        util::QueueArray* packet_queue
+    }Session;
     
-    typedef struct _Session Session;
-    
+
+    void        init_session        (Session* session);
+
+
+        
 } // namespace singleton
 
 

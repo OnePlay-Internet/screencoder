@@ -13,10 +13,10 @@
 
 #include <encoder_packet.h>
 
-#include <common.h>
+#include <platform_common.h>
 #include <sunshine_config.h>
 #include <encoder_validate.h>
-#include <encoder.h>
+#include <encoder_thread.h>
 
 
 

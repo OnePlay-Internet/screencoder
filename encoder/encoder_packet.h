@@ -1,5 +1,5 @@
 /**
- * @file encoder.h
+ * @file encoder_thread.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -49,6 +49,12 @@ namespace encoder
          * libav::Packet
          */
         util::Buffer* packet;
+
+        /**
+         * @brief 
+         * encoder::Session
+         */
+        util::Buffer* session;
 
         pointer user_data;
     }Packet;

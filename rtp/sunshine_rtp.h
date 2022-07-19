@@ -14,22 +14,8 @@
 
 namespace rtp
 {
-    typedef struct _Config {
-        int packetsize;
-        int minRequiredFecPackets;
-        int featureFlags;
-        int controlProtocolType;
-    }Config;
-
-
-
-    enum State {
-        STOPPED,
-        STOPPING,
-        STARTING,
-        RUNNING,
-    };
-    
+    int start_broadcast(util::Broadcaster* shutdown_event,
+                        util::QueueArray* packet_queue) ;
 } // namespace rtp
 
 

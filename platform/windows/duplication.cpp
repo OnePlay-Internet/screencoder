@@ -12,7 +12,7 @@
 #include <sunshine_util.h>
 
 
-#include <common.h>
+#include <platform_common.h>
 
 
 

@@ -1,5 +1,5 @@
 /**
- * @file encoder.h
+ * @file encoder_thread.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -15,7 +15,7 @@
 #include <sunshine_util.h>
 
 #include <encoder_validate.h>
-#include <common.h>
+#include <platform_common.h>
 
 
 
@@ -23,14 +23,15 @@ namespace encoder
 {
     typedef struct _Session {
         libav::CodecContext* context;
+        libav::FormatContext* format_context;
+        libav::Stream* stream;
+
         platf::HWDevice* device;
 
+        int64 pts;
         int inject;
     }Session;
 
-    typedef struct _SessionClass{
-        
-    } SessionClass;
 
     typedef struct _Profile{
         int h264_high;
@@ -118,10 +119,30 @@ namespace encoder
     platf::PixelFormat  map_pix_fmt     (libav::PixelFormat fmt);
 
 
-    int 
-    validate_config(platf::Display* disp, 
-                    Encoder* encoder, 
-                    Config* config) ;
+    /**
+     * @brief 
+     * 
+     * @param disp 
+     * @param encoder 
+     * @param config 
+     * @return int 
+     */
+    int                 validate_config (platf::Display* disp, 
+                                         Encoder* encoder, 
+                                         Config* config) ;    
+    
+    /**
+     * @brief 
+     * 
+     * @param shutdown_event 
+     * @param packet_queue 
+     * @param config 
+     * @param data 
+     */
+    void                capture          (util::Broadcaster* shutdown_event,
+                                          util::QueueArray* packet_queue,
+                                          Config config,
+                                          pointer data);
 } // namespace error
 
 

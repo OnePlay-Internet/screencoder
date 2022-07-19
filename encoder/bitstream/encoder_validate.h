@@ -13,7 +13,7 @@
 #include <sunshine_util.h>
 
 
-namespace bitstream {
+namespace encoder {
     /**
      * Check if SPS->VUI is present
      */

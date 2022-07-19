@@ -11,7 +11,7 @@
 #ifndef __ENCODER_D3D11_DEVICE_H__
 #define __ENCODER_D3D11_DEVICE_H__
 #include <sunshine_util.h>
-#include <encoder.h>
+#include <encoder_thread.h>
 
 
 #define NVENC encoder::make_d3d11_encoder()

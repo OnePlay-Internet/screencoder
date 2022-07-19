@@ -10,7 +10,7 @@ extern "C" {
 #include <libavutil/hwcontext_d3d11va.h>
 }
 
-#include <common.h>
+#include <platform_common.h>
 
 namespace helper
 {

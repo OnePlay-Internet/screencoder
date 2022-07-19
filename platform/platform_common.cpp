@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <common.h>
+#include <platform_common.h>
 #include <encoder_packet.h>
 #include <display_vram.h>
 

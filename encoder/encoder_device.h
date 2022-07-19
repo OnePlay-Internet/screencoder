@@ -11,7 +11,7 @@
 #ifndef __SUNSHINE_ENCODER_DEVICE_H__
 #define __SUNSHINE_ENCODER_DEVICE_H__
 
-#include <encoder.h>
+#include <encoder_thread.h>
 
 
 namespace encoder

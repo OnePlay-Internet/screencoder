@@ -15,7 +15,7 @@
 
 
 #include <d3d11_datatype.h>
-#include <common.h>
+#include <platform_common.h>
 #include <duplication.h>
 
 

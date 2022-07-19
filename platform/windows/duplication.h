@@ -10,7 +10,7 @@
  */
 #ifndef __SUNSHINE_DUPLICATION_H__
 #define __SUNSHINE_DUPLICATION_H__
-#include <common.h>
+#include <platform_common.h>
 #include <duplication.h>
 #include <d3d11_datatype.h>
     

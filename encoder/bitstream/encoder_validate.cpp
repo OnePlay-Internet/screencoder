@@ -20,7 +20,7 @@ extern "C" {
 
 
 
-namespace bitstream {
+namespace encoder {
 
 
     bool 

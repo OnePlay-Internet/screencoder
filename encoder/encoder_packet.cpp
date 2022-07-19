@@ -30,6 +30,7 @@ namespace encoder
     {
         Packet* self = ((Packet*)packet);
         BUFFER_CLASS->unref(self->packet);
+        BUFFER_CLASS->unref(self->session);
         free(packet);
     }
 

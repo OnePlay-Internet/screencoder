@@ -1,6 +1,6 @@
 
 
-#include <common.h>
+#include <platform_common.h>
 #include <hw_device.h>
 
 extern "C" {
@@ -145,6 +145,8 @@ namespace hwdevice
                    platf::PixelFormat pix_fmt) 
     {
       D3D11Device* self = (D3D11Device*)malloc(sizeof(D3D11Device));
+      memset((pointer)self,0,sizeof(D3D11Device));
+
       self->base.klass = (platf::HWDeviceClass*)d3d11_device_class_init();
       display::HLSL* hlsl = display::init_hlsl();
       HRESULT status;
@@ -228,6 +230,12 @@ namespace hwdevice
       self->device_ctx->VSSetConstantBuffers(0, 1, &self->info_scene);
 
       return (platf::HWDevice*)self;
+    }
+
+    void 
+    hw_device_free(platf::HWDevice* dev)
+    {
+        free((pointer)dev);
     }
 
     void 
@@ -346,6 +354,7 @@ namespace hwdevice
         
         klass.base.convert = hw_device_convert;
         klass.base.init    = hw_device_init;
+        klass.base.finalize    = hw_device_free;
         klass.base.set_frame = hw_device_set_frame;
         klass.base.set_colorspace = hw_device_set_colorspace;
         klass.init_view_port = d3d11_device_init_view_port;

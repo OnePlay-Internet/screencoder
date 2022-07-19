@@ -1,6 +1,6 @@
 #ifndef __SUNSHINE_HW_DEVICE_H__
 #define __SUNSHINE_HW_DEVICE_H__
-#include <common.h>
+#include <platform_common.h>
 #include <encoder_packet.h>
 #include <d3d11_datatype.h>
 

@@ -27,11 +27,17 @@ namespace libav
     void    packet_free_func    (void* pk);
 
     typedef AVFrame             Frame;
-    typedef AVCodecContext      CodecContext;
+
+    typedef AVStream            Stream;
+
     typedef AVBufferRef         BufferRef;
     typedef AVPixelFormat       PixelFormat;
-    typedef AVCodecID           CodecID;
 
+    typedef AVCodec             Codec;
+    typedef AVCodecID           CodecID;
+    typedef AVCodecContext      CodecContext;
+
+    typedef AVFormat            Format;
     typedef AVFormatContext     FormatContext;
 } // namespace libav
 

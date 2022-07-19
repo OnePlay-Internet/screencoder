@@ -68,6 +68,7 @@ namespace platf {
         int (*convert)          (HWDevice* self,
                                  Image* img);
 
+        int (*finalize)         (HWDevice* self);
         /**
          * @brief 
          * do the conversion from ImageD3D to libav::Frame

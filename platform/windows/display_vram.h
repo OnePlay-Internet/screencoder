@@ -12,7 +12,7 @@
 #define __SUNSHINE_DISPLAY_VRAM_H__
 #include <display.h>
 #include <d3d11_datatype.h>
-#include <common.h>
+#include <platform_common.h>
 
 #define DISPLAY_VRAM_CLASS      vram::display_class_init()
 

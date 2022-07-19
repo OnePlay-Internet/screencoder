@@ -16,7 +16,7 @@
 #include <display.h>
 #include <sunshine_config.h>
 
-#include <common.h>
+#include <platform_common.h>
 
 #include <d3d11_datatype.h>
 #include <windows_helper.h>
