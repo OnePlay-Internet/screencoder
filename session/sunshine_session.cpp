@@ -25,7 +25,6 @@ namespace session {
                  config::Encoder* config)
     {
         session->config = config;
-        session->idr_event = NEW_EVENT;
         session->shutdown_event = NEW_EVENT;
         session->packet_queue = QUEUE_ARRAY_CLASS->init();
     }

@@ -13,12 +13,11 @@
 #include <sunshine_util.h>
 
 #include <encoder_packet.h>
-#include <encoder_validate.h>
 #include <encoder_d3d11_device.h>
 #include <sunshine_config.h>
 
 #include <platform_common.h>
-#include <display.h>
+#include <display_base.h>
 extern "C" {
 #include <libswscale/swscale.h>
 #include <libavcodec/avcodec.h>
@@ -27,6 +26,8 @@ extern "C" {
 
 #include <thread>
 #include <string.h>
+
+#define DISPLAY_RETRY   5
 
 using namespace std::literals;
 
@@ -47,7 +48,6 @@ namespace encoder {
      */
     typedef struct _SyncSessionContext{
         util::Broadcaster* shutdown_event;
-        util::Broadcaster* idr_event;
         util::Broadcaster* join_event;
 
         util::QueueArray* packet_queue;
@@ -131,7 +131,7 @@ namespace encoder {
         if(ret < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, ret));
-            return -1;
+            return FALSE;
         }
 
 
@@ -143,15 +143,6 @@ namespace encoder {
             return 0;
         else if(ret < 0) 
             return ret;
-
-        if(session->inject) {
-            if(session->inject == 1) {
-                //H264
-            } else {
-                //H265
-            }
-        }
-
 
         // we pass the reference of session to packet
         packet->session = sync_session;
@@ -165,14 +156,14 @@ namespace encoder {
 
     void
     handle_options(AVDictionary* options, 
-                   KeyValue* keyvalue)
+                   util::KeyValue* keyvalue)
     {
-        KeyValue* option = keyvalue;
-        while(option) {
-            if(option->type == Type::STRING)
+        util::KeyValue* option = keyvalue;
+        while(option->type) {
+            if(option->type == util::Type::STRING)
                 av_dict_set(&options,option->key,option->string_value,0);
 
-            if(option->type == Type::INT)
+            if(option->type == util::Type::INT)
                 av_dict_set_int(&options,option->key,option->int_value,0);
 
             option++;
@@ -268,7 +259,11 @@ namespace encoder {
         ctx->max_b_frames = 0;
 
         // Use an infinite GOP length since I-frames are generated on demand
-        ctx->gop_size = encoder->flags & LIMITED_GOP_SIZE ? INT16_MAX : INT_MAX;
+        ctx->gop_size = encoder->flags[LIMITED_GOP_SIZE] ? INT16_MAX : INT_MAX;
+
+        // if gop_size are set then 
+        ctx->gop_size = ENCODER_CONFIG->gop_size >= 0 ? ENCODER_CONFIG->gop_size : ctx->gop_size;
+
         ctx->keyint_min = INT_MAX;
 
         if(config->numRefFrames == 0) {
@@ -279,7 +274,7 @@ namespace encoder {
             ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? config->numRefFrames : 0;
         }
 
-        ctx->flags |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
+        ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
         ctx->flags2 |= AV_CODEC_FLAG2_FAST;
 
         ctx->color_range = (config->encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
@@ -289,7 +284,7 @@ namespace encoder {
         case 0:
         default:
             // Rec. 601
-            // BOOST_LOG(info) << "Color coding [Rec. 601]"sv;
+            LOG_INFO("Color coding [Rec. 601]");
             ctx->color_primaries = AVCOL_PRI_SMPTE170M;
             ctx->color_trc       = AVCOL_TRC_SMPTE170M;
             ctx->colorspace      = AVCOL_SPC_SMPTE170M;
@@ -298,7 +293,7 @@ namespace encoder {
 
         case 1:
             // Rec. 709
-            // BOOST_LOG(info) << "Color coding [Rec. 709]"sv;
+            LOG_INFO("Color coding [Rec. 709]");
             ctx->color_primaries = AVCOL_PRI_BT709;
             ctx->color_trc       = AVCOL_TRC_BT709;
             ctx->colorspace      = AVCOL_SPC_BT709;
@@ -307,7 +302,7 @@ namespace encoder {
 
         case 2:
             // Rec. 2020
-            // BOOST_LOG(info) << "Color coding [Rec. 2020]"sv;
+            LOG_INFO("Color coding [Rec. 2020]");
             ctx->color_primaries = AVCOL_PRI_BT2020;
             ctx->color_trc       = AVCOL_TRC_BT2020_10;
             ctx->colorspace      = AVCOL_SPC_BT2020_NCL;
@@ -370,7 +365,7 @@ namespace encoder {
             ctx->bit_rate       = bitrate;
             ctx->rc_min_rate    = bitrate;
         }
-        else if(video_format->has_qp) {
+        else if(video_format->qp) {
             handle_options(options,video_format->qp);
         }
         else {
@@ -424,18 +419,6 @@ namespace encoder {
         session->stream = stream;
         session->context = ctx;
         session->device = device;
-
-
-        // 0 ==> don't inject, 1 ==> inject for h264, 2 ==> inject for hevc
-        // if VUI param are set, then no need to inject
-        // if VUI param are not set, then set inject option based on video format
-        if(!(bool)video_format->capabilities[FrameFlags::VUI_PARAMETERS])
-            if(config->videoFormat)
-                session->inject = 2;
-            else
-                session->inject = 1;
-        else
-            session->inject = 0;
 
         return session;
     }
@@ -505,12 +488,6 @@ namespace encoder {
             return platf::Capture::error;
         }
 
-        // peek idr event (keyframe)
-        if(IS_INVOKED(ctx->idr_event)) {
-            frame->pict_type = AV_PICTURE_TYPE_I;
-            frame->key_frame = 1;
-        }
-
         // convert image
         if(session->device->klass->convert(session->device,img)) {
             LOG_ERROR("Could not convert image");
@@ -520,10 +497,10 @@ namespace encoder {
 
         // encode
         if(encode(ctx->frame_nr++, 
-                    syncsession->session, 
-                    frame, 
-                    ctx->packet_queue, 
-                    ctx->channel_data)) 
+                  syncsession->session, 
+                  frame, 
+                  ctx->packet_queue, 
+                  ctx->channel_data)) 
         {
             LOG_ERROR("Could not encode video packet");
             RAISE_EVENT(ctx->shutdown_event);
@@ -557,13 +534,13 @@ namespace encoder {
     } 
 
     platf::Display*
-    reset_display(AVHWDeviceType type, 
+    tryget_display(AVHWDeviceType type, 
                   char* display_name, 
                   int framerate) 
     {
         platf::Display* disp = NULL;
         // We try this twice, in case we still get an error on reinitialization
-        for(int x = 0; x < 2; ++x) {
+        for(int x = 0; x < DISPLAY_RETRY; ++x) {
             disp = platf::display(map_dev_type(type), display_name, framerate);
             if (disp)
                 break;
@@ -627,15 +604,7 @@ namespace encoder {
             }
 
             // reset display every 200ms until display is ready
-            while(!IS_INVOKED(ctx->shutdown_event)) {
-                disp = reset_display(encoder->dev_type, chosen_display, ENCODER_CONFIG->framerate);
-                if(disp) 
-                    break;
-
-                std::this_thread::sleep_for(200ms);
-            }
-
-            // fail to get display names
+            disp = tryget_display(encoder->dev_type, chosen_display, ENCODER_CONFIG->framerate);
             if(!disp) {
                 LOG_ERROR("unable to create display");
                 goto done;
@@ -667,13 +636,10 @@ namespace encoder {
              pointer data) 
     {
         util::Broadcaster* join_event = NEW_EVENT;
-        util::Broadcaster* idr_event = NEW_EVENT;
-        RAISE_EVENT(idr_event);
 
         // push new session context to concode queue
         SyncSessionContext ss_ctx = {0};
         ss_ctx.shutdown_event = shutdown_event;
-        ss_ctx.idr_event = idr_event;
         ss_ctx.join_event = join_event;
         ss_ctx.packet_queue = packet_queue;
         ss_ctx.frame_nr = 1;
@@ -707,15 +673,14 @@ namespace encoder {
     }
 
 
-    int 
-    validate_config(platf::Display* disp, 
-                    Encoder* encoder, 
+    bool
+    validate_config(Encoder* encoder, 
                     Config* config) 
     {
-        disp = reset_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
-        if(!disp) {
-            return -1;
-        }
+        platf::Display* disp = tryget_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
+        if(!disp) 
+            return FALSE;
+        
 
         platf::PixelFormat pix_fmt  = config->dynamicRange == 0 ? 
                                         map_pix_fmt(encoder->static_pix_fmt) : 
@@ -723,21 +688,21 @@ namespace encoder {
 
         platf::HWDevice* hwdevice = disp->klass->make_hwdevice(disp,pix_fmt);
         if(!hwdevice) {
-            return -1;
+            return FALSE;
         }
 
         Session* session = make_session(encoder, config, disp->width, disp->height, hwdevice);
         if(!session) {
-            return -1;
+            return FALSE;
         }
 
         platf::Image* img = disp->klass->alloc_img(disp);
 
         if(!img || disp->klass->dummy_img(disp,img)) 
-            return -1;
+            return FALSE;
         
         if(session->device->klass->convert(session->device,img)) 
-            return -1;
+            return FALSE;
         
 
         libav::Frame* frame = session->device->frame;
@@ -750,7 +715,7 @@ namespace encoder {
                 frame, 
                 packets, NULL)) 
             {
-                return -1;
+                return FALSE;
             }
         }
 
@@ -760,7 +725,7 @@ namespace encoder {
         Packet* packet    = (Packet*)BUFFER_CLASS->ref(obj,&size);
         if(size != sizeof(Packet)) {
             LOG_ERROR("wrong datatype");
-            return -1;
+            return FALSE;
         }
 
         util::Buffer* av_buffer = packet->packet;
@@ -770,33 +735,34 @@ namespace encoder {
         if (size != sizeof(libav::Packet))
         {
             LOG_ERROR("wrong datatype");
-            return -1;
+            return FALSE;
         }
         
-
-
         if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
             LOG_ERROR("First packet type is not an IDR frame");
-            return -1;
+            return FALSE;
         }
 
-        int flag = 0;
-        if(encoder::validate_packet(av_packet, config->videoFormat ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264)) {
-            flag |= ValidateFlags::VUI_PARAMS;
+        if(av_packet->pts != (int64) AV_NOPTS_VALUE) {
+            av_packet->pts = av_rescale_q(session->pts,
+                    session->context->time_base,
+                    session->stream->time_base);
+        }
+        // TODO
+        if(avio_open_dyn_buf(&session->format_context->pb) < 0){
+            LOG_ERROR("buffer allocation failed");
+            return FALSE;
+        }           
+        if(av_write_frame(session->format_context, av_packet) != 0) {
+            LOG_ERROR("write failed");
+            return FALSE;
         }
 
-        char* hevc_nalu = "\000\000\000\001(";
-        char* h264_nalu = "\000\000\000\001e";
-        char* nalu_prefix = config->videoFormat ? hevc_nalu : h264_nalu;
-        util::Buffer* payload = BUFFER_CLASS->init(av_packet->data,av_packet->size,DO_NOTHING);
-        util::Buffer* pref =  BUFFER_CLASS->init(nalu_prefix,strlen(nalu_prefix),DO_NOTHING);
-
-        if(BUFFER_CLASS->search(payload,pref) != BUFFER_CLASS->size(payload))
-            flag |= ValidateFlags::NALU_PREFIX_5B;
-
-        BUFFER_CLASS->unref(av_buffer);
-        BUFFER_CLASS->unref(payload);
-        BUFFER_CLASS->unref(pref);
-        return flag;
+        int iolen;
+        byte* iobuf;
+        iolen = avio_close_dyn_buf(session->format_context->pb, &iobuf);
+        av_free(iobuf);
+        disp->klass->finalize((pointer)disp);
+        return TRUE;
     }
 }

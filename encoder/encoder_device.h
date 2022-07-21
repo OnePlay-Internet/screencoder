@@ -18,6 +18,14 @@ namespace encoder
 {
     bool        init_encoder_base       (Encoder* encoder);
 
+    /**
+     * @brief 
+     * 
+     * @param encoder 
+     * @return true 
+     * @return false 
+     */
+    bool        validate_encoder        (Encoder* encoder);
 }
 
 #endif

@@ -10,7 +10,7 @@
  */
 #ifndef __SUNSHINE_DISPLAY_VRAM_H__
 #define __SUNSHINE_DISPLAY_VRAM_H__
-#include <display.h>
+#include <display_base.h>
 #include <d3d11_datatype.h>
 #include <platform_common.h>
 

@@ -116,8 +116,6 @@ namespace platf {
 
         Image*      (*alloc_img)        (Display* self);
 
-        void        (*free)             (Display* self);
-
         HWDevice*   (*make_hwdevice)    (Display* self,
                                          PixelFormat pix_fmt);
         

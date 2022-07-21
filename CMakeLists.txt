@@ -6,24 +6,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(SUNSHINE_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 
-# Ugly hack to compile with #include <qos2.h>
-add_compile_definitions(
-	QOS_FLOWID=UINT32
-	PQOS_FLOWID=UINT32*
-	QOS_NON_ADAPTIVE_FLOW=2)
-
-
-set(UPNPC_BUILD_SHARED OFF CACHE BOOL "no shared libraries")
-set(UPNPC_BUILD_TESTS OFF CACHE BOOL "Don't build tests for miniupnpc")
-set(UPNPC_BUILD_SAMPLE OFF CACHE BOOL "Don't build samples for miniupnpc")
-set(UPNPC_NO_INSTALL ON CACHE BOOL "Don't install any libraries build for miniupnpc")
-
-find_package(Threads REQUIRED)
-find_package(OpenSSL REQUIRED)
-set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost COMPONENTS system thread REQUIRED)
-
-list(APPEND SUNSHINE_COMPILE_OPTIONS -Wall -Wno-missing-braces -Wno-maybe-uninitialized -Wno-sign-compare)
 
 
 
@@ -42,12 +24,6 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 if(NOT DEFINED SUNSHINE_PREPARED_BINARIES)
 	set(SUNSHINE_PREPARED_BINARIES "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled/windows")
 endif()
-
-add_compile_definitions(SUNSHINE_PLATFORM="windows")
-
-# TODO
-# add_subdirectory(tools) #This is temporary, only tools for Windows are needed, for now
-
 
 
 set(PLATFORM_INCLUDE_DIR
@@ -168,18 +144,6 @@ include_directories(
 )
  
 
-string(TOUPPER "x${CMAKE_BUILD_TYPE}" BUILD_TYPE)
-if("${BUILD_TYPE}" STREQUAL "XDEBUG")
-	list(APPEND SUNSHINE_COMPILE_OPTIONS -O0 -ggdb3)
-	if(WIN32)
-		set_source_files_properties(sunshine/src/http/nvhttp.cpp 
-			PROPERTIES COMPILE_FLAGS -O2)
-	endif()
-else()
-	add_definitions(-DNDEBUG)
-	list(APPEND SUNSHINE_COMPILE_OPTIONS -O3)
-endif()
-
 
 
 list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
@@ -203,14 +167,4 @@ set_target_properties(sunshine PROPERTIES CXX_STANDARD 17
                             SOVERSION ${PROJECT_VERSION_MAJOR}
                             )
 
-if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 17)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-endif()
-
-foreach(flag IN LISTS SUNSHINE_COMPILE_OPTIONS)
-	list(APPEND SUNSHINE_COMPILE_OPTIONS_CUDA "$<$<COMPILE_LANGUAGE:CUDA>:--compiler-options=${flag}>")
-endforeach()
-
-target_compile_options(sunshine PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${SUNSHINE_COMPILE_OPTIONS}>;$<$<COMPILE_LANGUAGE:CUDA>:${SUNSHINE_COMPILE_OPTIONS_CUDA};-std=c++17>)
 

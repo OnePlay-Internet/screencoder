@@ -24,7 +24,6 @@ namespace session
         config::Encoder* config;
 
         util::Broadcaster* shutdown_event;
-        util::Broadcaster* idr_event;
 
         util::QueueArray* packet_queue;
     }Session;

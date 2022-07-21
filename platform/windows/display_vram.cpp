@@ -17,7 +17,7 @@ extern "C" {
 
 #include <d3d11_datatype.h>
 #include <platform_common.h>
-#include <display.h>
+#include <display_base.h>
 #include <display_vram.h>
 #include <windows_helper.h>
 #include <hw_device.h>
@@ -218,6 +218,7 @@ namespace vram {
 
       self->base.base.klass = display_class_init();
       if(display::display_base_init(&self->base,framerate, display_name)) {
+        free(self);
         return NULL;
       }
 
@@ -233,6 +234,7 @@ namespace vram {
       auto status = self->base.device->CreateSamplerState(&sampler_desc, &self->sampler_linear);
       if(FAILED(status)) {
         LOG_ERROR("Failed to create point sampler state");
+        free(self);
         return NULL;
       }
 
@@ -240,13 +242,15 @@ namespace vram {
       display::HLSL* hlsl = display::init_hlsl();
       status = self->base.device->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
       if(status) {
-        // BOOST_LOG(error) << "Failed to create scene vertex shader [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Failed to create scene vertex shader");
+        free(self);
         return NULL;
       }
 
       status = self->base.device->CreatePixelShader(hlsl->scene_ps_hlsl->GetBufferPointer(), hlsl->scene_ps_hlsl->GetBufferSize(), nullptr, &self->scene_ps);
       if(status) {
-        // BOOST_LOG(error) << "Failed to create scene pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Failed to create scene pixel shader");
+        free(self);
         return NULL;
       }
 
@@ -254,6 +258,7 @@ namespace vram {
       self->blend_disable = helper::make_blend(self->base.device, false);
 
       if(!self->blend_disable || !self->blend_enable) {
+        free(self);
         return NULL;
       }
 

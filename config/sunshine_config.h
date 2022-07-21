@@ -43,24 +43,17 @@ namespace config
         // ffmpeg params
         int qp; // higher == more compression and less quality
 
-        int hevc_mode;
-
         Nvidia nv;
         RTP rtp;
         
-        encoder::Config *encoder_config;
-
         char* encoder;
         char* adapter_name;
         char* output_name;
 
-
+        int gop_size;
         int packet_size;
         int framerate;
         bool dwmflush;
-
-
-
     }Encoder;
 
     Encoder*       get_encoder_config       (int argc, char** argv);

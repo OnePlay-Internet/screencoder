@@ -55,8 +55,6 @@ namespace rtp
 
     typedef struct _Video {
         UDPConn conn;
-
-        util::Broadcaster* idr_event;
     }Video;
 
     typedef struct _BroadcastContext {

@@ -13,10 +13,12 @@
 #include <cmath>
 #include <codecvt>
 
-#include <display.h>
+#include <display_base.h>
 #include <sunshine_config.h>
 
 #include <platform_common.h>
+
+
 
 #include <d3d11_datatype.h>
 #include <windows_helper.h>
