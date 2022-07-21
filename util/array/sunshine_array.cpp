@@ -138,8 +138,8 @@ namespace util
     KeyValue* 
     new_keyvalue_pairs(int size)
     {
-        KeyValue* pairs = (KeyValue*)malloc(size * sizeof(KeyValue));
-        memset(pairs,0,sizeof(pairs));
+        KeyValue* pairs = (KeyValue*)malloc((size + 1) * sizeof(KeyValue));
+        memset(pairs,0,(size + 1)  * sizeof(KeyValue));
         return pairs;
     }
 
@@ -167,7 +167,16 @@ namespace util
         while ((pair + i)->type)
         {
             (pair + i)->type = Type::INT;
-            (pair + i)->key  = key;
+
+
+
+
+            (pair + i)->key = key;
+
+
+
+
+
             (pair + i)->int_value = val;
             i++;
         }

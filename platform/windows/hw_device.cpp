@@ -154,6 +154,7 @@ namespace hwdevice
       device_p->AddRef();
       self->base.data = device_p;
       self->device_ctx = device_ctx_p;
+
       self->format = (pix_fmt == platf::PixelFormat::nv12 ? DXGI_FORMAT_NV12 : DXGI_FORMAT_P010);
       status = device_p->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
       if(status) {
@@ -204,12 +205,12 @@ namespace hwdevice
         hlsl->convert_UV_vs_hlsl->GetBufferSize(),
         &self->input_layout);
 
-      self->img.display = std::move(display);
+      self->img.display = display;
 
       // Color the background black, so that the padding for keeping the aspect ratio
       // is black
       if(self->img.display->klass->dummy_img(self->img.display,(platf::Image*)&self->back_img)) {
-        // BOOST_LOG(warning) << "Couldn't create an image to set background color to black"sv;
+        LOG_WARNING("Couldn't create an image to set background color to black");
         return NULL;
       }
 

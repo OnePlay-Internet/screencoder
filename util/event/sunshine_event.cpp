@@ -27,6 +27,7 @@ namespace util
     {
         Buffer* obj = BUFFER_CLASS->init((pointer)true,sizeof(bool),DO_NOTHING);
         QUEUE_ARRAY_CLASS->push(broadcaster,obj);
+        BUFFER_CLASS->unref(obj);
     }
 
     bool            

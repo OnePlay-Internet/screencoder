@@ -29,4 +29,6 @@
 
 void do_nothing(void*);
 
+bool string_compare(char* a, char* b);
+
 #endif

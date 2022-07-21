@@ -110,7 +110,7 @@ namespace vram {
         BUFFER_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
 
         UINT dummy;
-        status = self->base.dup.dup->GetFramePointerShape(img_object->size, img_ptr, &dummy, &shape_info);
+        status = self->base.dup.dup->GetFramePointerShape(frame_info.PointerShapeBufferSize, img_ptr, &dummy, &shape_info);
         if(FAILED(status)) {
           LOG_ERROR("Failed to get new pointer shape");
           return platf::Capture::error;
@@ -118,6 +118,8 @@ namespace vram {
 
         int cursor_size;
         util::Buffer* cursor_buf = helper::make_cursor_image(img_object, shape_info);
+        BUFFER_CLASS->unref(img_object);
+
         void* cursor_img = BUFFER_CLASS->ref(cursor_buf,&cursor_size);
 
         D3D11_SUBRESOURCE_DATA data {
@@ -240,6 +242,12 @@ namespace vram {
 
 
       display::HLSL* hlsl = display::init_hlsl();
+      if(!hlsl)
+      {
+        LOG_ERROR("unable to initialize hlsl");
+        return NULL;
+      }
+
       status = self->base.device->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
       if(status) {
         LOG_ERROR("Failed to create scene vertex shader");
@@ -346,11 +354,11 @@ namespace vram {
       
       img->base.row_pitch  = disp->width * 4;
 
-      byte* dummy_data = (byte*)malloc(disp->width * disp->height);
-      memset(dummy_data,0, disp->width * disp->height);
+      int* dummy_data = (int*)malloc(sizeof(int)* (disp->width * disp->height));
+      memset(dummy_data,0, sizeof(int)* (disp->width * disp->height));
 
       D3D11_SUBRESOURCE_DATA data {
-        dummy_data,
+        (pointer)dummy_data,
         (UINT)img->base.row_pitch
       };
 

@@ -12,7 +12,6 @@
 #include <sunshine_macro.h>
 #include <sunshine_datatype.h>
 #include <sunshine_object.h>
-#include <sunshine_object.h>
 #include <cstdlib>
 #include <mutex>
 #include <string.h>
@@ -96,6 +95,7 @@ namespace util {
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
+        BUFFER_CLASS->ref(obj,NULL);
         last->obj  = obj;
         last->next = NULL;
 
@@ -125,6 +125,10 @@ namespace util {
 
         BufferLL* container = queue->first;
         Buffer *ret = container->obj;
+
+        BUFFER_CLASS->lock(ret);
+        BUFFER_CLASS->unref(ret);
+
         queue->first = container->next;
         free(container);
         queue->length--;

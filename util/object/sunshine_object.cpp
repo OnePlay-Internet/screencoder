@@ -18,9 +18,43 @@
 
 namespace util 
 {
+    typedef struct _Buffer{
+        uint ref_count;
+
+        bool free_lock;
+
+        /**
+         * @brief 
+         * should not be used directly
+         */
+        BufferFreeFunc free_func;
+
+        /**
+         * @brief 
+         * should not be used directly
+         */
+        uint size;
+
+        /**
+         * @brief 
+         * should not be used directly
+         */
+        pointer data;
+    };
 
 
 
+    Buffer*
+    object_duplicate (Buffer* obj)
+    {
+        Buffer* object = (Buffer*)malloc(sizeof(Buffer));
+        memset(object,0,sizeof(Buffer));
+
+        memcpy(object->data,obj->data,obj->size);
+        memcpy(object,obj,sizeof(Buffer));
+        object->ref_count = 1;
+        return object;
+    }
 
     pointer 
     object_ref (Buffer* obj,
@@ -30,6 +64,7 @@ namespace util
         if (size)
             *size = obj->size;
         
+        obj->free_lock = false;
         return obj->data;
     }
 
@@ -44,13 +79,6 @@ namespace util
         return BUFFER_CLASS->init(new_ptr,new_size,free);
     }
 
-    pointer 
-    object_end_pointer (Buffer* obj)
-    {
-        return ((byte*)obj->data) + obj->size;
-    }
-
-    
     uint
     object_size (Buffer* obj)
     {
@@ -61,11 +89,17 @@ namespace util
     object_unref (Buffer* obj)
     {
         obj->ref_count--;
-        if (!obj->ref_count)
+        if (!obj->ref_count && !obj->free_lock)
         {
             obj->free_func(obj->data);
             free(obj);
         }
+    }
+
+    void    
+    object_lock (Buffer* obj)
+    {
+        obj->free_lock = true;
     }
 
     Buffer* 
@@ -80,6 +114,7 @@ namespace util
         object->free_func = free_func;
         object->size = size,
         object->ref_count = 1;
+        object->free_lock = false;
         return object;
     }
 
@@ -208,7 +243,9 @@ namespace util
 
         klass.init  = object_init;
         klass.unref = object_unref;
+        klass.lock = object_lock;
         klass.ref   = object_ref;
+        klass.duplicate = object_duplicate;
         klass.size  = object_size;
         klass.merge = buffer_merge;
         klass.replace = replace;

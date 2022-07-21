@@ -30,8 +30,8 @@ using namespace std::literals;
 
 
 // TODO: setup shader dir
-#define SUNSHINE_ASSETS_DIR
-#define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/shaders/directx"
+#define SUNSHINE_ASSETS_DIR "E:/ideacrawler/test_idea"
+#define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/directx"
 
 namespace display{
   HDESK 
@@ -54,23 +54,6 @@ namespace display{
     return hDesk;
   }
 
-
-  bool 
-  string_compare(char* a, char* b){
-    int i = 0;
-    if (strlen(a) != strlen(b))
-      return false;
-    
-    while (*(a + i) == *(b + i))
-    {
-      i++;
-    }
-
-    if (strlen(a) == i)
-      return true;  
-    else
-      return false;
-  }
 
   int
   display_base_init(DisplayBase* self,
@@ -102,7 +85,7 @@ namespace display{
 
       char str[100] = {0};
       wcstombs(str, adapter_desc.Description, 12);
-      if(!ENCODER_CONFIG->adapter_name && string_compare(str,ENCODER_CONFIG->adapter_name)) 
+      if(ENCODER_CONFIG->adapter_name && string_compare(str,ENCODER_CONFIG->adapter_name)) 
       {
           continue;
       }
@@ -114,7 +97,7 @@ namespace display{
 
         char str2[100] = {0};
         wcstombs(str2, desc.DeviceName, 12);
-        if(!ENCODER_CONFIG->output_name && string_compare(str2,display_name)) {
+        if(ENCODER_CONFIG->output_name && string_compare(str2,display_name)) {
           continue;
         }
 
@@ -287,7 +270,7 @@ namespace display{
       }
 
       if(FAILED(status)) {
-        LOG_ERROR("DuplicateOutput Failed [0x");
+        LOG_ERROR("DuplicateOutput Failed");
         return -1;
       }
       output1->Release();
@@ -432,7 +415,6 @@ namespace display{
   {
       self->cursor_view.TopLeftX = rel_x;
       self->cursor_view.TopLeftY = rel_y;
-
       self->visible = visible;
   }
 
@@ -444,7 +426,6 @@ namespace display{
   {
       self->cursor_view.Width  = width;
       self->cursor_view.Height = height;
-
       self->texture = texture;
   }
 
@@ -464,8 +445,7 @@ namespace display{
     display::HLSL*
     init_hlsl() 
     {
-      // BOOST_LOG(info) << "Compiling shaders..."sv;
-
+      LOG_INFO("Compiling shaders...");
       static bool initialize = false;
       display::HLSL* hlsl = (display::HLSL*)malloc(sizeof(display::HLSL));
       memset(hlsl,0,sizeof(display::HLSL));
@@ -498,7 +478,7 @@ namespace display{
       if(!hlsl->scene_ps_hlsl) {
         return NULL;
       }
-      // BOOST_LOG(info) << "Compiled shaders"sv;
+      LOG_INFO("Compiled shaders");
       return hlsl;
     }    
 } // namespace platf::dxgi

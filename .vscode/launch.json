@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/sunshine.exe",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": true,
@@ -18,7 +18,7 @@
             "miDebuggerPath": "C:\\msys64\\mingw64\\bin\\gdb.exe",
             "sourceFileMap": 
             { 
-                "/e/": "e:/" 
+                "/e/": "E:/" 
             },
             "setupCommands": [
                 {

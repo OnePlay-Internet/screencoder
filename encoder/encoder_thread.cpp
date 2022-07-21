@@ -150,6 +150,7 @@ namespace encoder {
 
         util::Buffer* obj = BUFFER_CLASS->init(packet,sizeof(Packet),packet_class_init()->finalize);
         QUEUE_ARRAY_CLASS->push(packets,obj);
+        BUFFER_CLASS->unref(obj);
 
         return 0;
     }

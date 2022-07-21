@@ -93,7 +93,8 @@ namespace helper
             }
           }
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
-          return img_obj;
+          BUFFER_CLASS->unref(img_obj);
+          return BUFFER_CLASS->duplicate(img_obj);
         default:
           break;
       }
@@ -163,6 +164,9 @@ namespace helper
         ++xor_mask;
       }
 
+      BUFFER_CLASS->unref(img_obj);
+      BUFFER_CLASS->lock(ret);
+      BUFFER_CLASS->unref(ret);
       return ret;
     }
 

@@ -116,7 +116,7 @@ namespace encoder {
         util::keyval_new_intval(h264pairs,"coder",ENCODER_CONFIG->nv.coder);
         encoder.h264 = 
         {
-            "nvenc_h264",
+            "h264_nvenc",
             h264qp,
             h264pairs,
         };
