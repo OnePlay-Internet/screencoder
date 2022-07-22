@@ -18,7 +18,6 @@
 int 
 main(int argc, char ** argv)
 {
-    printf("hello %s %d",argv,argc);
     config::get_encoder_config(argc,argv);
 
     session::Session sess;

@@ -90,6 +90,9 @@ namespace util {
     {
         std::lock_guard {queue->_lock};
         BufferLL* container = queue->first;
+
+        if (!container)  
+
         while (!container->next) { container = container->next; }
         
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
@@ -99,8 +102,12 @@ namespace util {
         last->obj  = obj;
         last->next = NULL;
 
-        container->next = last;
         queue->length++;
+
+        if()
+        queue->first = last;
+        container->next = last;
+        
         return true;
     }
 
@@ -110,9 +117,9 @@ namespace util {
     {
         std::lock_guard {queue->_lock};
         if (queue->length > 0)
-            return false;
-        else
             return true;
+        else
+            return false;
     }
 
 

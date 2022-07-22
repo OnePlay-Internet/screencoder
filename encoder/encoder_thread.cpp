@@ -21,8 +21,8 @@
 extern "C" {
 #include <libswscale/swscale.h>
 #include <libavcodec/avcodec.h>
-
 }
+#include <hw_device.h> 
 
 #include <thread>
 #include <string.h>
@@ -310,7 +310,6 @@ namespace encoder {
             sws_color_space      = SWS_CS_BT2020;
             break;
         }
-        // BOOST_LOG(info) << "Color range: ["sv << ((config->encoderCscMode & 0x1) ? "JPEG"sv : "MPEG"sv) << ']';
 
         libav::PixelFormat sw_fmt;
         if(config->dynamicRange == 0) {
@@ -376,10 +375,8 @@ namespace encoder {
 
         if(int status = avcodec_open2(ctx, codec, &options)) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
-            // BOOST_LOG(error)
-            // << "Could not open codec ["sv
-            // << video_format->name << "]: "sv
-            // << av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status);
+            LOG_ERROR("Could not open codec");
+            LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status));
             return NULL;
         }
 
@@ -698,7 +695,8 @@ namespace encoder {
         }
 
         platf::Image* img = disp->klass->alloc_img(disp);
-
+        hwdevice::ImageD3D* d3d = (hwdevice::ImageD3D*) img;
+        
         if(!img || disp->klass->dummy_img(disp,img)) 
             return FALSE;
         

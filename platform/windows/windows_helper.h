@@ -13,6 +13,7 @@
 
 #include <d3d11_datatype.h>
 #include <sunshine_util.h>
+#include <hw_device.h>
 
 namespace helper
 {
@@ -33,6 +34,11 @@ namespace helper
                                                  int width, int height, 
                                                  DXGI_FORMAT format);
 
+    int                     init_render_target_a(directx::d3d11::Device device, 
+                                                 hwdevice::ImageD3D* img,
+                                                 int width, int height, 
+                                                 DXGI_FORMAT format, 
+                                                 directx::d3d11::Texture2D tex);
 
     /**
      * @brief 

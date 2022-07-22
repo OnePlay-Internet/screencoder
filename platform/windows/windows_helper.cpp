@@ -11,6 +11,7 @@ extern "C" {
 }
 
 #include <platform_common.h>
+#include <hw_device.h>
 
 namespace helper
 {
@@ -194,7 +195,7 @@ namespace helper
       }
 
       if(status) {
-        // BOOST_LOG(error) << "Couldn't compile ["sv << file << "] [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Couldn't compile");
         return NULL;
       }
 
@@ -225,8 +226,7 @@ namespace helper
      */
     int 
     init_render_target_a(directx::d3d11::Device device, 
-            directx::d3d11::ShaderResourceView shader_res, 
-            directx::d3d11::RenderTargetView render_target, 
+            hwdevice::ImageD3D* img,
             int width, int height, 
             DXGI_FORMAT format, 
             directx::d3d11::Texture2D tex) 
@@ -238,9 +238,9 @@ namespace helper
 
         shader_resource_desc.Texture2D.MipLevels = 1;
 
-        HRESULT status = device->CreateShaderResourceView(tex, &shader_resource_desc, &shader_res);
+        HRESULT status = device->CreateShaderResourceView(tex, &shader_resource_desc, &img->input_res);
         if(status) {
-          // BOOST_LOG(error) << "Failed to create render target texture for luma [0x"sv << util::hex(status).to_string_view() << ']';
+          LOG_ERROR("Failed to create render target texture for luma");
           return -1;
         }
 
@@ -249,58 +249,16 @@ namespace helper
           D3D11_RTV_DIMENSION_TEXTURE2D
         };
 
-        status = device->CreateRenderTargetView(tex, &render_target_desc, &render_target);
+        status = device->CreateRenderTargetView(tex, &render_target_desc, &img->scene_rt);
         if(status) {
-          // BOOST_LOG(error) << "Failed to create render target view [0x"sv << util::hex(status).to_string_view() << ']';
+          LOG_ERROR("Failed to create render target view ");
           return -1;
         }
 
         return 0;
     }
 
-    /**
-     * @brief 
-     * 
-     * @param device 
-     * @param shader_res 
-     * @param render_target 
-     * @param width 
-     * @param height 
-     * @param format 
-     * @return int 
-     */
-    int 
-    init_render_target_b(directx::d3d11::Device device, 
-            directx::d3d11::ShaderResourceView shader_res, 
-            directx::d3d11::RenderTargetView render_target, 
-            int width, int height, 
-            DXGI_FORMAT format) 
-    {
-      D3D11_TEXTURE2D_DESC desc {};
 
-      desc.Width            = width;
-      desc.Height           = height;
-      desc.Format           = format;
-      desc.Usage            = D3D11_USAGE_DEFAULT;
-      desc.BindFlags        = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-      desc.MipLevels        = 1;
-      desc.ArraySize        = 1;
-      desc.SampleDesc.Count = 1;
-
-      directx::d3d11::Texture2D tex;
-      auto status = device->CreateTexture2D(&desc, nullptr, &tex);
-      if(status) {
-        // BOOST_LOG(error) << "Failed to create render target texture for luma [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
-      }
-
-      return init_render_target_a(device, 
-                      shader_res, 
-                      render_target, 
-                      width, height, 
-                      format, 
-                      tex);
-    }
     
 } // namespace helper
 
@@ -338,7 +296,7 @@ namespace platf {
       directx::dxgi::Factory factory;
       status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&factory);
       if(FAILED(status)) {
-        // BOOST_LOG(error) << "Failed to create DXGIFactory1 [0x"sv << util::hex(status).to_string_view() << ']' << std::endl;
+        LOG_ERROR("Failed to create DXGIFactory1");
         return {};
       }
 

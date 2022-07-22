@@ -30,7 +30,7 @@ using namespace std::literals;
 
 
 // TODO: setup shader dir
-#define SUNSHINE_ASSETS_DIR "E:/ideacrawler/test_idea"
+#define SUNSHINE_ASSETS_DIR "C:/Users/developer/Desktop/sunshine/sunshine-util"
 #define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/directx"
 
 namespace display{
@@ -40,13 +40,13 @@ namespace display{
     auto hDesk = OpenInputDesktop(DF_ALLOWOTHERACCOUNTHOOK, FALSE, GENERIC_ALL);
     if(!hDesk) {
       auto err = GetLastError();
-      // BOOST_LOG(error) << "Failed to Open Input Desktop [0x"sv << util::hex(err).to_string_view() << ']';
+      LOG_ERROR("Failed to Open Input Desktop");
       return nullptr;
     }
 
     if(!SetThreadDesktop(hDesk)) {
       auto err = GetLastError();
-      // BOOST_LOG(error) << "Failed to sync desktop to thread [0x"sv << util::hex(err).to_string_view() << ']';
+      LOG_ERROR("Failed to sync desktop to thread");
     }
 
     CloseDesktop(hDesk);
@@ -139,7 +139,7 @@ namespace display{
 
     status = self->adapter->QueryInterface(IID_IDXGIAdapter, (void **)&adapter_p);
     if(FAILED(status)) {
-      // BOOST_LOG(error) << "Failed to query IDXGIAdapter interface"sv;
+      LOG_ERROR("Failed to query IDXGIAdapter interface");
       return -1;
     }
 
@@ -158,7 +158,7 @@ namespace display{
     adapter_p->Release();
 
     if(FAILED(status)) {
-      // BOOST_LOG(error) << "Failed to create D3D11 device [0x"sv << util::hex(status).to_string_view() << ']';
+      LOG_ERROR("Failed to create D3D11 device");
       return -1;
     }
 
@@ -207,7 +207,7 @@ namespace display{
         tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
         if(!AdjustTokenPrivileges(token, false, &tp, sizeof(tp), NULL, NULL)) {
-          // BOOST_LOG(warning) << "Could not set privilege to increase GPU priority";
+          LOG_WARNING("Could not set privilege to increase GPU priority");
         }
       }
 
@@ -220,7 +220,7 @@ namespace display{
         if(fn) {
           status = fn(GetCurrentProcess(), D3DKMT_SCHEDULINGPRIORITYCLASS_REALTIME);
           if(FAILED(status)) {
-            // BOOST_LOG(warning) << "Failed to set realtime GPU priority. Please run application as administrator for optimal performance.";
+            LOG_WARNING("Failed to set realtime GPU priority. Please run application as administrator for optimal performance.");
           }
         }
       }
@@ -228,7 +228,7 @@ namespace display{
       directx::dxgi::Device dxgi;
       status = self->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
       if(FAILED(status)) {
-        // BOOST_LOG(warning) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_WARNING("Failed to query DXGI interface from device");
         return -1;
       }
 

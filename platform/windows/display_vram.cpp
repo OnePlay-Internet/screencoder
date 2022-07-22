@@ -143,7 +143,7 @@ namespace vram {
         directx::d3d11::Texture2D texture;
         auto status = self->base.device->CreateTexture2D(&t, &data, &texture);
         if(FAILED(status)) {
-          // BOOST_LOG(error) << "Failed to create mouse texture [0x"sv << util::hex(status).to_string_view() << ']';
+          LOG_ERROR("Failed to create mouse texture");
           return platf::Capture::error;
         }
 
@@ -160,7 +160,7 @@ namespace vram {
 
         status = self->base.device->CreateShaderResourceView(texture, &desc, &self->cursor.input_res);
         if(FAILED(status)) {
-          // BOOST_LOG(error) << "Failed to create cursor shader resource view [0x"sv << util::hex(status).to_string_view() << ']';
+          LOG_ERROR("Failed to create cursor shader resource view");
           return platf::Capture::error;
         }
 
@@ -182,7 +182,7 @@ namespace vram {
         status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
 
         if(FAILED(status)) {
-          // BOOST_LOG(error) << "Couldn't query interface [0x"sv << util::hex(status).to_string_view() << ']';
+          LOG_ERROR("Couldn't query interface");
           return platf::Capture::error;
         }
       }
@@ -301,7 +301,8 @@ namespace vram {
 
       img->display     = platf_disp;
 
-      BUFFER_MALLOC(dummy_obj,img_base->row_pitch * platf_disp->height,dummy_data);
+      uint8* dummy_data = (uint8*)malloc(img_base->row_pitch * platf_disp->height * sizeof(uint8));
+      memset(dummy_data,0,img_base->row_pitch * platf_disp->height * sizeof(uint8));
       D3D11_SUBRESOURCE_DATA data {
         dummy_data,
         (UINT)img_base->row_pitch
@@ -319,15 +320,14 @@ namespace vram {
 
       auto status = disp->base.device->CreateTexture2D(&t, &data, &img->texture);
       if(FAILED(status)) {
-        // BOOST_LOG(error) << "Failed to create img buf texture [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Failed to create img buf texture");
         return nullptr;
       }
 
-      if(helper::init_render_target_b(disp->base.device, 
-                              img->input_res, 
-                              img->scene_rt, 
+      if(helper::init_render_target_a(disp->base.device, img,
                               platf_disp->width, platf_disp->height, 
-                              display_base->format)) 
+                              display_base->format,
+                              img->texture)) 
       {
         return nullptr;
       }
@@ -347,20 +347,19 @@ namespace vram {
                           platf::Image *img_base) 
     {
       DisplayVram* self = (DisplayVram*) disp; 
-
       hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)img_base;
+
       if(img->texture) 
         return 0;
       
       img->base.row_pitch  = disp->width * 4;
 
-      int* dummy_data = (int*)malloc(sizeof(int)* (disp->width * disp->height));
-      memset(dummy_data,0, sizeof(int)* (disp->width * disp->height));
-
+      int* dummy_data = (int*)malloc(sizeof(int) * (disp->width * disp->height));
       D3D11_SUBRESOURCE_DATA data {
         (pointer)dummy_data,
         (UINT)img->base.row_pitch
       };
+      memset(dummy_data,0, sizeof(int)* (disp->width * disp->height));
 
       D3D11_TEXTURE2D_DESC t {};
       t.Width            = disp->width;
@@ -375,13 +374,12 @@ namespace vram {
       directx::d3d11::Texture2D tex;
       auto status = self->base.device->CreateTexture2D(&t, &data, &tex);
       if(FAILED(status)) {
-        // BOOST_LOG(error) << "Failed to create dummy texture [0x"sv << util::hex(status).to_string_view() << ']';
+        LOG_ERROR("Failed to create dummy texture");
         return -1;
       }
 
-      img->texture = tex;
+      img->texture      = tex;
       img->base.data    = (byte*)img->texture;
-
       return 0;
     }
 
@@ -392,7 +390,7 @@ namespace vram {
       DisplayVram* self = (DisplayVram*) disp; 
       
       if(pix_fmt != platf::PixelFormat::nv12) {
-        // BOOST_LOG(error) << "DisplayVram doesn't support pixel format ["sv << from_pix_fmt(pix_fmt) << ']';
+        LOG_ERROR("DisplayVram doesn't support pixel format");
         return nullptr;
       }
 

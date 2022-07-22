@@ -61,7 +61,6 @@ list(PREPEND PLATFORM_LIBRARIES
 	dwmapi
 	bz2
 	Secur32
-	swresample
 	Bcrypt
 )
 
