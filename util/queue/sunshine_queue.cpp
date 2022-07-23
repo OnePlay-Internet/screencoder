@@ -89,12 +89,6 @@ namespace util {
                      util::Buffer* obj)
     {
         std::lock_guard {queue->_lock};
-        BufferLL* container = queue->first;
-
-        if (!container)  
-
-        while (!container->next) { container = container->next; }
-        
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
@@ -102,12 +96,18 @@ namespace util {
         last->obj  = obj;
         last->next = NULL;
 
-        queue->length++;
+        if(!queue->length)
+        {
+            queue->first = last;
+        }
+        else
+        {
+            BufferLL* container = queue->first;
+            while (!container->next) { container = container->next; }
+            container->next = last;
+        }
 
-        if()
-        queue->first = last;
-        container->next = last;
-        
+        queue->length++;
         return true;
     }
 

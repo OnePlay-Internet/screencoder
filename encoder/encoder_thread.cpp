@@ -21,6 +21,21 @@
 extern "C" {
 #include <libswscale/swscale.h>
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+
+// this function implementation has already been defined in avio_internal.h: line 186
+// we breaked the rule to use this
+
+/**
+ * Open a write only packetized memory stream with a maximum packet
+ * size of 'max_packet_size'.  The stream is stored in a memory buffer
+ * with a big-endian 4 byte header giving the packet size in bytes.
+ *
+ * @param s new IO context
+ * @param max_packet_size maximum packet size (must be > 0)
+ * @return zero if no error.
+ */
+int ffio_open_dyn_packet_buf(AVIOContext **, int);
 }
 #include <hw_device.h> 
 
@@ -185,7 +200,7 @@ namespace encoder {
             return NULL;
 
         // format specific index
-        st->id = 0;
+        // st->id = 0;
         // TODO what is CODEC_FLAG_GLOBAL_HEADER
         // if(ctx->flags & AVFMT_GLOBALHEADER) {
         //     st->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -220,27 +235,28 @@ namespace encoder {
             return NULL;
         }
 
-        libav::Codec* codec = avcodec_find_encoder_by_name(video_format->name);
-        if(!codec) {
+        session->codec = avcodec_find_encoder_by_name(video_format->name);
+        if(!session->codec) {
             LOG_ERROR("Couldn't create encoder");
             return NULL;
         }
-        libav::OutputFormat* format = av_guess_format("rtp", NULL, NULL);
-        if(!format) {
+        session->context = avcodec_alloc_context3(session->codec);
+
+        session->format_context = avformat_alloc_context();
+        session->format_context->oformat = av_guess_format("rtp", NULL, NULL);
+        if(!session->format_context->oformat) {
             LOG_ERROR("Couldn't create rtppay");
             return NULL;
         }
 
-        libav::FormatContext* fmtctx = avformat_alloc_context();
-        libav::Stream* stream = rtp_avformat_new_stream(fmtctx,codec);
-        fmtctx->oformat = format;
+        session->stream = avformat_new_stream(session->format_context,NULL);
 
-		if(fmtctx->packet_size > 0) 
-			fmtctx->packet_size = MAX(ENCODER_CONFIG->packet_size,fmtctx->packet_size);
+		if(session->format_context->packet_size > 0) 
+			session->format_context->packet_size = MAX(ENCODER_CONFIG->packet_size,session->format_context->packet_size);
 		else 
-			fmtctx->packet_size = ENCODER_CONFIG->packet_size;
+			session->format_context->packet_size = ENCODER_CONFIG->packet_size;
 
-        libav::CodecContext* ctx = stream->codec;
+        libav::CodecContext* ctx = session->context;
         ctx->width     = config->width;
         ctx->height    = config->height;
         ctx->time_base = AVRational { 1, config->framerate };
@@ -265,7 +281,7 @@ namespace encoder {
         // if gop_size are set then 
         ctx->gop_size = ENCODER_CONFIG->gop_size >= 0 ? ENCODER_CONFIG->gop_size : ctx->gop_size;
 
-        ctx->keyint_min = INT_MAX;
+        ctx->keyint_min = ENCODER_CONFIG->gop_size - 5;
 
         if(config->numRefFrames == 0) {
             ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
@@ -373,7 +389,7 @@ namespace encoder {
             return NULL;
         }
 
-        if(int status = avcodec_open2(ctx, codec, &options)) {
+        if(int status = avcodec_open2(ctx, session->codec, &options)) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR("Could not open codec");
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status));
@@ -390,7 +406,6 @@ namespace encoder {
             frame->hw_frames_ctx = av_buffer_ref(ctx->hw_frames_ctx);
         
 
-        platf::HWDevice* device;
         if(!hwdevice->data) {
             // TODO software encoder
             // auto device_tmp = std::make_unique<swdevice_t>();
@@ -403,21 +418,16 @@ namespace encoder {
         }
         else 
         {
-            device = hwdevice;
+            session->device = hwdevice;
         }
 
-        if(device->klass->set_frame(device,frame)) 
+        if(session->device->klass->set_frame(session->device,frame)) 
             return NULL;
         
 
-        device->klass->set_colorspace(device,sws_color_space, ctx->color_range);
-
+        session->device->klass->set_colorspace(session->device,sws_color_space, ctx->color_range);
         session->pts = frame->pts;
-        session->format_context = fmtctx;
-        session->stream = stream;
         session->context = ctx;
-        session->device = device;
-
         return session;
     }
 
@@ -693,6 +703,7 @@ namespace encoder {
         if(!session) {
             return FALSE;
         }
+        util::Buffer* obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
 
         platf::Image* img = disp->klass->alloc_img(disp);
         hwdevice::ImageD3D* d3d = (hwdevice::ImageD3D*) img;
@@ -710,7 +721,7 @@ namespace encoder {
         util::QueueArray* packets = QUEUE_ARRAY_CLASS->init();
         while(!QUEUE_ARRAY_CLASS->peek(packets)) {
             if(encode(1, 
-                BUFFER_CLASS->init(session,sizeof(Session),session_finalize), 
+                obj_ses, 
                 frame, 
                 packets, NULL)) 
             {
@@ -742,26 +753,51 @@ namespace encoder {
             return FALSE;
         }
 
-        if(av_packet->pts != (int64) AV_NOPTS_VALUE) {
-            av_packet->pts = av_rescale_q(session->pts,
-                    session->context->time_base,
-                    session->stream->time_base);
-        }
-        // TODO
-        if(avio_open_dyn_buf(&session->format_context->pb) < 0){
-            LOG_ERROR("buffer allocation failed");
+        if(!session->format_context)  {
+            LOG_ERROR("Uninitialized formater");
             return FALSE;
-        }           
-        if(av_write_frame(session->format_context, av_packet) != 0) {
+        }
+
+
+
+        AVFormatContext* fmtctx = avformat_alloc_context();
+        fmtctx->oformat = av_guess_format("rtp",NULL,NULL);
+        snprintf(fmtctx->filename, sizeof(fmtctx->filename), "rtp://%s:%d", "localhost", 6000);
+
+        AVStream* video_stream_ = avformat_new_stream (fmtctx, session->codec);
+
+
+        if (fmtctx->oformat->flags & AVFMT_GLOBALHEADER)
+            session->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+        AVCodecContext* ctx = avcodec_alloc_context3(session->codec);
+        AVCodecParameters* params;
+        avcodec_parameters_from_context(video_stream_->codecpar,session->context);
+
+
+        fmtctx->streams[0] = video_stream_;
+        if (avio_open(&fmtctx->pb, fmtctx->filename, AVIO_FLAG_WRITE) < 0){
+            LOG_ERROR("Error opening output file");
+            return false;
+        }
+
+        if (avformat_write_header(fmtctx, NULL) < 0){
+            LOG_ERROR("Error writing header");
+            return false;
+        }
+
+        int res = av_write_frame(fmtctx, av_packet);
+        if(res != 0) {
             LOG_ERROR("write failed");
             return FALSE;
         }
 
+
+
         int iolen;
         byte* iobuf;
-        iolen = avio_close_dyn_buf(session->format_context->pb, &iobuf);
-        av_free(iobuf);
         disp->klass->finalize((pointer)disp);
+        BUFFER_CLASS->unref(obj_ses);
         return TRUE;
     }
 }

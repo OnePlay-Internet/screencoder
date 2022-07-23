@@ -245,11 +245,6 @@ namespace rtp
 
             init = true;
 
-            if(av_packet->pts != (int64) AV_NOPTS_VALUE) {
-                av_packet->pts = av_rescale_q(session->pts,
-                        session->context->time_base,
-                        session->stream->time_base);
-            }
             // TODO
             if(ffio_open_dyn_packet_buf(&session->format_context->pb,session->format_context->packet_size) < 0){
                 LOG_ERROR("buffer allocation failed");

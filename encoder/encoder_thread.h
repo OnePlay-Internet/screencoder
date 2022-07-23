@@ -22,8 +22,10 @@ namespace encoder
 {
     typedef struct _Session {
         libav::CodecContext* context;
-        libav::FormatContext* format_context;
         libav::Stream* stream;
+        libav::Codec* codec;
+
+        libav::FormatContext* format_context;
 
         platf::HWDevice* device;
 

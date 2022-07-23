@@ -127,7 +127,6 @@ namespace helper
           case 1: //transparent
           {
             *pixel_data = transparent;
-
             break;
           }
           case 3: //inverse
