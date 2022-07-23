@@ -13,11 +13,14 @@
 #include <platform_common.h>
 #include <duplication.h>
 #include <d3d11_datatype.h>
+
+
+#define DUPLICATION_CLASS           duplication::duplication_class_init()
     
 namespace duplication
 {
     typedef struct _Duplication {
-        directx::dxgi::OutputDuplication dup;
+        dxgi::OutputDuplication dup;
         bool has_frame;
         bool use_dwmflush;
     }Duplication;
@@ -26,12 +29,7 @@ namespace duplication
         platf::Capture(*next_frame)     (Duplication* dup,
                                          DXGI_OUTDUPL_FRAME_INFO frame_info, 
                                          std::chrono::milliseconds timeout, 
-                                         directx::dxgi::Resource* res_p);
-
-        platf::Capture(*reset)          (Duplication* dup,
-                                         directx::dxgi::OutputDuplication dup_p);
-
-        platf::Capture(*release_frame)  (Duplication* dup);
+                                         dxgi::Resource* res_p);
 
         void          (*finalize)       (Duplication* dup);
     }DuplicationClass;

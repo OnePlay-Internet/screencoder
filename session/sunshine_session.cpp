@@ -13,6 +13,7 @@
 #include <sunshine_session.h>
 #include <sunshine_util.h>
 #include <sunshine_rtp.h>
+#include <encoder_thread.h>
 
 
 
@@ -37,8 +38,7 @@ namespace session {
         // TODO
         encoder::capture(session->shutdown_event,
                          session->packet_queue,
-                         NULL,
-                         session);
+                         NULL);
 
         rtp::start_broadcast(session->shutdown_event,
                              session->packet_queue);

@@ -5,7 +5,6 @@
 
 #include <string.h>
 
-#include <encoder_packet.h>
 #include <d3dcompiler.h>
 #include <directxmath.h>
 
@@ -20,8 +19,7 @@ extern "C" {
 #include <display_base.h>
 #include <display_vram.h>
 #include <windows_helper.h>
-#include <hw_device.h>
-#include <encoder_thread.h>
+#include <gpu_hw_device.h>
 #include <thread>
 
 
@@ -29,10 +27,11 @@ extern "C" {
 using namespace std::literals;
 
 
-namespace vram {
-
-
-
+namespace gpu {
+    platf::Capture    display_vram_snapshot   (platf::Display* disp,
+                                               platf::Image *img_base, 
+                                               std::chrono::milliseconds timeout, 
+                                               bool cursor_visible); 
     /**
      * @brief 
      * 
@@ -45,7 +44,7 @@ namespace vram {
     display_vram_capture(platf::Display* disp,
                         platf::Image* img, 
                         platf::SnapshootCallback snapshot_cb, 
-                        pointer data,
+                        util::Buffer* data,
                         bool cursor) 
     {
         DisplayVram* self = (DisplayVram*) disp; 
@@ -57,7 +56,7 @@ namespace vram {
           }
 
           next_frame = now + self->base.delay;
-          auto status = display_class_init()->snapshot((platf::Display*)self,img,1000ms,cursor);
+          auto status = display_vram_snapshot((platf::Display*)self,img,1000ms,cursor);
           switch(status) {
             case platf::Capture::reinit:
             case platf::Capture::error:
@@ -66,8 +65,7 @@ namespace vram {
               std::this_thread::sleep_for(1ms);
               continue;
             case platf::Capture::ok:
-              snapshot_cb(img,data);
-              break;
+              return snapshot_cb(img,data);
             default:
               LOG_ERROR("Unrecognized capture status"); 
               return status;
@@ -83,14 +81,14 @@ namespace vram {
                           bool cursor_visible) 
     {
       DisplayVram* self = (DisplayVram*) disp; 
-      hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)img_base;
+      gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
 
       HRESULT status;
 
       DXGI_OUTDUPL_FRAME_INFO frame_info;
 
-      directx::dxgi::Resource res;
-      platf::Capture capture_status = duplication::duplication_class_init()->next_frame(&self->base.dup,frame_info, timeout, &res);
+      dxgi::Resource res;
+      platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&self->base.dup,frame_info, timeout, &res);
 
       if(capture_status != platf::Capture::ok) {
         return capture_status;
@@ -140,7 +138,7 @@ namespace vram {
         t.Format           = DXGI_FORMAT_B8G8R8A8_UNORM;
         t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
 
-        directx::d3d11::Texture2D texture;
+        d3d11::Texture2D texture;
         auto status = self->base.device->CreateTexture2D(&t, &data, &texture);
         if(FAILED(status)) {
           LOG_ERROR("Failed to create mouse texture");
@@ -164,17 +162,17 @@ namespace vram {
           return platf::Capture::error;
         }
 
-        display::gpu_cursor_class_init()->set_texture(&self->cursor,
-                                                      t.Width, 
-                                                      t.Height, 
-                                                      texture);
+        GPU_CURSOR_CLASS->set_texture(&self->cursor,
+                                      t.Width, 
+                                      t.Height, 
+                                      texture);
       }
 
       if(frame_info.LastMouseUpdateTime.QuadPart) {
-        display::gpu_cursor_class_init()->set_pos(&self->cursor,
-                                                  frame_info.PointerPosition.Position.x, 
-                                                  frame_info.PointerPosition.Position.y, 
-                                                  frame_info.PointerPosition.Visible && cursor_visible);
+        GPU_CURSOR_CLASS->set_pos(&self->cursor,
+                                  frame_info.PointerPosition.Position.x, 
+                                  frame_info.PointerPosition.Position.y, 
+                                  frame_info.PointerPosition.Visible && cursor_visible);
       }
 
       if(frame_update_flag) {
@@ -218,7 +216,7 @@ namespace vram {
       memset(self,0,sizeof(DisplayVram));
 
 
-      self->base.base.klass = display_class_init();
+      self->base.base.klass = (platf::DisplayClass*)display_class_init();
       if(display::display_base_init(&self->base,framerate, display_name)) {
         free(self);
         return NULL;
@@ -241,10 +239,11 @@ namespace vram {
       }
 
 
-      display::HLSL* hlsl = display::init_hlsl();
+      helper::HLSL* hlsl = helper::init_hlsl();
       if(!hlsl)
       {
         LOG_ERROR("unable to initialize hlsl");
+        free(self);
         return NULL;
       }
 
@@ -280,16 +279,62 @@ namespace vram {
     void
     display_vram_finalize(void* self)
     {
+        DisplayVram* disp = (DisplayVram*)self;
+        DUPLICATION_CLASS->finalize(&disp->base.dup);
         free(self);
     }
 
-  
+      /**
+     * @brief 
+     * 
+     * @param device 
+     * @param shader_res 
+     * @param render_target 
+     * @param width 
+     * @param height 
+     * @param format 
+     * @param tex 
+     * @return int 
+     */
+    int 
+    init_render_target(d3d11::Device device, 
+            ImageGpu* img,
+            int width, int height, 
+            DXGI_FORMAT format, 
+            d3d11::Texture2D tex) 
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc {
+          format,
+          D3D11_SRV_DIMENSION_TEXTURE2D
+        };
+
+        shader_resource_desc.Texture2D.MipLevels = 1;
+
+        HRESULT status = device->CreateShaderResourceView(tex, &shader_resource_desc, &img->input_res);
+        if(status) {
+          LOG_ERROR("Failed to create render target texture for luma");
+          return -1;
+        }
+
+        D3D11_RENDER_TARGET_VIEW_DESC render_target_desc {
+          format,
+          D3D11_RTV_DIMENSION_TEXTURE2D
+        };
+
+        status = device->CreateRenderTargetView(tex, &render_target_desc, &img->scene_rt);
+        if(status) {
+          LOG_ERROR("Failed to create render target view ");
+          return -1;
+        }
+
+        return 0;
+    }
 
     platf::Image*
     display_vram_alloc_img(platf::Display* platf_disp) 
     {
       DisplayVram* disp= (DisplayVram*) platf_disp;
-      hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)malloc(sizeof(hwdevice::ImageD3D));
+      gpu::ImageGpu* img = (gpu::ImageGpu*)malloc(sizeof(gpu::ImageGpu));
       platf::Image* img_base = (platf::Image*)img;
 
       display::DisplayBase* display_base = (display::DisplayBase*)disp;
@@ -324,10 +369,10 @@ namespace vram {
         return nullptr;
       }
 
-      if(helper::init_render_target_a(disp->base.device, img,
-                              platf_disp->width, platf_disp->height, 
-                              display_base->format,
-                              img->texture)) 
+      if(init_render_target(disp->base.device, img,
+                            platf_disp->width, platf_disp->height, 
+                            display_base->format,
+                            img->texture)) 
       {
         return nullptr;
       }
@@ -347,7 +392,7 @@ namespace vram {
                           platf::Image *img_base) 
     {
       DisplayVram* self = (DisplayVram*) disp; 
-      hwdevice::ImageD3D* img = (hwdevice::ImageD3D*)img_base;
+      gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
 
       if(img->texture) 
         return 0;
@@ -371,7 +416,7 @@ namespace vram {
       t.Format           = self->base.format;
       t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
 
-      directx::d3d11::Texture2D tex;
+      d3d11::Texture2D tex;
       auto status = self->base.device->CreateTexture2D(&t, &data, &tex);
       if(FAILED(status)) {
         LOG_ERROR("Failed to create dummy texture");
@@ -383,7 +428,7 @@ namespace vram {
       return 0;
     }
 
-    platf::HWDevice*
+    platf::Device*
     display_vram_make_hwdevice(platf::Display* disp,
                                platf::PixelFormat pix_fmt) 
     {
@@ -394,7 +439,7 @@ namespace vram {
         return nullptr;
       }
 
-      return hwdevice::d3d11_device_class_init()->base.init((platf::Display*)self,
+      return D3D11DEVICE_CLASS->base.init((platf::Display*)self,
         self->base.device,
         self->base.device_ctx,
         pix_fmt);
@@ -403,22 +448,22 @@ namespace vram {
 
     
     
-    platf::DisplayClass*    
+    DisplayVramClass*    
     display_class_init()
     {
         static bool init = false;
-        static platf::DisplayClass klass;
+        static DisplayVramClass klass;
         if (init)
             return &klass;
         
         init = true;
-        klass.init          = display_vram_init;
-        klass.finalize      = display_vram_finalize;
-        klass.alloc_img     = display_vram_alloc_img;
-        klass.dummy_img     = display_vram_dummy_img;
-        klass.make_hwdevice = display_vram_make_hwdevice;
-        klass.snapshot      = display_vram_snapshot;
-        klass.capture       = display_vram_capture;
+        klass.base.init          = display_vram_init;
+        klass.base.finalize      = display_vram_finalize;
+        klass.base.alloc_img     = display_vram_alloc_img;
+        klass.base.dummy_img     = display_vram_dummy_img;
+        klass.base.make_hwdevice = display_vram_make_hwdevice;
+        klass.base.snapshot      = display_vram_snapshot;
+        klass.base.capture       = display_vram_capture;
         return &klass;
     }
 

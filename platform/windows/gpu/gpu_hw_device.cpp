@@ -1,7 +1,15 @@
-
-
+/**
+ * @file hw_device.cpp
+ * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
+ * @brief 
+ * @version 1.0
+ * @date 2022-07-23
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 #include <platform_common.h>
-#include <hw_device.h>
+#include <gpu_hw_device.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -11,20 +19,23 @@ extern "C" {
 
 #include <windows_helper.h>
 
-namespace hwdevice
-{
+namespace gpu
+{    
+    void d3d11_device_init_view_port(GpuDevice* self,
+                                     float width, 
+                                     float height);
     int 
-    hw_device_set_frame(platf::HWDevice* self,
+    hw_device_set_frame(platf::Device* self,
                         libav::Frame* frame) 
     {
-      D3D11Device* hw = (D3D11Device*)self;
+      GpuDevice* hw = (GpuDevice*)self;
       if(hw->hwframe)
         av_frame_free(&hw->hwframe);
 
       hw->hwframe    = frame;
       hw->base.frame = frame;
 
-      directx::d3d11::Device device = (directx::d3d11::Device)hw->base.data;
+      d3d11::Device device = (d3d11::Device)hw->base.data;
 
       int out_width  = frame->width;
       int out_height = frame->height;
@@ -115,7 +126,7 @@ namespace hwdevice
       }
 
       auto desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
-      desc->texture = (directx::d3d11::Texture2D)hw->img.base.data;
+      desc->texture = (d3d11::Texture2D)hw->img.base.data;
       desc->index   = 0;
 
       frame->data[0] = hw->img.base.data;
@@ -138,17 +149,17 @@ namespace hwdevice
      * @param pix_fmt 
      * @return int 
      */
-    platf::HWDevice*
+    platf::Device*
     hw_device_init(platf::Display* display, 
-                   directx::d3d11::Device device_p, 
-                   directx::d3d11::DeviceContext device_ctx_p,
+                   d3d11::Device device_p, 
+                   d3d11::DeviceContext device_ctx_p,
                    platf::PixelFormat pix_fmt) 
     {
-      D3D11Device* self = (D3D11Device*)malloc(sizeof(D3D11Device));
-      memset((pointer)self,0,sizeof(D3D11Device));
+      GpuDevice* self = (GpuDevice*)malloc(sizeof(GpuDevice));
+      memset((pointer)self,0,sizeof(GpuDevice));
 
-      self->base.klass = (platf::HWDeviceClass*)d3d11_device_class_init();
-      display::HLSL* hlsl = display::init_hlsl();
+      self->base.klass = (platf::DeviceClass*)d3d11_device_class_init();
+      helper::HLSL* hlsl = helper::init_hlsl();
       HRESULT status;
 
       device_p->AddRef();
@@ -187,8 +198,8 @@ namespace hwdevice
       }
 
 
-      encoder::Color* color = platf::get_color();
-      util::Buffer* buf = BUFFER_CLASS->init(color,sizeof(encoder::Color),DO_NOTHING);
+      platf::Color* color = platf::get_color();
+      util::Buffer* buf = BUFFER_CLASS->init(color,sizeof(platf::Color[4]),DO_NOTHING);
       self->color_matrix = helper::convert_to_d3d11_buffer(device_p, buf);
       if(!self->color_matrix) {
         LOG_ERROR("Failed to create color matrix buffer");
@@ -230,22 +241,22 @@ namespace hwdevice
       self->device_ctx->PSSetConstantBuffers(0, 1, &self->color_matrix);
       self->device_ctx->VSSetConstantBuffers(0, 1, &self->info_scene);
 
-      return (platf::HWDevice*)self;
+      return (platf::Device*)self;
     }
 
     void 
-    hw_device_free(platf::HWDevice* dev)
+    hw_device_free(platf::Device* dev)
     {
         free((pointer)dev);
     }
 
     void 
-    hw_device_set_colorspace(platf::HWDevice* dev,
+    hw_device_set_colorspace(platf::Device* dev,
                              uint32 colorspace, 
                              uint32 color_range) 
     {
-      D3D11Device* self = (D3D11Device*)dev;
-      encoder::Color* colors = platf::get_color();
+      GpuDevice* self = (GpuDevice*)dev;
+      platf::Color* colors = platf::get_color();
       switch(colorspace) {
       case 5: // SWS_CS_SMPTE170M
         self->color_p = colors;
@@ -265,8 +276,8 @@ namespace hwdevice
       }
 
 
-      util::Buffer* buf = BUFFER_CLASS->init(colors,sizeof(encoder::Color),DO_NOTHING);
-      directx::d3d11::Buffer color_matrix = (directx::d3d11::Buffer)helper::convert_to_d3d11_buffer((directx::d3d11::Device)self->base.data, buf);
+      util::Buffer* buf = BUFFER_CLASS->init(colors,sizeof(platf::Color[4]),DO_NOTHING);
+      d3d11::Buffer color_matrix = (d3d11::Buffer)helper::convert_to_d3d11_buffer((d3d11::Device)self->base.data, buf);
       if(!color_matrix) {
         LOG_WARNING("Failed to create color matrix");
         return;
@@ -283,15 +294,15 @@ namespace hwdevice
      * @return int 
      */
     int 
-    hw_device_convert(platf::HWDevice* dev,
+    hw_device_convert(platf::Device* dev,
                       platf::Image* img_base) 
     {
-        D3D11Device* self = (D3D11Device*)dev;
-        ImageD3D* img = (ImageD3D*)img_base;
+        GpuDevice* self = (GpuDevice*)dev;
+        ImageGpu* img = (ImageGpu*)img_base;
 
         self->device_ctx->IASetInputLayout(self->input_layout);
 
-        d3d11_device_class_init()->init_view_port(self,self->img.base.width, self->img.base.height);
+        d3d11_device_init_view_port(self,self->img.base.width, self->img.base.height);
         self->device_ctx->OMSetRenderTargets(1, &self->nv12_Y_rt, nullptr);
         self->device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
         self->device_ctx->PSSetShader(self->convert_Y_ps, nullptr, 0);
@@ -306,7 +317,7 @@ namespace hwdevice
         // before rendering on the UV part of the image.
         self->device_ctx->Flush();
 
-        d3d11_device_class_init()->init_view_port(self,self->img.base.width / 2, self->img.base.height / 2);
+        d3d11_device_init_view_port(self,self->img.base.width / 2, self->img.base.height / 2);
         self->device_ctx->OMSetRenderTargets(1, &self->nv12_UV_rt, nullptr);
         self->device_ctx->VSSetShader(self->convert_UV_vs, nullptr, 0);
         self->device_ctx->PSSetShader(self->convert_UV_ps, nullptr, 0);
@@ -322,7 +333,7 @@ namespace hwdevice
     }
 
     void 
-    _init_view_port(D3D11Device* self,
+    _init_view_port(GpuDevice* self,
                     float x, 
                     float y, 
                     float width, 
@@ -338,31 +349,31 @@ namespace hwdevice
     }
 
     void 
-    d3d11_device_init_view_port(D3D11Device* self,
+    d3d11_device_init_view_port(GpuDevice* self,
                                 float width, 
                                 float height) 
     {
-      _init_view_port((D3D11Device*)self,0.0f, 0.0f, width, height);
+      _init_view_port((GpuDevice*)self,0.0f, 0.0f, width, height);
     }
 
-    D3D11DeviceClass*       
+    GpuDeviceClass*       
     d3d11_device_class_init()
     {
         static bool initialize = FALSE;
-        static D3D11DeviceClass klass = {0};
+        static GpuDeviceClass klass = {0};
         if (initialize)
             return &klass;
         
-        klass.base.convert = hw_device_convert;
-        klass.base.init    = hw_device_init;
-        klass.base.finalize    = hw_device_free;
-        klass.base.set_frame = hw_device_set_frame;
-        klass.base.set_colorspace = hw_device_set_colorspace;
-        klass.init_view_port = d3d11_device_init_view_port;
+        klass.base.convert            = hw_device_convert;
+        klass.base.init               = hw_device_init;
+        klass.base.finalize           = hw_device_free;
+        klass.base.set_frame          = hw_device_set_frame;
+        klass.base.set_colorspace     = hw_device_set_colorspace;
+        klass.init_view_port          = d3d11_device_init_view_port;
         initialize = TRUE;
         return &klass;
     }
     
-} // namespace hwdevice
+} // namespace gpu
 
 

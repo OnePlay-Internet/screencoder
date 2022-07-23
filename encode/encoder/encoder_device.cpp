@@ -11,19 +11,94 @@
 #include <encoder_device.h>
 #include <sunshine_util.h>
 
-#include <encoder_packet.h>
 
 #include <platform_common.h>
 #include <sunshine_config.h>
 
+#include <encoder_session.h>
 #include <encoder_thread.h>
+#include <sunshine_rtp.h>
+
 
 
 
 
 namespace encoder
 {
+    bool
+    validate_config(Encoder* encoder, 
+                    Config* config) 
+    {
+        platf::Display* disp = platf::tryget_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
+        if(!disp) 
+            return FALSE;
+        
 
+        platf::PixelFormat pix_fmt  = config->dynamicRange == 0 ? 
+                                        platf::map_pix_fmt(encoder->static_pix_fmt) : 
+                                        platf::map_pix_fmt(encoder->dynamic_pix_fmt);
+
+        platf::Device* device = disp->klass->make_hwdevice(disp,pix_fmt);
+        if(!device) {
+            return FALSE;
+        }
+
+        Session* session = make_session(encoder, config, disp->width, disp->height, device);
+        if(!session) {
+            return FALSE;
+        }
+        util::Buffer* obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
+
+        platf::Image* img = disp->klass->alloc_img(disp);
+        
+        if(!img || disp->klass->dummy_img(disp,img)) 
+            return FALSE;
+        
+        if(device->klass->convert(device,img)) 
+            return FALSE;
+        
+
+        libav::Frame* frame = device->frame;
+        frame->pict_type = AV_PICTURE_TYPE_I;
+
+        util::QueueArray* packets = QUEUE_ARRAY_CLASS->init();
+        while(!QUEUE_ARRAY_CLASS->peek(packets)) {
+            if(encode(1, 
+                obj_ses, 
+                frame, 
+                packets)) 
+            {
+                return FALSE;
+            }
+        }
+
+        util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(packets);
+
+        int size;
+        session    = (Session*)BUFFER_CLASS->ref(obj,&size);
+        if(size != sizeof(Session)) {
+            LOG_ERROR("wrong datatype");
+            return FALSE;
+        }
+
+        libav::Packet* av_packet = session->packet;
+        if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
+            LOG_ERROR("First packet type is not an IDR frame");
+            return FALSE;
+        }
+
+
+        int res = av_write_frame(session->rtp->format, av_packet);
+        if(res != 0) {
+            LOG_ERROR("write failed");
+            return FALSE;
+        }
+
+
+        disp->klass->finalize((pointer)disp);
+        BUFFER_CLASS->unref(obj);
+        return TRUE;
+    }
 
     bool 
     validate_encoder(Encoder* encoder) 
@@ -116,4 +191,5 @@ namespace encoder
 
         return true;
     }
+
 }

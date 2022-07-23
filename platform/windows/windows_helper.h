@@ -13,14 +13,15 @@
 
 #include <d3d11_datatype.h>
 #include <sunshine_util.h>
-#include <hw_device.h>
+#include <gpu_hw_device.h>
 
 namespace helper
 {
-    directx::d3d11::Buffer convert_to_d3d11_buffer          (directx::d3d11::Device device, 
+
+    d3d11::Buffer convert_to_d3d11_buffer          (d3d11::Device device, 
                                                  util::Buffer* t);
 
-    directx::d3d11::BlendState make_blend       (directx::d3d11::Device device, 
+    d3d11::BlendState make_blend       (d3d11::Device device, 
                                                  bool enable);
 
     util::Buffer*           make_cursor_image   (util::Buffer* img_data, 
@@ -28,33 +29,50 @@ namespace helper
         
 
 
-    int                     init_render_target_b(directx::d3d11::Device device, 
-                                                 directx::d3d11::ShaderResourceView shader_res, 
-                                                 directx::d3d11::RenderTargetView render_target, 
-                                                 int width, int height, 
-                                                 DXGI_FORMAT format);
 
-    int                     init_render_target_a(directx::d3d11::Device device, 
-                                                 hwdevice::ImageD3D* img,
-                                                 int width, int height, 
-                                                 DXGI_FORMAT format, 
-                                                 directx::d3d11::Texture2D tex);
+
+
 
     /**
      * @brief 
      * 
      * @param file 
-     * @return directx::d3d::Blob 
+     * @return d3d::Blob 
      */
-    directx::d3d::Blob      compile_vertex_shader(LPCSTR file);
+    d3d::Blob      compile_vertex_shader(LPCSTR file);
 
     /**
      * @brief 
      * 
      * @param file 
-     * @return directx::d3d::Blob 
+     * @return d3d::Blob 
      */
-    directx::d3d::Blob      compile_pixel_shader(LPCSTR file);
+    d3d::Blob      compile_pixel_shader(LPCSTR file);
+
+
+    /**
+     * @brief 
+     * 
+     * @param type 
+     * @return platf::MemoryType 
+     */
+    platf::MemoryType       map_dev_type        (libav::HWDeviceType type) ;
+
+    typedef struct _HLSL
+    {  
+      d3d::Blob convert_UV_vs_hlsl;
+      d3d::Blob convert_UV_ps_hlsl;
+      d3d::Blob scene_vs_hlsl;
+      d3d::Blob convert_Y_ps_hlsl;
+      d3d::Blob scene_ps_hlsl;
+    }HLSL;
+
+    /**
+     * @brief 
+     * 
+     * @return HLSL* 
+     */
+    HLSL*          init_hlsl                    (); 
 } // namespace helper
 
 

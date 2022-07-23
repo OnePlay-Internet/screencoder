@@ -9,8 +9,9 @@
  * 
  */
 #include <platform_common.h>
-#include <encoder_packet.h>
 #include <display_vram.h>
+
+#include <windows_helper.h>
 
 
 
@@ -18,9 +19,7 @@
 
 namespace platf
 {
-    
-
-    encoder::Color 
+    platf::Color 
     make_color_matrix(float Cr, float Cb, 
                       float U_max, float V_max, 
                       float add_Y, float add_UV, 
@@ -45,11 +44,11 @@ namespace platf
         };
     }
 
-    encoder::Color*
+    Color*
     get_color()
     {
         static bool init = false;
-        static encoder::Color colors[4];
+        static Color colors[4];
         if(init)
             return colors;
 
@@ -60,4 +59,26 @@ namespace platf
         colors[3] = make_color_matrix(0.2126f, 0.0722f, 0.5f, 0.5f, 0.0f, 0.5f, { 0.0f, 255.0f }, { 0.0f, 255.0f });         // BT701 JPEG
         return colors;
     }
+
+    PixelFormat
+    map_pix_fmt(libav::PixelFormat fmt) 
+    {
+        switch(fmt) {
+            case AV_PIX_FMT_YUV420P10:
+                return PixelFormat::yuv420p10;
+            case AV_PIX_FMT_YUV420P:
+                return PixelFormat::yuv420p;
+            case AV_PIX_FMT_NV12:
+                return PixelFormat::nv12;
+            case AV_PIX_FMT_P010:
+                return PixelFormat::p010;
+            default:
+                return PixelFormat::unknown_pixelformat;
+        }
+
+        return PixelFormat::unknown_pixelformat;
+    }
+
+
+
 } // namespace platf

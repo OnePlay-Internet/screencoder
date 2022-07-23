@@ -11,7 +11,6 @@
 #include <encoder_d3d11_device.h>
 #include <sunshine_util.h>
 
-#include <encoder_thread.h>
 #include <encoder_device.h>
 #include <platform_common.h>
 
@@ -50,7 +49,7 @@ namespace encoder {
      * @return libav::BufferRef* 
      */
     libav::BufferRef* 
-    dxgi_make_hwdevice_ctx(platf::HWDevice *hwdevice_ctx) 
+    dxgi_make_hwdevice_ctx(platf::Device *hwdevice_ctx) 
     {
         libav::BufferRef* ctx_buf = (libav::BufferRef*)av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA);
         AVD3D11VADeviceContext* ctx = (AVD3D11VADeviceContext *)((AVHWDeviceContext *)ctx_buf->data)->hwctx;

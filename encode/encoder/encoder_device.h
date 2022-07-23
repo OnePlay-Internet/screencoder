@@ -1,45 +1,41 @@
 /**
- * @file encoder_thread.h
+ * @file encoder_device.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
- * @date 2022-07-06
+ * @date 2022-07-09
  * 
  * @copyright Copyright (c) 2022
  * 
  */
-
-#ifndef __ENCODER_H__
-#define __ENCODER_H__
+#ifndef __SUNSHINE_ENCODER_DEVICE_H__
+#define __SUNSHINE_ENCODER_DEVICE_H__
 
 #include <sunshine_util.h>
-
 #include <platform_common.h>
-
-
 
 namespace encoder
 {
-    typedef struct _Session {
-        libav::CodecContext* context;
-        libav::Stream* stream;
-        libav::Codec* codec;
-
-        libav::FormatContext* format_context;
-
-        platf::HWDevice* device;
-
-        int64 pts;
-    }Session;
-
-
     typedef struct _Profile{
         int h264_high;
         int hevc_main;
         int hevc_main_10;
     } Profile;
 
-    typedef libav::BufferRef* (*MakeHWDeviceContext) (platf::HWDevice *hwdevice);
+    struct _Config{
+        int width;
+        int height;
+        int framerate;
+        int bitrate;
+        int slicesPerFrame;
+        int numRefFrames;
+        int encoderCscMode;
+        int videoFormat;
+        int dynamicRange;
+    };
+
+
+    typedef libav::BufferRef* (*MakeHWDeviceContext) (platf::Device *hwdevice);
 
     typedef enum _EncodingFlags{
         DEFAULT,
@@ -78,7 +74,7 @@ namespace encoder
         std::bitset<FrameFlags::MAX_FLAGS_FRAME> capabilities;
     }CodecConfig;
 
-    typedef struct _Encoder{
+    struct _Encoder{
         char* name;
 
         CodecConfig h264;
@@ -95,36 +91,17 @@ namespace encoder
         std::bitset<EncodingFlags::MAX_FLAGS_ENCODING> flags;
 
         MakeHWDeviceContext make_hw_ctx_func;
-    }Encoder;
-
-
-    platf::PixelFormat  map_pix_fmt     (libav::PixelFormat fmt);
+    };
 
 
     /**
      * @brief 
      * 
-     * @param disp 
      * @param encoder 
-     * @param config 
-     * @return int 
+     * @return true 
+     * @return false 
      */
-    bool                validate_config (Encoder* encoder, 
-                                         Config* config) ;    
-    
-    /**
-     * @brief 
-     * 
-     * @param shutdown_event 
-     * @param packet_queue 
-     * @param config 
-     * @param data 
-     */
-    void                capture          (util::Broadcaster* shutdown_event,
-                                          util::QueueArray* packet_queue,
-                                          Config* config,
-                                          pointer data);
-} // namespace error
-
+    bool        validate_encoder        (Encoder* encoder);
+}
 
 #endif

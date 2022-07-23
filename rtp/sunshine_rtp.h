@@ -10,12 +10,21 @@
  */
 #ifndef __SUNSHINE_RTP_H__
 #define __SUNSHINE_RTP_H__
-
+#include <sunshine_util.h>
 
 namespace rtp
 {
-    int start_broadcast(util::Broadcaster* shutdown_event,
-                        util::QueueArray* packet_queue) ;
+    struct _RtpContext {
+        libav::Stream* stream;
+        libav::FormatContext* format;
+    };
+
+
+
+    RtpContext*     make_rtp_context(encoder::EncodeContext* encode);
+
+    int             start_broadcast (util::Broadcaster* shutdown_event,
+                                     util::QueueArray* packet_queue) ;
 } // namespace rtp
 
 

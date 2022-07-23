@@ -1,3 +1,14 @@
+/**
+ * @file windows_helper.cpp
+ * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
+ * @brief 
+ * @version 1.0
+ * @date 2022-07-23
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+#include <windows_helper.h>
 #include <d3d11_datatype.h>
 #include <display_vram.h>
 #include <sunshine_util.h>
@@ -11,12 +22,22 @@ extern "C" {
 }
 
 #include <platform_common.h>
-#include <hw_device.h>
+#include <gpu_hw_device.h>
+#include <thread>
+
+
+
+// TODO: setup shader dir
+#define SUNSHINE_ASSETS_DIR "C:/Users/developer/Desktop/sunshine/sunshine-util"
+#define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/directx"
+
+#define DISPLAY_RETRY   5
+using namespace std::literals;
 
 namespace helper
 {
-    directx::d3d11::Buffer
-    convert_to_d3d11_buffer(directx::d3d11::Device device, 
+    d3d11::Buffer
+    convert_to_d3d11_buffer(d3d11::Device device, 
                 util::Buffer* buffer) 
     {
       int size;
@@ -31,7 +52,7 @@ namespace helper
         ptr
       };
 
-      directx::d3d11::Buffer buf_p;
+      d3d11::Buffer buf_p;
       auto status = device->CreateBuffer(&buffer_desc, &init_data, &buf_p);
       if(status) {
         LOG_ERROR("Failed to create buffer");
@@ -42,8 +63,8 @@ namespace helper
       return buf_p;
     }
 
-    directx::d3d11::BlendState
-    make_blend(directx::d3d11::Device device, 
+    d3d11::BlendState
+    make_blend(d3d11::Device device, 
               bool enable) 
     {
       D3D11_BLEND_DESC bdesc {};
@@ -62,7 +83,7 @@ namespace helper
         rt.DestBlendAlpha = D3D11_BLEND_ZERO;
       }
 
-      directx::d3d11::BlendState blend;
+      d3d11::BlendState blend;
       auto status = device->CreateBlendState(&bdesc, &blend);
       if(status) {
         LOG_ERROR("Failed to create blend state");
@@ -170,13 +191,13 @@ namespace helper
       return ret;
     }
 
-    directx::d3d::Blob 
+    d3d::Blob 
     compile_shader(LPCSTR file, 
                    LPCSTR entrypoint, 
                    LPCSTR shader_model) 
     {
-      directx::d3d::Blob msg_p = NULL;
-      directx::d3d::Blob compiled_p;
+      d3d::Blob msg_p = NULL;
+      d3d::Blob compiled_p;
 
       DWORD flags = D3DCOMPILE_ENABLE_STRICTNESS;
 
@@ -198,67 +219,79 @@ namespace helper
         return NULL;
       }
 
-      return directx::d3d::Blob { compiled_p };
+      return d3d::Blob { compiled_p };
     }
 
-    directx::d3d::Blob 
+    d3d::Blob 
     compile_pixel_shader(LPCSTR file) {
       return compile_shader(file, "main_ps", "ps_5_0");
     }
 
-    directx::d3d::Blob 
+    d3d::Blob 
     compile_vertex_shader(LPCSTR file) {
       return compile_shader(file, "main_vs", "vs_5_0");
     }
 
-    /**
-     * @brief 
-     * 
-     * @param device 
-     * @param shader_res 
-     * @param render_target 
-     * @param width 
-     * @param height 
-     * @param format 
-     * @param tex 
-     * @return int 
-     */
-    int 
-    init_render_target_a(directx::d3d11::Device device, 
-            hwdevice::ImageD3D* img,
-            int width, int height, 
-            DXGI_FORMAT format, 
-            directx::d3d11::Texture2D tex) 
+
+
+
+    platf::MemoryType
+    map_dev_type(libav::HWDeviceType type) {
+        switch(type) {
+        case AV_HWDEVICE_TYPE_D3D11VA:
+            return platf::MemoryType::dxgi;
+        case AV_HWDEVICE_TYPE_VAAPI:
+            return platf::MemoryType::vaapi;
+        case AV_HWDEVICE_TYPE_CUDA:
+            return platf::MemoryType::cuda;
+        case AV_HWDEVICE_TYPE_NONE:
+            return platf::MemoryType::system;
+        default:
+            return platf::MemoryType::unknown;
+        }
+        return platf::MemoryType::unknown;
+    } 
+
+
+    HLSL*
+    init_hlsl() 
     {
-        D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_desc {
-          format,
-          D3D11_SRV_DIMENSION_TEXTURE2D
-        };
+      LOG_INFO("Compiling shaders...");
+      static bool initialize = false;
+      HLSL* hlsl = (HLSL*)malloc(sizeof(HLSL));
+      memset(hlsl,0,sizeof(HLSL));
 
-        shader_resource_desc.Texture2D.MipLevels = 1;
+      if (initialize)
+        return hlsl;
+      
 
-        HRESULT status = device->CreateShaderResourceView(tex, &shader_resource_desc, &img->input_res);
-        if(status) {
-          LOG_ERROR("Failed to create render target texture for luma");
-          return -1;
-        }
+      hlsl->scene_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/SceneVS.hlsl");
+      if(!hlsl->scene_vs_hlsl) {
+        return NULL;
+      }
 
-        D3D11_RENDER_TARGET_VIEW_DESC render_target_desc {
-          format,
-          D3D11_RTV_DIMENSION_TEXTURE2D
-        };
+      hlsl->convert_Y_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertYPS.hlsl");
+      if(!hlsl->convert_Y_ps_hlsl) {
+        return NULL;
+      }
 
-        status = device->CreateRenderTargetView(tex, &render_target_desc, &img->scene_rt);
-        if(status) {
-          LOG_ERROR("Failed to create render target view ");
-          return -1;
-        }
+      hlsl->convert_UV_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertUVPS.hlsl");
+      if(!hlsl->convert_UV_ps_hlsl) {
+        return NULL;
+      }
 
-        return 0;
-    }
+      hlsl->convert_UV_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/ConvertUVVS.hlsl");
+      if(!hlsl->convert_UV_vs_hlsl) {
+        return NULL;
+      }
 
-
-    
+      hlsl->scene_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ScenePS.hlsl");
+      if(!hlsl->scene_ps_hlsl) {
+        return NULL;
+      }
+      LOG_INFO("Compiled shaders");
+      return hlsl;
+    }    
 } // namespace helper
 
 
@@ -267,14 +300,17 @@ namespace helper
 
 
 namespace platf {
+
+
+
   
     Display* 
-    display(MemoryType hwdevice_type, 
+    get_display(MemoryType hwdevice_type, 
             char* display_name, 
             int framerate) 
     {
         if(hwdevice_type == MemoryType::dxgi) 
-            return vram::display_class_init()->init(framerate, display_name);
+            return ((platf::DisplayClass*)DISPLAY_VRAM_CLASS)->init(framerate, display_name);
         
         if(hwdevice_type == MemoryType::system)
             // TODO display ram
@@ -292,14 +328,14 @@ namespace platf {
       //  "Detecting monitors...";
 
 
-      directx::dxgi::Factory factory;
+      dxgi::Factory factory;
       status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&factory);
       if(FAILED(status)) {
         LOG_ERROR("Failed to create DXGIFactory1");
         return {};
       }
 
-      directx::dxgi::Adapter adapter;
+      dxgi::Adapter adapter;
       for(int x = 0; factory->EnumAdapters1(x, &adapter) != DXGI_ERROR_NOT_FOUND; ++x) {
         DXGI_ADAPTER_DESC1 adapter_desc;
         adapter->GetDesc1(&adapter_desc);
@@ -338,4 +374,20 @@ namespace platf {
       return display_names;
     }
 
+    Display*
+    tryget_display(libav::HWDeviceType type, 
+                  char* display_name, 
+                  int framerate) 
+    {
+        Display* disp = NULL;
+        // We try this twice, in case we still get an error on reinitialization
+        for(int x = 0; x < DISPLAY_RETRY; ++x) {
+            disp = get_display(helper::map_dev_type(type), display_name, framerate);
+            if (disp)
+                break;
+
+            std::this_thread::sleep_for(200ms);
+        }
+        return disp;
+    }
 } // namespace platf

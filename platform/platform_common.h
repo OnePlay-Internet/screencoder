@@ -12,10 +12,26 @@
 #include <mutex>
 #include <string>
 #include <d3d11_datatype.h>
-#include <encoder_packet.h>
 
 
-namespace platf {
+using float4 = float[4];
+using float3 = float[3];
+using float2 = float[2];
+
+
+
+namespace platf {    
+    
+    
+    typedef struct _Color {
+        float4 color_vec_y;
+        float4 color_vec_u;
+        float4 color_vec_v;
+        float2 range_y;
+        float2 range_uv;
+    }Color;
+
+
     typedef enum _MemoryType {
         system,
         vaapi,
@@ -47,36 +63,36 @@ namespace platf {
         int32 row_pitch;
     }Image;
 
-    typedef struct _HWDeviceClass HWDeviceClass;
+    typedef struct _HWDeviceClass DeviceClass;
 
     typedef struct _DisplayClass DisplayClass;
 
     typedef struct _Display      Display;
 
     typedef struct _HWDevice {
-        HWDeviceClass* klass;
+        DeviceClass* klass;
         void *data;
         libav::Frame* frame;
-    }HWDevice;
+    }Device;
 
     struct _HWDeviceClass {
-        HWDevice* (*init)       (platf::Display* display, 
-                                 directx::d3d11::Device device_p, 
-                                 directx::d3d11::DeviceContext device_ctx_p,
+        Device* (*init)       (platf::Display* display, 
+                                 d3d11::Device device_p, 
+                                 d3d11::DeviceContext device_ctx_p,
                                  platf::PixelFormat pix_fmt);
 
-        int (*convert)          (HWDevice* self,
+        int (*convert)          (Device* self,
                                  Image* img);
 
-        void (*finalize)         (HWDevice* self);
+        void (*finalize)         (Device* self);
         /**
          * @brief 
-         * do the conversion from ImageD3D to libav::Frame
+         * do the conversion from libav::Frame to ImageD3D
          */
-        int (*set_frame)        (HWDevice* self,
+        int (*set_frame)        (Device* self,
                                  libav::Frame* frame);
 
-        void (*set_colorspace)  (HWDevice* self,
+        void (*set_colorspace)  (Device* self,
                                  uint32 colorspace, 
                                  uint32 color_range);
     };
@@ -93,7 +109,7 @@ namespace platf {
      *    This may or may not be the image send with the callback
      */
     typedef Capture (*SnapshootCallback) (Image* img,
-                                          pointer data);
+                                          util::Buffer* data);
 
 
     struct _Display {
@@ -116,13 +132,13 @@ namespace platf {
 
         Image*      (*alloc_img)        (Display* self);
 
-        HWDevice*   (*make_hwdevice)    (Display* self,
+        Device*     (*make_hwdevice)    (Display* self,
                                          PixelFormat pix_fmt);
         
         Capture     (*capture)          (Display* self,
                                          Image* img, 
                                          SnapshootCallback snapshot_cb, 
-                                         pointer data,
+                                         util::Buffer* data,
                                          bool cursor);
 
         Capture     (*snapshot)         (Display* self,
@@ -141,7 +157,7 @@ namespace platf {
      * 
      * Returns Display based on hwdevice_type
      */
-    Display*                display       (MemoryType hwdevice_type , 
+    Display*                get_display       (MemoryType hwdevice_type , 
                                           char* display_name , 
                                           int framerate);
 
@@ -154,7 +170,14 @@ namespace platf {
      * 
      * @return Color* 
      */
-    encoder::Color*                  get_color     ();
+    Color*                  get_color     ();
+
+
+    Display*                tryget_display(libav::HWDeviceType type, 
+                                           char* display_name, 
+                                           int framerate);
+
+    PixelFormat             map_pix_fmt     (libav::PixelFormat fmt);
 } // namespace platf
 
 #endif //SUNSHINE_COMMON_H

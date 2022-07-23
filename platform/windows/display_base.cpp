@@ -29,11 +29,27 @@
 using namespace std::literals;
 
 
-// TODO: setup shader dir
-#define SUNSHINE_ASSETS_DIR "C:/Users/developer/Desktop/sunshine/sunshine-util"
-#define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/directx"
+
 
 namespace display{
+    typedef enum _D3DKMT_SCHEDULINGPRIORITYCLASS {
+        D3DKMT_SCHEDULINGPRIORITYCLASS_IDLE,
+        D3DKMT_SCHEDULINGPRIORITYCLASS_BELOW_NORMAL,
+        D3DKMT_SCHEDULINGPRIORITYCLASS_NORMAL,
+        D3DKMT_SCHEDULINGPRIORITYCLASS_ABOVE_NORMAL,
+        D3DKMT_SCHEDULINGPRIORITYCLASS_HIGH,
+        D3DKMT_SCHEDULINGPRIORITYCLASS_REALTIME
+    } D3DKMT_SCHEDULINGPRIORITYCLASS;
+
+    typedef NTSTATUS WINAPI (*PD3DKMTSetProcessSchedulingPriorityClass)(HANDLE, D3DKMT_SCHEDULINGPRIORITYCLASS);
+
+
+
+
+
+
+
+
   HDESK 
   syncThreadDesktop() 
   {
@@ -77,10 +93,10 @@ namespace display{
       return -1;
     }
 
-    directx::dxgi::Adapter adapter_p;
+    dxgi::Adapter adapter_p;
     for(int x = 0; self->factory->EnumAdapters1(x, &adapter_p) != DXGI_ERROR_NOT_FOUND; ++x) {
       DXGI_ADAPTER_DESC1 adapter_desc;
-      directx::dxgi::Adapter adapter_temp = adapter_p;
+      dxgi::Adapter adapter_temp = adapter_p;
       adapter_temp->GetDesc1(&adapter_desc);
 
       char str[100] = {0};
@@ -90,7 +106,7 @@ namespace display{
           continue;
       }
 
-      directx::dxgi::Output output;
+      dxgi::Output output;
       for(int y = 0; adapter_temp->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
         DXGI_OUTPUT_DESC desc;
         output->GetDesc(&desc);
@@ -225,7 +241,7 @@ namespace display{
         }
       }
 
-      directx::dxgi::Device dxgi;
+      dxgi::Device dxgi;
       status = self->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
       if(FAILED(status)) {
         LOG_WARNING("Failed to query DXGI interface from device");
@@ -237,7 +253,7 @@ namespace display{
 
     // Try to reduce latency
     {
-      directx::dxgi::Device1 dxgi = {0};
+      dxgi::Device1 dxgi = {0};
       status = self->device->QueryInterface(IID_IDXGIDevice, (void **)&dxgi);
       if(FAILED(status)) {
         LOG_ERROR("Failed to query DXGI interface from device ");
@@ -253,7 +269,7 @@ namespace display{
     //FIXME: Duplicate output on RX580 in combination with DOOM (2016) --> BSOD
     //TODO: Use IDXGIOutput5 for improved performance
     {
-      directx::dxgi::Output1 output1 = {0};
+      dxgi::Output1 output1 = {0};
       status = self->output->QueryInterface(IID_IDXGIOutput1, (void **)&output1);
       if(FAILED(status)) {
         LOG_ERROR("Failed to query IDXGIOutput1 from the output");
@@ -407,79 +423,6 @@ namespace display{
     "DXGI_FORMAT_V208",
     "DXGI_FORMAT_V408"
   };
-  void 
-  cursor_set_pos(GpuCursor* self,
-                 LONG rel_x, 
-                 LONG rel_y, 
-                 bool visible) 
-  {
-      self->cursor_view.TopLeftX = rel_x;
-      self->cursor_view.TopLeftY = rel_y;
-      self->visible = visible;
-  }
 
-  void 
-  cursor_set_texture(GpuCursor* self,
-                     LONG width, 
-                     LONG height, 
-                     directx::d3d11::Texture2D texture) 
-  {
-      self->cursor_view.Width  = width;
-      self->cursor_view.Height = height;
-      self->texture = texture;
-  }
-
-  GpuCursorClass*     
-  gpu_cursor_class_init()
-  {
-    static bool init = FALSE;
-    static GpuCursorClass klass = {0};
-    if (init)
-      return &klass;
-    
-    klass.set_pos = cursor_set_pos;
-    klass.set_texture = cursor_set_texture;
-    return &klass;
-  }
-
-    display::HLSL*
-    init_hlsl() 
-    {
-      LOG_INFO("Compiling shaders...");
-      static bool initialize = false;
-      display::HLSL* hlsl = (display::HLSL*)malloc(sizeof(display::HLSL));
-      memset(hlsl,0,sizeof(display::HLSL));
-
-      if (initialize)
-        return hlsl;
-      
-
-      hlsl->scene_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/SceneVS.hlsl");
-      if(!hlsl->scene_vs_hlsl) {
-        return NULL;
-      }
-
-      hlsl->convert_Y_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertYPS.hlsl");
-      if(!hlsl->convert_Y_ps_hlsl) {
-        return NULL;
-      }
-
-      hlsl->convert_UV_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertUVPS.hlsl");
-      if(!hlsl->convert_UV_ps_hlsl) {
-        return NULL;
-      }
-
-      hlsl->convert_UV_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/ConvertUVVS.hlsl");
-      if(!hlsl->convert_UV_vs_hlsl) {
-        return NULL;
-      }
-
-      hlsl->scene_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ScenePS.hlsl");
-      if(!hlsl->scene_ps_hlsl) {
-        return NULL;
-      }
-      LOG_INFO("Compiled shaders");
-      return hlsl;
-    }    
 } // namespace platf::dxgi
 

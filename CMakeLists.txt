@@ -79,9 +79,9 @@ file(GLOB UTIL_SOURCE_LIST
 )
 
 file(GLOB ENCODER_SOURCE_LIST 
-	encoder/*.cpp
-	encoder/d3d11/*.cpp
-	encoder/bitstream/*.cpp
+	encode/*.cpp
+	encode/encoder/*.cpp
+	encode/encoder/d3d11/*.cpp
 )
 
 file(GLOB RTP_SOURCE_LIST 
@@ -99,6 +99,8 @@ file(GLOB SESSION_SOURCE_LIST
 file(GLOB PLATFORM_SOURCE_LIST 
 	platform/*.cpp
 	platform/windows/*.cpp
+	platform/windows/gpu/*.cpp
+	platform/windows/duplication/*.cpp
 )
 
 
@@ -117,9 +119,9 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/config
   ${CMAKE_CURRENT_SOURCE_DIR}/audio
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/encoder
-  ${CMAKE_CURRENT_SOURCE_DIR}/encoder/bitstream
-  ${CMAKE_CURRENT_SOURCE_DIR}/encoder/d3d11
+  ${CMAKE_CURRENT_SOURCE_DIR}/encode
+  ${CMAKE_CURRENT_SOURCE_DIR}/encode/encoder/d3d11
+  ${CMAKE_CURRENT_SOURCE_DIR}/encode/encoder
 
   ${CMAKE_CURRENT_SOURCE_DIR}/input
   ${CMAKE_CURRENT_SOURCE_DIR}/rtp
@@ -137,6 +139,8 @@ include_directories(
 
   ${CMAKE_CURRENT_SOURCE_DIR}/platform
   ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows
+  ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/gpu
+  ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/duplication
 
   ${FFMPEG_INCLUDE_DIRS}
   ${PLATFORM_INCLUDE_DIRS}

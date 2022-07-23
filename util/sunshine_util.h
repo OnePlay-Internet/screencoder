@@ -21,4 +21,21 @@
 #include <sunshine_event.h>
 
 
+namespace rtp {
+typedef struct _RtpContext RtpContext;
+}
+
+namespace encoder {
+typedef struct _EncodeContext EncodeContext;
+
+typedef struct _Session Session;
+
+typedef struct _EncodeThreadContext EncodeThreadContext;
+
+typedef struct _Config  Config;
+
+typedef struct _Encoder Encoder;
+}
+
+
 #endif

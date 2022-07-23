@@ -10,7 +10,6 @@
  */
 #ifndef __SUNSHINE_CONFIG_H__
 #define __SUNSHINE_CONFIG_H__
-#include <encoder_thread.h>
 
 #define ENCODER_CONFIG          config::get_encoder_config(0,nullptr)
 

@@ -21,57 +21,14 @@
 
 
 namespace display {
-    typedef struct _HLSL
-    {  
-      directx::d3d::Blob convert_UV_vs_hlsl;
-      directx::d3d::Blob convert_UV_ps_hlsl;
-      directx::d3d::Blob scene_vs_hlsl;
-      directx::d3d::Blob convert_Y_ps_hlsl;
-      directx::d3d::Blob scene_ps_hlsl;
-    }HLSL;
-
-
-
-    typedef struct _GpuCursor {
-        directx::d3d11::Texture2D texture;
-        directx::d3d11::ShaderResourceView input_res;
-        D3D11_VIEWPORT cursor_view;
-        bool visible;
-    }GpuCursor;
-
-    typedef struct _GpuCursorClass {
-        void (*set_pos)     (GpuCursor* cursor,
-                             LONG rel_x, 
-                             LONG rel_y, 
-                             bool visible);
-
-        void (*set_texture) (GpuCursor* cursor,
-                             LONG width, 
-                             LONG height, 
-                             directx::d3d11::Texture2D texture);
-    }GpuCursorClass;
-
-    GpuCursorClass*     gpu_cursor_class_init       ();
-
-    typedef enum _D3DKMT_SCHEDULINGPRIORITYCLASS {
-        D3DKMT_SCHEDULINGPRIORITYCLASS_IDLE,
-        D3DKMT_SCHEDULINGPRIORITYCLASS_BELOW_NORMAL,
-        D3DKMT_SCHEDULINGPRIORITYCLASS_NORMAL,
-        D3DKMT_SCHEDULINGPRIORITYCLASS_ABOVE_NORMAL,
-        D3DKMT_SCHEDULINGPRIORITYCLASS_HIGH,
-        D3DKMT_SCHEDULINGPRIORITYCLASS_REALTIME
-    } D3DKMT_SCHEDULINGPRIORITYCLASS;
-
-    typedef NTSTATUS WINAPI (*PD3DKMTSetProcessSchedulingPriorityClass)(HANDLE, D3DKMT_SCHEDULINGPRIORITYCLASS);
-
     typedef struct _DisplayBase {
         platf::Display base;
 
-        directx::dxgi::Factory factory;
-        directx::dxgi::Adapter adapter;
-        directx::dxgi::Output  output;
-        directx::d3d11::Device device;
-        directx::d3d11::DeviceContext device_ctx;
+        dxgi::Factory factory;
+        dxgi::Adapter adapter;
+        dxgi::Output  output;
+        d3d11::Device device;
+        d3d11::DeviceContext device_ctx;
 
         duplication::Duplication dup;
 
@@ -80,20 +37,8 @@ namespace display {
         D3D_FEATURE_LEVEL feature_level;
     }DisplayBase;
 
-    typedef struct _Cursor {
-        byte* img_data;
-        DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info;
-        int x, y;
-        bool visible;
-    }Cursor;
 
-    typedef struct _DisplayRam{
-      DisplayBase base;
-      Cursor cursor;
 
-      D3D11_MAPPED_SUBRESOURCE img_info;
-      directx::d3d11::Texture2D texture;
-    }DisplayRam;
 
     /**
      * @brief 
@@ -106,7 +51,6 @@ namespace display {
                                                  int framerate, 
                                                  char* display_name);
 
-    HLSL*          init_hlsl                    (); 
 } // namespace platf::dxgi
 
 #endif
