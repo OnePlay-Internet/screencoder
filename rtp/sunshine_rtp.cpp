@@ -42,34 +42,34 @@ namespace rtp
         static bool init = false;
         static RtpContext ret;
         if(init)
-            return &ret;
+            goto done;
 
         init = true;
-        AVFormatContext* fmtctx = avformat_alloc_context();
-        fmtctx->oformat = av_guess_format("rtp",NULL,NULL);
-        snprintf(fmtctx->filename, sizeof(fmtctx->filename), 
+        ret.format = avformat_alloc_context();
+        ret.format->oformat = av_guess_format("rtp",NULL,NULL);
+        snprintf(ret.format->filename, sizeof(ret.format->filename), 
             "rtp://%s:%d", "localhost", ENCODER_CONFIG->rtp.port);
 
-        AVStream* video_stream = avformat_new_stream (fmtctx, encode->codec);
+        ret.stream = avformat_new_stream (ret.format, encode->codec);
 
-        if (fmtctx->oformat->flags & AVFMT_GLOBALHEADER)
+        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
             encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
-        avcodec_parameters_from_context(video_stream->codecpar,encode->context);
 
-        fmtctx->streams[0] = video_stream;
-        if (avio_open(&fmtctx->pb, fmtctx->filename, AVIO_FLAG_WRITE) < 0){
+        ret.format->streams[0] = ret.stream;
+        if (avio_open(&ret.format->pb, ret.format->filename, AVIO_FLAG_WRITE) < 0){
             LOG_ERROR("Error opening output file");
             return NULL;
         }
 
-        if (avformat_write_header(fmtctx, NULL) < 0){
+        if (avformat_write_header(ret.format, NULL) < 0){
             LOG_ERROR("Error writing header");
             return NULL;
         }
-
-        ret.format = fmtctx;
-        ret.stream = video_stream;
+        done:
+        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
+        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
+            encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         return &ret;
     }
 
