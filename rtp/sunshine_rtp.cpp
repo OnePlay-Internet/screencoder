@@ -65,10 +65,11 @@ namespace rtp
             return NULL;
         }
 
-        if (avformat_write_header(ret.format, NULL) < 0){
-            LOG_ERROR("Error writing header");
-            return NULL;
-        }
+
+        char buf[200000];
+        av_sdp_create(&ret.format, 1, buf, 20000);
+        printf("sdp:\n%s\n", buf);
+
         return &ret;
         done:
         avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
@@ -110,6 +111,10 @@ namespace rtp
 
             RtpContext* rtp = make_rtp_context(NULL);
 
+            if(avformat_write_header(rtp->format,NULL) != 0) {
+                LOG_ERROR("write header failed");
+                break;
+            }
             // TODO
             if(av_write_frame(rtp->format, av_packet) != 0) {
                 LOG_ERROR("write failed");
