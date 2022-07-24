@@ -45,8 +45,6 @@ namespace duplication
         return platf::Capture::timeout;
       case WAIT_ABANDONED:
       case DXGI_ERROR_ACCESS_LOST:
-      case DXGI_ERROR_ACCESS_DENIED:
-        return platf::Capture::reinit;
       default:
         LOG_ERROR("Couldn't acquire next frame");
         return platf::Capture::error;
@@ -70,9 +68,6 @@ namespace duplication
           return platf::Capture::timeout;
         case WAIT_ABANDONED:
         case DXGI_ERROR_ACCESS_LOST:
-        case DXGI_ERROR_ACCESS_DENIED:
-          dup->has_frame = false;
-          return platf::Capture::reinit;
         default:
           LOG_ERROR("Couldn't release frame");
           return platf::Capture::error;

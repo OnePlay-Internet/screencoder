@@ -119,7 +119,7 @@ namespace encoder {
      * @return platf::Capture 
      */
     platf::Capture
-    on_image_snapshoot (platf::Image* img,
+    on_image_snapshoot (platf::Image** img,
                         util::Buffer* buffer,
                         EncodeThreadContext* thread_ctx)
     {
@@ -138,7 +138,7 @@ namespace encoder {
         }
 
         // convert image
-        if(device->klass->convert(device,img)) {
+        if(device->klass->convert(device,*img)) {
             LOG_ERROR("Could not convert image");
             RAISE_EVENT(thread_ctx->shutdown_event);
             BUFFER_CLASS->unref(buffer);
@@ -146,23 +146,19 @@ namespace encoder {
         }
 
         // encode
-        while(!QUEUE_ARRAY_CLASS->peek(thread_ctx->packet_queue)) {
-            if(!encode(thread_ctx->frame_nr++, 
-                    buffer, 
-                    frame, 
-                    thread_ctx->packet_queue)) 
-            {
-                LOG_ERROR("Could not encode video packet");
-                RAISE_EVENT(thread_ctx->shutdown_event);
-                BUFFER_CLASS->unref(buffer);
-                return platf::Capture::error;
-            }
-            std::this_thread::sleep_for(1ms);
+        if(!encode(thread_ctx->frame_nr++, 
+                buffer, 
+                frame, 
+                thread_ctx->packet_queue)) {
+            LOG_ERROR("Could not encode video packet");
+            RAISE_EVENT(thread_ctx->shutdown_event);
+            BUFFER_CLASS->unref(buffer);
+            return platf::Capture::error;
         }
 
         // reset keyframe attribute
-        frame->pict_type = AV_PICTURE_TYPE_NONE;
-        frame->key_frame = 0;
+        // frame->pict_type = AV_PICTURE_TYPE_NONE;
+        // frame->key_frame = 0;
 
         BUFFER_CLASS->unref(buffer);
         return platf::Capture::ok;

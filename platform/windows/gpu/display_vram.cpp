@@ -50,6 +50,7 @@ namespace gpu {
                         encoder::EncodeThreadContext* thread_ctx,
                         bool cursor) 
     {
+        platf::Capture status;
         DisplayVram* self = (DisplayVram*) disp; 
         auto next_frame = std::chrono::steady_clock::now();
         while(img) {
@@ -59,18 +60,21 @@ namespace gpu {
           }
 
           next_frame = now + self->base.delay;
-          auto status = display_vram_snapshot((platf::Display*)self,img,1000ms,cursor);
+          status = display_vram_snapshot((platf::Display*)self,img,1000ms,cursor);
           switch(status) {
-            case platf::Capture::reinit:
             case platf::Capture::error:
               return status;
             case platf::Capture::timeout:
               std::this_thread::sleep_for(1ms);
               continue;
-            case platf::Capture::ok:
-              return snapshot_cb(img,data,thread_ctx);
             default:
-              LOG_ERROR("Unrecognized capture status"); 
+              break;
+          }
+          status = snapshot_cb(&img,data,thread_ctx);
+          switch(status) {
+            case platf::Capture::ok:
+              break;
+            default:
               return status;
           }
         }

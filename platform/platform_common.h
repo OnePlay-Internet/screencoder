@@ -108,7 +108,7 @@ namespace platf {
      *    Returns the image object that should be filled next.
      *    This may or may not be the image send with the callback
      */
-    typedef Capture (*SnapshootCallback) (Image* img,
+    typedef Capture (*SnapshootCallback) (Image** img,
                                           util::Buffer* data,
                                           encoder::EncodeThreadContext* thread_ctx);
 
