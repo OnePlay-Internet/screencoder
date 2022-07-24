@@ -94,8 +94,7 @@ namespace encoder
             return FALSE;
         }
 
-
-        disp->klass->finalize((pointer)disp);
+        session_finalize(session);
         BUFFER_CLASS->unref(obj);
         return TRUE;
     }

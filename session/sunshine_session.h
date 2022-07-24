@@ -21,16 +21,13 @@ namespace session
 {
     typedef struct _Session
     {
-        config::Encoder* config;
-
         util::Broadcaster* shutdown_event;
 
         util::QueueArray* packet_queue;
     }Session;
     
 
-    void        init_session        (Session* session,
-                                     config::Encoder* config);
+    void        init_session        (Session* session);
 
     void        start_session       (Session* session);
 

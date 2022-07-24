@@ -91,12 +91,22 @@ namespace config
 
         encoder.qp = 28;
 
-        encoder.rtp.port = 3452;
+        encoder.rtp.port = 6000;
 
         encoder.nv.coder = coder_e::_auto;
         encoder.nv.rc = rc_e::cbr;
         encoder.nv.rc = preset_e::_default;
         
+        encoder.conf.width = 1920;
+        encoder.conf.height = 1080;
+        encoder.conf.bitrate = 1000;
+        encoder.conf.framerate = 60;
+        encoder.conf.encoderCscMode = 0;
+        encoder.conf.videoFormat = 0;
+        encoder.conf.dynamicRange = 0;
+        encoder.conf.numRefFrames = 0;
+        encoder.conf.slicesPerFrame = 1;
+
         init = true;
         return &encoder;
     }

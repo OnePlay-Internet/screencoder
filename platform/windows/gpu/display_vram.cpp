@@ -22,6 +22,8 @@ extern "C" {
 #include <gpu_hw_device.h>
 #include <thread>
 
+#include <comdef.h>
+
 
 
 using namespace std::literals;
@@ -45,6 +47,7 @@ namespace gpu {
                         platf::Image* img, 
                         platf::SnapshootCallback snapshot_cb, 
                         util::Buffer* data,
+                        encoder::EncodeThreadContext* thread_ctx,
                         bool cursor) 
     {
         DisplayVram* self = (DisplayVram*) disp; 
@@ -65,7 +68,7 @@ namespace gpu {
               std::this_thread::sleep_for(1ms);
               continue;
             case platf::Capture::ok:
-              return snapshot_cb(img,data);
+              return snapshot_cb(img,data,thread_ctx);
             default:
               LOG_ERROR("Unrecognized capture status"); 
               return status;
@@ -85,10 +88,10 @@ namespace gpu {
 
       HRESULT status;
 
-      DXGI_OUTDUPL_FRAME_INFO frame_info;
+      DXGI_OUTDUPL_FRAME_INFO frame_info = {0};
 
       dxgi::Resource res;
-      platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&self->base.dup,frame_info, timeout, &res);
+      platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&self->base.dup,&frame_info, timeout, &res);
 
       if(capture_status != platf::Capture::ok) {
         return capture_status;
@@ -102,14 +105,16 @@ namespace gpu {
         return platf::Capture::timeout;
       }
 
+      // todo
       if(frame_info.PointerShapeBufferSize > 0) {
         DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
-
         BUFFER_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
 
         UINT dummy;
         status = self->base.dup.dup->GetFramePointerShape(frame_info.PointerShapeBufferSize, img_ptr, &dummy, &shape_info);
         if(FAILED(status)) {
+          _com_error err(status);
+          LPCTSTR errMsg = err.ErrorMessage();
           LOG_ERROR("Failed to get new pointer shape");
           return platf::Capture::error;
         }
@@ -281,6 +286,30 @@ namespace gpu {
     {
         DisplayVram* disp = (DisplayVram*)self;
         DUPLICATION_CLASS->finalize(&disp->base.dup);
+        if(disp->scene_vs)
+            disp->scene_vs->Release();
+        if(disp->scene_ps)
+            disp->scene_ps->Release();
+        if(disp->sampler_linear)
+            disp->sampler_linear->Release();
+        if(disp->blend_disable)
+            disp->blend_disable->Release();
+        if(disp->blend_enable)
+            disp->blend_enable->Release();
+        if(disp->src)
+            disp->src->Release();
+        if(disp->base.adapter)
+            disp->base.adapter->Release();
+        if(disp->base.device)
+            disp->base.device->Release();
+        if(disp->base.device_ctx)
+            disp->base.device_ctx->Release();
+        if(disp->base.dup.dup)
+            disp->base.dup.dup->Release();
+        if(disp->base.factory)
+            disp->base.factory->Release();
+        if(disp->base.output)
+            disp->base.output->Release();
         free(self);
     }
 

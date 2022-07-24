@@ -176,7 +176,9 @@ namespace encoder {
         return (platf::Capture)ctx->display->klass->capture(ctx->display, 
                                                     img,
                                                     (platf::SnapshootCallback)on_image_snapshoot, 
-                                                    buf, TRUE);
+                                                    buf, 
+                                                    ctx,
+                                                    FALSE);
     }
 
     /**
@@ -236,6 +238,7 @@ namespace encoder {
         }
         done:
         RAISE_EVENT(ctx->shutdown_event);
+        RAISE_EVENT(ctx->join_event);
     }
 
     /**
@@ -248,8 +251,7 @@ namespace encoder {
      */
     void 
     capture( util::Broadcaster* shutdown_event,
-             util::QueueArray* packet_queue,
-             Config* config) 
+             util::QueueArray* packet_queue) 
     {
         util::Broadcaster* join_event = NEW_EVENT;
 
@@ -259,7 +261,7 @@ namespace encoder {
         ss_ctx.join_event = join_event;
         ss_ctx.packet_queue = packet_queue;
 
-        ss_ctx.config = config;
+        ss_ctx.config = &ENCODER_CONFIG->conf;
         ss_ctx.frame_nr = 1;
         ss_ctx.thread = std::thread {captureThread, &ss_ctx };
 

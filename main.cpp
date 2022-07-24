@@ -8,10 +8,14 @@
  * @copyright Copyright (c) 2022
  * 
  */
+#include <sunshine_util.h>
 #include <typeinfo>
 #include <iostream>
+
 #include <sunshine_session.h>
 #include <sunshine_config.h>
+#include <encoder_device.h>
+
 
 #include <iostream>
 
@@ -22,8 +26,7 @@ main(int argc, char ** argv)
 
     session::Session sess;
     memset(&sess,0,sizeof(session::Session));
-
-    session::init_session(&sess,NULL);
+    session::init_session(&sess);
     session::start_session(&sess);
     return 0;
 }

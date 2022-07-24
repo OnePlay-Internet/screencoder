@@ -22,17 +22,6 @@ namespace encoder
         int hevc_main_10;
     } Profile;
 
-    struct _Config{
-        int width;
-        int height;
-        int framerate;
-        int bitrate;
-        int slicesPerFrame;
-        int numRefFrames;
-        int encoderCscMode;
-        int videoFormat;
-        int dynamicRange;
-    };
 
 
     typedef libav::BufferRef* (*MakeHWDeviceContext) (platf::Device *hwdevice);

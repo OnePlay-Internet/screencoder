@@ -37,6 +37,18 @@ namespace encoder
 
         rtp::RtpContext* rtp;
     };
+    
+    struct _Config{
+        int width;
+        int height;
+        int framerate;
+        int bitrate;
+        int slicesPerFrame;
+        int numRefFrames;
+        int encoderCscMode;
+        int videoFormat;
+        int dynamicRange;
+    };
 
 } // namespace encoder
 

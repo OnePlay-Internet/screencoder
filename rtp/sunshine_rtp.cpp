@@ -31,6 +31,7 @@ namespace rtp
         std::thread video_thread;
 
         util::Broadcaster* shutdown_event;
+        util::Broadcaster* join_event;
 
         util::QueueArray* packet_queue;
     }BroadcastContext;
@@ -87,7 +88,10 @@ namespace rtp
         util::Broadcaster* shutdown_event = ctx->shutdown_event;
 
 
-        while(QUEUE_ARRAY_CLASS->peek(packets)) {
+        while(TRUE) {
+            if(!QUEUE_ARRAY_CLASS->peek(packets))
+                continue;
+
             util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
             if(IS_INVOKED(shutdown_event))
                 break;
@@ -110,13 +114,14 @@ namespace rtp
             // TODO
             if(av_write_frame(session->rtp->format, av_packet) != 0) {
                 LOG_ERROR("write failed");
-                goto done;
+                break;
             }
 
             BUFFER_CLASS->unref(video_packet_buffer);
         }
-    done:
+
         RAISE_EVENT(shutdown_event);
+        RAISE_EVENT(ctx->join_event);
     }
 
 
@@ -134,6 +139,8 @@ namespace rtp
         memset(&ctx,0,sizeof(BroadcastContext));
         ctx.packet_queue = packet_queue;
         ctx.shutdown_event = shutdown_event;
+        ctx.join_event = NEW_EVENT;
         ctx.video_thread = std::thread { videoBroadcastThread, &ctx};
+        WAIT_EVENT(ctx.join_event);
     }
 } // namespace rtp

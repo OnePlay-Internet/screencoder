@@ -100,7 +100,7 @@ namespace encoder {
         util::keyval_new_intval(hevcpairs,"preset",ENCODER_CONFIG->nv.rc);
         util::keyval_new_intval(hevcpairs,"rc",ENCODER_CONFIG->nv.rc);
         encoder.hevc = CodecConfig {
-            "nvenc_hevc",
+            "hevc_nvenc",
             hevcqp,
             hevcpairs,
         };

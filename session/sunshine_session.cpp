@@ -15,17 +15,15 @@
 #include <sunshine_rtp.h>
 #include <encoder_thread.h>
 
-
+#include <thread>
 
 namespace session {
 
 
 
     void        
-    init_session(Session* session,
-                 config::Encoder* config)
+    init_session(Session* session)
     {
-        session->config = config;
         session->shutdown_event = NEW_EVENT;
         session->packet_queue = QUEUE_ARRAY_CLASS->init();
     }
@@ -35,15 +33,15 @@ namespace session {
     void
     start_session(Session* session)
     {
-        // TODO
-        encoder::capture(session->shutdown_event,
-                         session->packet_queue,
-                         NULL);
+        std::thread capture   { encoder::capture, 
+                                session->shutdown_event, 
+                                session->packet_queue };
 
-        rtp::start_broadcast(session->shutdown_event,
-                             session->packet_queue);
-
+        std::thread broadcast { rtp::start_broadcast , 
+                                session->shutdown_event, 
+                                session->packet_queue };
 
         WAIT_EVENT(session->shutdown_event);
+        
     }
 }

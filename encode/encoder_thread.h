@@ -31,8 +31,7 @@ namespace encoder
      * @param data 
      */
     void                capture          (util::Broadcaster* shutdown_event,
-                                          util::QueueArray* packet_queue,
-                                          Config* config);
+                                          util::QueueArray* packet_queue);
     
 
     int                 encode           (int frame_nr, 

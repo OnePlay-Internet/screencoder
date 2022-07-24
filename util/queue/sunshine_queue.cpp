@@ -26,12 +26,6 @@ namespace util {
      * Circular Array
      */
     struct _QueueArray {
-        /**
-         * @brief 
-         * 
-         */
-        uint length;
-
         std::mutex _lock;
 
         /**
@@ -88,7 +82,7 @@ namespace util {
     queue_array_push(QueueArray* queue, 
                      util::Buffer* obj)
     {
-        std::lock_guard {queue->_lock};
+        std::lock_guard lg (queue->_lock);
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
@@ -96,18 +90,17 @@ namespace util {
         last->obj  = obj;
         last->next = NULL;
 
-        if(!queue->length)
+        if(!queue->first)
         {
             queue->first = last;
         }
         else
         {
             BufferLL* container = queue->first;
-            while (!container->next) { container = container->next; }
+            while (container->next) { container = container->next; }
             container->next = last;
         }
 
-        queue->length++;
         return true;
     }
 
@@ -115,18 +108,14 @@ namespace util {
     bool            
     queue_array_peek(QueueArray* queue)
     {
-        std::lock_guard {queue->_lock};
-        if (queue->length > 0)
-            return true;
-        else
-            return false;
+        return queue->first ? true : false;
     }
 
 
     util::Buffer* 
     queue_array_pop(QueueArray* queue)
     {
-        std::lock_guard {queue->_lock};
+        std::lock_guard lg (queue->_lock);
         if (!queue_array_peek(queue))
             return NULL;
 
@@ -138,7 +127,6 @@ namespace util {
 
         queue->first = container->next;
         free(container);
-        queue->length--;
         return ret;
     }
 
@@ -149,7 +137,6 @@ namespace util {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
         memset(array,0,sizeof(QueueArray));
 
-        array->length = 0;
         array->first = NULL;
         return array;
     }
@@ -158,7 +145,7 @@ namespace util {
     void            
     queue_array_finalize(QueueArray* queue)
     {
-        std::lock_guard {queue->_lock};
+        std::lock_guard lg (queue->_lock);
         free(queue);
     }
 }

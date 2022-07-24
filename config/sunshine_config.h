@@ -16,6 +16,7 @@
 #define RTSP_TCP_MAX_PACKET_SIZE 1472
 
 
+#include <encoder_datatype.h>
 
 
 namespace config
@@ -44,6 +45,7 @@ namespace config
 
         Nvidia nv;
         RTP rtp;
+        encoder::Config conf;
         
         char* encoder;
         char* adapter_name;

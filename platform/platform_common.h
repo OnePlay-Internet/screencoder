@@ -109,7 +109,8 @@ namespace platf {
      *    This may or may not be the image send with the callback
      */
     typedef Capture (*SnapshootCallback) (Image* img,
-                                          util::Buffer* data);
+                                          util::Buffer* data,
+                                          encoder::EncodeThreadContext* thread_ctx);
 
 
     struct _Display {
@@ -139,6 +140,7 @@ namespace platf {
                                          Image* img, 
                                          SnapshootCallback snapshot_cb, 
                                          util::Buffer* data,
+                                         encoder::EncodeThreadContext* thread_ctx,
                                          bool cursor);
 
         Capture     (*snapshot)         (Display* self,

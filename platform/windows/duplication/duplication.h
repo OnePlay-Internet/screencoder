@@ -27,7 +27,7 @@ namespace duplication
 
     typedef struct _DuplicationClass {
         platf::Capture(*next_frame)     (Duplication* dup,
-                                         DXGI_OUTDUPL_FRAME_INFO frame_info, 
+                                         DXGI_OUTDUPL_FRAME_INFO* frame_info, 
                                          std::chrono::milliseconds timeout, 
                                          dxgi::Resource* res_p);
 

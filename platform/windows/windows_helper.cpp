@@ -256,41 +256,41 @@ namespace helper
     HLSL*
     init_hlsl() 
     {
-      LOG_INFO("Compiling shaders...");
       static bool initialize = false;
-      HLSL* hlsl = (HLSL*)malloc(sizeof(HLSL));
-      memset(hlsl,0,sizeof(HLSL));
-
+      static HLSL hlsl = {0};
       if (initialize)
-        return hlsl;
+        return &hlsl;
       
 
-      hlsl->scene_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/SceneVS.hlsl");
-      if(!hlsl->scene_vs_hlsl) {
+
+      LOG_INFO("Compiling shaders...");
+      hlsl.scene_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/SceneVS.hlsl");
+      if(!hlsl.scene_vs_hlsl) {
         return NULL;
       }
 
-      hlsl->convert_Y_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertYPS.hlsl");
-      if(!hlsl->convert_Y_ps_hlsl) {
+      hlsl.convert_Y_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertYPS.hlsl");
+      if(!hlsl.convert_Y_ps_hlsl) {
         return NULL;
       }
 
-      hlsl->convert_UV_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertUVPS.hlsl");
-      if(!hlsl->convert_UV_ps_hlsl) {
+      hlsl.convert_UV_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ConvertUVPS.hlsl");
+      if(!hlsl.convert_UV_ps_hlsl) {
         return NULL;
       }
 
-      hlsl->convert_UV_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/ConvertUVVS.hlsl");
-      if(!hlsl->convert_UV_vs_hlsl) {
+      hlsl.convert_UV_vs_hlsl = helper::compile_vertex_shader(SUNSHINE_SHADERS_DIR "/ConvertUVVS.hlsl");
+      if(!hlsl.convert_UV_vs_hlsl) {
         return NULL;
       }
 
-      hlsl->scene_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ScenePS.hlsl");
-      if(!hlsl->scene_ps_hlsl) {
+      hlsl.scene_ps_hlsl = helper::compile_pixel_shader(SUNSHINE_SHADERS_DIR "/ScenePS.hlsl");
+      if(!hlsl.scene_ps_hlsl) {
         return NULL;
       }
       LOG_INFO("Compiled shaders");
-      return hlsl;
+      initialize = true;
+      return &hlsl;
     }    
 } // namespace helper
 
@@ -379,13 +379,14 @@ namespace platf {
                   char* display_name, 
                   int framerate) 
     {
-        Display* disp = NULL;
+        static Display* disp = NULL;
         // We try this twice, in case we still get an error on reinitialization
         for(int x = 0; x < DISPLAY_RETRY; ++x) {
+            if (disp)
+                break;
             disp = get_display(helper::map_dev_type(type), display_name, framerate);
             if (disp)
                 break;
-
             std::this_thread::sleep_for(200ms);
         }
         return disp;

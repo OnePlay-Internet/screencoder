@@ -22,7 +22,7 @@ namespace duplication
 
     platf::Capture 
     duplication_get_next_frame(Duplication* dup,
-                              DXGI_OUTDUPL_FRAME_INFO frame_info, 
+                              DXGI_OUTDUPL_FRAME_INFO* frame_info, 
                               std::chrono::milliseconds timeout, 
                               dxgi::Resource *res_p) 
     {
@@ -35,7 +35,7 @@ namespace duplication
         DwmFlush();
       }
 
-      HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), &frame_info, res_p);
+      HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), frame_info, res_p);
 
       switch(status) {
       case S_OK:
@@ -94,8 +94,8 @@ namespace duplication
         return &klass;
       
 
-      klass.next_frame =    duplication_get_next_frame;
-      klass.finalize=       duplication_finalize;
+      klass.next_frame    =   duplication_get_next_frame;
+      klass.finalize      =   duplication_finalize;
       initialize = true;
       return &klass;
     }
