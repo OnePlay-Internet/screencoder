@@ -41,8 +41,12 @@ namespace util {
 
     bool            queue_array_peek        (QueueArray* queue);
 
-    Buffer*          queue_array_pop         (QueueArray* queue);
 
+    pointer         queue_array_pop         (QueueArray* queue, 
+                                             util::Buffer** buf,
+                                             int* size);
+
+                                             
     QueueArray*     queue_array_init        ();
 
     void            queue_array_finalize    (QueueArray* queue);
@@ -112,8 +116,10 @@ namespace util {
     }
 
 
-    util::Buffer* 
-    queue_array_pop(QueueArray* queue)
+    pointer
+    queue_array_pop(QueueArray* queue, 
+                    util::Buffer** buf,
+                    int* size)
     {
         std::lock_guard lg (queue->_lock);
         if (!queue_array_peek(queue))
@@ -122,12 +128,10 @@ namespace util {
         BufferLL* container = queue->first;
         Buffer *ret = container->obj;
 
-        BUFFER_CLASS->lock(ret);
-        BUFFER_CLASS->unref(ret);
 
         queue->first = container->next;
         free(container);
-        return ret;
+        return BUFFER_CLASS->ref(ret,size);
     }
 
 

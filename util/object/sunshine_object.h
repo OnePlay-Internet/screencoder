@@ -81,8 +81,6 @@ namespace util
 
         void    (*unref)    (Buffer* obj);
 
-        void    (*lock)     (Buffer* obj);
-
         Buffer* (*init)     (pointer data,
                              uint size,
                              BufferFreeFunc func);

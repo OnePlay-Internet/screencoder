@@ -31,7 +31,7 @@ namespace encoder
 
  
     util::Buffer*
-    make_synced_session(platf::Image* img, 
+    make_session_buffer(platf::Image* img, 
                         Encoder* encoder,
                         platf::Display* display,
                         Config* config);

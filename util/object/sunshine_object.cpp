@@ -21,8 +21,6 @@ namespace util
     typedef struct _Buffer{
         uint ref_count;
 
-        bool free_lock;
-
         /**
          * @brief 
          * should not be used directly
@@ -64,7 +62,6 @@ namespace util
         if (size)
             *size = obj->size;
         
-        obj->free_lock = false;
         return obj->data;
     }
 
@@ -89,18 +86,13 @@ namespace util
     object_unref (Buffer* obj)
     {
         obj->ref_count--;
-        if (!obj->ref_count && !obj->free_lock)
+        if (!obj->ref_count)
         {
             obj->free_func(obj->data);
             free(obj);
         }
     }
 
-    void    
-    object_lock (Buffer* obj)
-    {
-        obj->free_lock = true;
-    }
 
     Buffer* 
     object_init (pointer data, 
@@ -114,7 +106,6 @@ namespace util
         object->free_func = free_func;
         object->size = size,
         object->ref_count = 1;
-        object->free_lock = false;
         return object;
     }
 
@@ -243,7 +234,6 @@ namespace util
 
         klass.init  = object_init;
         klass.unref = object_unref;
-        klass.lock = object_lock;
         klass.ref   = object_ref;
         klass.duplicate = object_duplicate;
         klass.size  = object_size;

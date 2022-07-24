@@ -41,7 +41,7 @@ namespace rtp
     {
         static bool init = false;
         static RtpContext ret;
-        if(init)
+        if(init || !encode)
             goto done;
 
         init = true;
@@ -89,27 +89,21 @@ namespace rtp
             if(!QUEUE_ARRAY_CLASS->peek(packets))
                 continue;
 
-            util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
             if(IS_INVOKED(shutdown_event))
                 break;
 
-
-
             int size;
-            encoder::Session* session = (encoder::Session*)BUFFER_CLASS->ref(video_packet_buffer,&size);
-            if(size != sizeof(encoder::Session)) {
+            util::Buffer* video_packet_buffer;
+            libav::Packet* av_packet = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(packets,&video_packet_buffer,&size);
+            if(size != sizeof(libav::Packet)) {
                 LOG_ERROR("wrong datatype");
                 continue;
             }
 
-            libav::Packet* av_packet = session->packet;
-            if(!av_packet) {
-                LOG_ERROR("wrong datatype");
-                continue;
-            }
+            RtpContext* rtp = make_rtp_context(NULL);
 
             // TODO
-            if(av_write_frame(session->rtp->format, av_packet) != 0) {
+            if(av_write_frame(rtp->format, av_packet) != 0) {
                 LOG_ERROR("write failed");
                 break;
             }

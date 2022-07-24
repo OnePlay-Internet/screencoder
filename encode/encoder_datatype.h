@@ -22,6 +22,7 @@ namespace encoder
      */
     struct _EncodeContext{
         libav::CodecContext* context;
+
         libav::Codec* codec;
 
         platf::Device* device;
@@ -31,12 +32,8 @@ namespace encoder
     struct _Session {
         int64 pts;
 
-        libav::Packet* packet;
-
         // encoder::EncodeContext encode;
-        util::Buffer* encode;
-
-        rtp::RtpContext* rtp;
+        EncodeContext* encode;
     };
     
     struct _Config{

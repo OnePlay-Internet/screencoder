@@ -186,8 +186,6 @@ namespace helper
       }
 
       BUFFER_CLASS->unref(img_obj);
-      BUFFER_CLASS->lock(ret);
-      BUFFER_CLASS->unref(ret);
       return ret;
     }
 

@@ -83,7 +83,7 @@ namespace encoder
         free(data);
     }
 
-    util::Buffer*
+    EncodeContext*
     make_encode_context(platf::Device* device,
                         char* encoder)
     {
@@ -103,7 +103,7 @@ namespace encoder
             return NULL;
         }
         
-        return BUFFER_CLASS->init((pointer)ctx,sizeof(EncodeContext),free_encode_context);
+        return ctx;
     }
 
 
@@ -113,10 +113,6 @@ namespace encoder
                  int width, int height, 
                  platf::Device* device) 
     {
-        Session* session = (Session*)malloc(sizeof(Session));
-        memset(session,0,sizeof(Session));
-
-
         bool hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
 
         CodecConfig* video_format = (config->videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
@@ -130,8 +126,7 @@ namespace encoder
             return NULL;
         }
 
-        session->encode = make_encode_context(device,video_format->name);
-        EncodeContext* encode_ctx = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
+        EncodeContext* encode_ctx = make_encode_context(device,video_format->name);
         libav::CodecContext* ctx = encode_ctx->context;
         ctx->width     = config->width;
         ctx->height    = config->height;
@@ -302,8 +297,11 @@ namespace encoder
                                         sws_color_space, 
                                         ctx->color_range);
 
+
+        Session* session = (Session*)malloc(sizeof(Session));
+        memset(session,0,sizeof(Session));
         session->pts = frame->pts;
-        BUFFER_CLASS->unref(session->encode);
+        session->encode = encode_ctx;
         return session;
     }
 
@@ -311,11 +309,7 @@ namespace encoder
     session_finalize(pointer session)
     {
         Session* self = (Session*) session;
-        if(self->encode)
-            BUFFER_CLASS->unref(self->encode);
-
-        if(self->packet)
-            av_free_packet(self->packet);
+        free_encode_context(self->encode);
         free(session);
     }
 
@@ -330,7 +324,7 @@ namespace encoder
      * @param ctx 
      */
     util::Buffer*
-    make_synced_session(platf::Image* img, 
+    make_session_buffer(platf::Image* img, 
                         Encoder* encoder,
                         platf::Display* display,
                         Config* config) 
@@ -350,9 +344,7 @@ namespace encoder
         if(!ses)
             return NULL;
 
-        EncodeContext* encode_ctx = (EncodeContext*)BUFFER_CLASS->ref(ses->encode,NULL);
-        ses->rtp = rtp::make_rtp_context(encode_ctx);
-        BUFFER_CLASS->unref(ses->encode);
+        rtp::make_rtp_context(ses->encode);
         return BUFFER_CLASS->init((pointer)ses,sizeof(Session),session_finalize);
     }
 } // namespace encoder

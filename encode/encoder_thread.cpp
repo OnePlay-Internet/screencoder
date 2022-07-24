@@ -38,6 +38,7 @@ using namespace std::literals;
 namespace encoder {
     struct _EncodeThreadContext {
         int frame_nr;
+
         util::Broadcaster* shutdown_event;
         util::Broadcaster* join_event;
         util::QueueArray* packet_queue;
@@ -50,6 +51,11 @@ namespace encoder {
         platf::Display* display;
     };
 
+    void
+    free_av_packet(void* pkt)
+    {
+        av_free_packet((libav::Packet*)pkt);
+    }
 
 
     /**
@@ -68,11 +74,8 @@ namespace encoder {
            util::QueueArray* packets) 
     {
         int ret;
-        Session* session = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
-        EncodeContext* encode = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
-
-
-        libav::CodecContext* libav_ctx = encode->context;
+        Session* session      = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
+        libav::CodecContext* libav_ctx = session->encode->context;
         frame->pts = (int64_t)frame_nr;
 
         /* send the frame to the encoder */
@@ -80,32 +83,28 @@ namespace encoder {
         if(ret < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, ret));
-            goto fail;
+            BUFFER_CLASS->unref(session_buf);
+            return FALSE;
         }
 
 
-        session->packet = av_packet_alloc();
-        ret = avcodec_receive_packet(libav_ctx, session->packet);
+        libav::Packet* packet = av_packet_alloc();
+        ret = avcodec_receive_packet(libav_ctx, packet);
         if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) 
-            goto success;
-        else if(ret < 0) 
-            goto fail;
+        {
+            BUFFER_CLASS->unref(session_buf);
+            return TRUE;
+        }
+        else if(ret < 0) {
+            BUFFER_CLASS->unref(session_buf);
+            return FALSE;
+        }
 
         // we pass the reference of session to packet
-        session->packet->pts = (int64_t)frame_nr;
-        BUFFER_CLASS->unref(session->encode);
-        QUEUE_ARRAY_CLASS->push(packets,session_buf);
-        BUFFER_CLASS->unref(session_buf);
-
-        success:
-        ret = TRUE;
-        goto done;
-        fail:
-        ret = FALSE;
-        done:
-        BUFFER_CLASS->unref(session->encode);
-        BUFFER_CLASS->unref(session_buf);
-        return ret;
+        util::Buffer* pkt = BUFFER_CLASS->init(packet,sizeof(libav::Packet),free_av_packet);
+        QUEUE_ARRAY_CLASS->push(packets,pkt);
+        BUFFER_CLASS->unref(pkt);
+        return TRUE;
     }
 
 
@@ -125,8 +124,7 @@ namespace encoder {
                         EncodeThreadContext* thread_ctx)
     {
         Session* session = (Session*)BUFFER_CLASS->ref(buffer,NULL);
-        EncodeContext* encode_ctx = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
-        platf::Device* device = encode_ctx->device;
+        platf::Device* device = session->encode->device;
 
         // get frame from device
         libav::Frame* frame = device->frame;
@@ -146,7 +144,6 @@ namespace encoder {
         }
 
         // encode
-        BUFFER_CLASS->unref(session->encode);
         if(!encode(thread_ctx->frame_nr++, 
                   buffer, 
                   frame, 
@@ -177,7 +174,7 @@ namespace encoder {
         if(!img || ctx->display->klass->dummy_img(ctx->display,img)) 
             return platf::Capture::error;
 
-        util::Buffer* buf = make_synced_session(img, 
+        util::Buffer* buf = make_session_buffer(img, 
                                                 ctx->encoder,
                                                 ctx->display,
                                                 ctx->config);
@@ -186,12 +183,15 @@ namespace encoder {
 
         // cursor
         // run image capture in while loop, 
-        return (platf::Capture)ctx->display->klass->capture(ctx->display, 
+        platf::Capture ret = ctx->display->klass->capture(ctx->display, 
                                                     img,
                                                     (platf::SnapshootCallback)on_image_snapshoot, 
                                                     buf, 
                                                     ctx,
                                                     FALSE);
+        
+        BUFFER_CLASS->unref(buf);
+        return ret;
     }
 
     /**

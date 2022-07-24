@@ -29,17 +29,20 @@ namespace encoder
     validate_config(Encoder* encoder, 
                     Config* config) 
     {
+        int size;
         int res, ret;
         libav::Packet* av_packet   = NULL;
-        util::Buffer* obj  = NULL;
+        libav::Frame* frame = NULL;
         libav::FormatContext* fmtctx   = NULL;
         libav::Stream* stream  = NULL;
-        encoder::EncodeContext* encode_context = NULL;
+
+        util::Buffer* obj  = NULL;
         util::Buffer* obj_ses = NULL;
-        platf::Image* img = NULL;
-        libav::Frame* frame = NULL;
         util::QueueArray* packets = NULL;
+
         Session* session = NULL;
+        EncodeContext* encode_context = NULL;
+        platf::Image* img = NULL;
 
         platf::Display* disp = platf::tryget_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
         if(!disp) 
@@ -52,20 +55,30 @@ namespace encoder
 
         platf::Device* device = disp->klass->make_hwdevice(disp,pix_fmt);
         if(!device) 
-            goto fail;
+        {
+            LOG_ERROR("Fail to create hwdevice");
+            return FALSE;
+        }
         
-
         session = make_session(encoder, config, disp->width, disp->height, device);
         if(!session)
-            goto fail;
+        {
+            session_finalize(session);
+            return FALSE;
+        }
         
-        encode_context = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
         img = disp->klass->alloc_img(disp);
         if(!img || disp->klass->dummy_img(disp,img)) 
-            goto fail;
+        {
+            session_finalize(session);
+            return FALSE;
+        }
         
         if(device->klass->convert(device,img)) 
-            goto fail;
+        {
+            session_finalize(session);
+            return FALSE;
+        }
         
 
         frame = device->frame;
@@ -75,22 +88,28 @@ namespace encoder
         obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
         while(!QUEUE_ARRAY_CLASS->peek(packets)) {
             if(!encode(1, obj_ses, frame, packets)) 
-                goto fail;
+            {
+                LOG_ERROR("fail to encode");
+                QUEUE_ARRAY_CLASS->stop(packets);
+                BUFFER_CLASS->unref(obj_ses);
+                return FALSE;
+            }
         }
 
-        obj = QUEUE_ARRAY_CLASS->pop(packets);
-
-        int size;
-        session    = (Session*)BUFFER_CLASS->ref(obj,&size);
-        if(size != sizeof(Session)) {
+        av_packet = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(packets,&obj,&size);
+        if(size != sizeof(libav::Packet)) {
             LOG_ERROR("wrong datatype");
-            goto fail;
+            QUEUE_ARRAY_CLASS->stop(packets);
+            BUFFER_CLASS->unref(obj_ses);
+            return FALSE;
         }
 
-        av_packet = session->packet;
         if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
             LOG_ERROR("First packet type is not an IDR frame");
-            goto fail;
+            QUEUE_ARRAY_CLASS->stop(packets);
+            BUFFER_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj_ses);
+            return FALSE;
         }
 
         fmtctx = avformat_alloc_context();
@@ -108,34 +127,33 @@ namespace encoder
         fmtctx->streams[0] = stream;
         if (avio_open(&fmtctx->pb, fmtctx->filename, AVIO_FLAG_WRITE) < 0){
             LOG_ERROR("Error opening output file");
-            goto fail;
+            avformat_free_context(fmtctx);
+            QUEUE_ARRAY_CLASS->stop(packets);
+            BUFFER_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj_ses);
+            return FALSE;
         }
 
         if (avformat_write_header(fmtctx, NULL) < 0){
             LOG_ERROR("Error writing header");
-            goto fail;
+            avformat_free_context(fmtctx);
+            QUEUE_ARRAY_CLASS->stop(packets);
+            BUFFER_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj_ses);
+            return FALSE;
         }
 
         res = av_write_frame(fmtctx, av_packet);
         if(res != 0) {
             LOG_ERROR("write failed");
-            goto fail;
+            avformat_free_context(fmtctx);
+            QUEUE_ARRAY_CLASS->stop(packets);
+            BUFFER_CLASS->unref(obj);
+            BUFFER_CLASS->unref(obj_ses);
+            return FALSE;
         }
 
-        ret = TRUE;
-        goto done;
-        fail:
-        ret = FALSE;
-        done:
-        if(fmtctx)
-            avformat_free_context(fmtctx);
-        if(session && session->encode)
-            BUFFER_CLASS->unref(session->encode);
-        if(packets)
-            QUEUE_ARRAY_CLASS->stop(packets);
-        if(obj)
-            BUFFER_CLASS->unref(obj);
-        return ret;
+        return TRUE;
     }
 
     bool 
