@@ -33,7 +33,8 @@ namespace encoder
 
         libav::Packet* packet;
 
-        encoder::EncodeContext encode;
+        // encoder::EncodeContext encode;
+        util::Buffer* encode;
 
         rtp::RtpContext* rtp;
     };

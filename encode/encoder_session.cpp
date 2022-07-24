@@ -74,6 +74,39 @@ namespace encoder
     }
 
 
+    void
+    free_encode_context(pointer data)
+    {
+        EncodeContext* ctx = (EncodeContext*)data;
+        avcodec_free_context(&ctx->context);
+        ctx->device->klass->finalize(ctx->device);
+        free(data);
+    }
+
+    util::Buffer*
+    make_encode_context(platf::Device* device,
+                        char* encoder)
+    {
+        EncodeContext* ctx = (EncodeContext*)malloc(sizeof(EncodeContext));
+        memset((pointer)ctx,0,sizeof(EncodeContext));
+
+
+        ctx->device = device;
+        ctx->codec = avcodec_find_encoder_by_name(encoder);
+        if(!ctx->codec) {
+            LOG_ERROR("Couldn't create encoder");
+            return NULL;
+        }
+        ctx->context = avcodec_alloc_context3(ctx->codec);
+        if(!ctx->context) {
+            LOG_ERROR("Couldn't create context");
+            return NULL;
+        }
+        
+        return BUFFER_CLASS->init((pointer)ctx,sizeof(EncodeContext),free_encode_context);
+    }
+
+
     Session*
     make_session(Encoder* encoder, 
                  Config* config, 
@@ -97,20 +130,9 @@ namespace encoder
             return NULL;
         }
 
-        session->encode.device = device;
-        session->encode.codec = avcodec_find_encoder_by_name(video_format->name);
-        if(!session->encode.codec) {
-            LOG_ERROR("Couldn't create encoder");
-            return NULL;
-        }
-        session->encode.context = avcodec_alloc_context3(session->encode.codec);
-        if(!session->encode.context) {
-            LOG_ERROR("Couldn't create context");
-            return NULL;
-        }
-
-
-        libav::CodecContext* ctx = session->encode.context;
+        session->encode = make_encode_context(device,video_format->name);
+        EncodeContext* encode_ctx = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
+        libav::CodecContext* ctx = encode_ctx->context;
         ctx->width     = config->width;
         ctx->height    = config->height;
         ctx->time_base = AVRational { 1, config->framerate };
@@ -243,7 +265,7 @@ namespace encoder
             return NULL;
         }
 
-        if(int status = avcodec_open2(ctx, session->encode.codec, &options)) {
+        if(int status = avcodec_open2(ctx, encode_ctx->codec, &options)) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR("Could not open codec");
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status));
@@ -281,7 +303,8 @@ namespace encoder
                                         ctx->color_range);
 
         session->pts = frame->pts;
-        session->rtp = rtp::make_rtp_context(&session->encode);
+        session->rtp = rtp::make_rtp_context(encode_ctx);
+        BUFFER_CLASS->unref(session->encode);
         return session;
     }
 
@@ -289,10 +312,9 @@ namespace encoder
     session_finalize(pointer session)
     {
         Session* self = (Session*) session;
-        platf::Device* dev = self->encode.device;
-        dev->klass->finalize(dev);
-        libav::CodecContext* cdctx = self->encode.context;
-        avcodec_free_context(&cdctx);
+        if(self->encode)
+            BUFFER_CLASS->unref(self->encode);
+
         if(self->packet)
             av_free_packet(self->packet);
         free(session);

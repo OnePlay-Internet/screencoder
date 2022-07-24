@@ -68,7 +68,7 @@ namespace encoder {
            util::QueueArray* packets) 
     {
         Session* session = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
-        EncodeContext* encode = &session->encode;
+        EncodeContext* encode = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
 
 
         libav::CodecContext* libav_ctx = encode->context;
@@ -92,6 +92,8 @@ namespace encoder {
 
         // we pass the reference of session to packet
 
+        BUFFER_CLASS->unref(session->encode);
+        BUFFER_CLASS->unref(session->encode);
         QUEUE_ARRAY_CLASS->push(packets,session_buf);
         BUFFER_CLASS->unref(session_buf);
         return 0;
@@ -114,7 +116,8 @@ namespace encoder {
                         EncodeThreadContext* thread_ctx)
     {
         Session* session = (Session*)BUFFER_CLASS->ref(buffer,NULL);
-        platf::Device* device = session->encode.device;
+        EncodeContext* encode_ctx = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
+        platf::Device* device = encode_ctx->device;
 
         // get frame from device
         libav::Frame* frame = device->frame;
@@ -134,6 +137,7 @@ namespace encoder {
         }
 
         // encode
+        BUFFER_CLASS->unref(session->encode);
         if(encode(thread_ctx->frame_nr++, 
                   buffer, 
                   frame, 
