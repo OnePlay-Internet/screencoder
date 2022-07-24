@@ -171,6 +171,8 @@ namespace gpu {
                                       t.Width, 
                                       t.Height, 
                                       texture);
+        
+        BUFFER_CLASS->unref(cursor_buf);
       }
 
       if(frame_info.LastMouseUpdateTime.QuadPart) {

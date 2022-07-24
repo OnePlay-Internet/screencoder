@@ -103,6 +103,7 @@ namespace encoder {
         // we pass the reference of session to packet
         util::Buffer* pkt = BUFFER_CLASS->init(packet,sizeof(libav::Packet),free_av_packet);
         QUEUE_ARRAY_CLASS->push(packets,pkt);
+        BUFFER_CLASS->unref(session_buf);
         BUFFER_CLASS->unref(pkt);
         return TRUE;
     }
@@ -133,6 +134,7 @@ namespace encoder {
         if(IS_INVOKED(thread_ctx->shutdown_event)) {
             // Let waiting thread know it can delete shutdown_event
             RAISE_EVENT(thread_ctx->join_event);
+            BUFFER_CLASS->unref(buffer);
             return platf::Capture::error;
         }
 
@@ -140,6 +142,7 @@ namespace encoder {
         if(device->klass->convert(device,img)) {
             LOG_ERROR("Could not convert image");
             RAISE_EVENT(thread_ctx->shutdown_event);
+            BUFFER_CLASS->unref(buffer);
             return platf::Capture::error;
         }
 
@@ -151,6 +154,7 @@ namespace encoder {
         {
             LOG_ERROR("Could not encode video packet");
             RAISE_EVENT(thread_ctx->shutdown_event);
+            BUFFER_CLASS->unref(buffer);
             return platf::Capture::error;
         }
 

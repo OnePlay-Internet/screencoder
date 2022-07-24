@@ -46,7 +46,7 @@ namespace util {
                                              util::Buffer** buf,
                                              int* size);
 
-                                             
+
     QueueArray*     queue_array_init        ();
 
     void            queue_array_finalize    (QueueArray* queue);
@@ -131,7 +131,9 @@ namespace util {
 
         queue->first = container->next;
         free(container);
-        return BUFFER_CLASS->ref(ret,size);
+        pointer data = BUFFER_CLASS->ref(ret,size);
+        BUFFER_CLASS->unref(ret);
+        return data;
     }
 
 

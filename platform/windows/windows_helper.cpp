@@ -56,6 +56,7 @@ namespace helper
       auto status = device->CreateBuffer(&buffer_desc, &init_data, &buf_p);
       if(status) {
         LOG_ERROR("Failed to create buffer");
+        BUFFER_CLASS->unref(buffer);
         return NULL;
       }
 
