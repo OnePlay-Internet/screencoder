@@ -57,7 +57,6 @@ namespace rtp
 
         avcodec_parameters_from_context(video_stream->codecpar,encode->context);
 
-
         fmtctx->streams[0] = video_stream;
         if (avio_open(&fmtctx->pb, fmtctx->filename, AVIO_FLAG_WRITE) < 0){
             LOG_ERROR("Error opening output file");

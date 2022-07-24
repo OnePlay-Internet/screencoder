@@ -67,6 +67,7 @@ namespace encoder {
            libav::Frame* frame, 
            util::QueueArray* packets) 
     {
+        bool ret;
         Session* session = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
         EncodeContext* encode = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
 
@@ -75,28 +76,34 @@ namespace encoder {
         frame->pts = (int64_t)frame_nr;
 
         /* send the frame to the encoder */
-        auto ret = avcodec_send_frame(libav_ctx, frame);
+        ret = avcodec_send_frame(libav_ctx, frame);
         if(ret < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, ret));
-            return FALSE;
+            ret = FALSE;
+            goto fail;
         }
 
 
         session->packet = av_packet_alloc();
         ret = avcodec_receive_packet(libav_ctx, session->packet);
         if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) 
-            return 0;
-        else if(ret < 0) 
-            return ret;
+            goto success;
+        else if(ret < 0) {
+            ret = FALSE;
+            goto fail;
+        }
 
         // we pass the reference of session to packet
 
         BUFFER_CLASS->unref(session->encode);
-        BUFFER_CLASS->unref(session->encode);
         QUEUE_ARRAY_CLASS->push(packets,session_buf);
         BUFFER_CLASS->unref(session_buf);
-        return 0;
+        success:
+        ret = TRUE;
+        fail:
+        BUFFER_CLASS->unref(session->encode);
+        return FALSE;
     }
 
 
@@ -235,7 +242,7 @@ namespace encoder {
             switch (result)
             {
             case platf::Capture::error:
-                goto done;
+                break;
             default:
                 continue;
             }
