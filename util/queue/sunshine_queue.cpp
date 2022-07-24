@@ -26,8 +26,6 @@ namespace util {
      * Circular Array
      */
     struct _QueueArray {
-        std::mutex _lock;
-
         /**
          * @brief 
          * 
@@ -86,7 +84,6 @@ namespace util {
     queue_array_push(QueueArray* queue, 
                      util::Buffer* obj)
     {
-        std::lock_guard lg (queue->_lock);
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
@@ -94,12 +91,9 @@ namespace util {
         last->obj  = obj;
         last->next = NULL;
 
-        if(!queue->first)
-        {
+        if(!queue->first) {
             queue->first = last;
-        }
-        else
-        {
+        } else {
             BufferLL* container = queue->first;
             while (container->next) { container = container->next; }
             container->next = last;
@@ -121,7 +115,6 @@ namespace util {
                     util::Buffer** buf,
                     int* size)
     {
-        std::lock_guard lg (queue->_lock);
         if (!queue_array_peek(queue))
             return NULL;
 
@@ -131,6 +124,7 @@ namespace util {
 
         queue->first = container->next;
         free(container);
+        *buf = ret;
         pointer data = BUFFER_CLASS->ref(ret,size);
         BUFFER_CLASS->unref(ret);
         return data;
@@ -151,7 +145,6 @@ namespace util {
     void            
     queue_array_finalize(QueueArray* queue)
     {
-        queue->_lock.unlock();
         free(queue);
     }
 }

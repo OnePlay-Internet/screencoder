@@ -74,6 +74,7 @@ namespace encoder {
            util::QueueArray* packets) 
     {
         int ret;
+        util::Buffer* pkt = NULL;
         Session* session      = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
         libav::CodecContext* libav_ctx = session->encode->context;
         frame->pts = (int64_t)frame_nr;
@@ -90,18 +91,16 @@ namespace encoder {
 
         libav::Packet* packet = av_packet_alloc();
         ret = avcodec_receive_packet(libav_ctx, packet);
-        if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) 
-        {
+        if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             BUFFER_CLASS->unref(session_buf);
             return TRUE;
-        }
-        else if(ret < 0) {
+        } else if(ret < 0) {
             BUFFER_CLASS->unref(session_buf);
             return FALSE;
         }
 
         // we pass the reference of session to packet
-        util::Buffer* pkt = BUFFER_CLASS->init(packet,sizeof(libav::Packet),free_av_packet);
+        pkt = BUFFER_CLASS->init(packet,sizeof(libav::Packet),free_av_packet);
         QUEUE_ARRAY_CLASS->push(packets,pkt);
         BUFFER_CLASS->unref(session_buf);
         BUFFER_CLASS->unref(pkt);
@@ -147,15 +146,18 @@ namespace encoder {
         }
 
         // encode
-        if(!encode(thread_ctx->frame_nr++, 
-                  buffer, 
-                  frame, 
-                  thread_ctx->packet_queue)) 
-        {
-            LOG_ERROR("Could not encode video packet");
-            RAISE_EVENT(thread_ctx->shutdown_event);
-            BUFFER_CLASS->unref(buffer);
-            return platf::Capture::error;
+        while(!QUEUE_ARRAY_CLASS->peek(thread_ctx->packet_queue)) {
+            if(!encode(thread_ctx->frame_nr++, 
+                    buffer, 
+                    frame, 
+                    thread_ctx->packet_queue)) 
+            {
+                LOG_ERROR("Could not encode video packet");
+                RAISE_EVENT(thread_ctx->shutdown_event);
+                BUFFER_CLASS->unref(buffer);
+                return platf::Capture::error;
+            }
+            std::this_thread::sleep_for(1ms);
         }
 
         // reset keyframe attribute

@@ -41,7 +41,9 @@ namespace rtp
     {
         static bool init = false;
         static RtpContext ret;
-        if(init || !encode)
+        if(!encode)
+            return &ret;
+        if(init)
             goto done;
 
         init = true;
@@ -67,7 +69,11 @@ namespace rtp
             LOG_ERROR("Error writing header");
             return NULL;
         }
+        return &ret;
         done:
+        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
+        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
+            encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         return &ret;
     }
 
@@ -86,8 +92,10 @@ namespace rtp
 
 
         while(TRUE) {
-            if(!QUEUE_ARRAY_CLASS->peek(packets))
+            if(!QUEUE_ARRAY_CLASS->peek(packets)) {
+                std::this_thread::sleep_for(1ms);
                 continue;
+            }
 
             if(IS_INVOKED(shutdown_event))
                 break;

@@ -19,7 +19,8 @@
 
 #define LOG_DEBUG(content)  error::log(__FILE__,__LINE__,"debug",content)
 
-#define LOG_INFO(content)  error::log(__FILE__,__LINE__,"info",content)
+// #define LOG_INFO(content)  error::log(__FILE__,__LINE__,"info",content)
+#define LOG_INFO(content)  
 
 #define LOG_OUTPUT_PIPE(content) printf(content)
 

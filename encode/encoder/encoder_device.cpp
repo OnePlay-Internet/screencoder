@@ -41,7 +41,6 @@ namespace encoder
         util::QueueArray* packets = NULL;
 
         Session* session = NULL;
-        EncodeContext* encode_context = NULL;
         platf::Image* img = NULL;
 
         platf::Display* disp = platf::tryget_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
@@ -117,11 +116,11 @@ namespace encoder
         snprintf(fmtctx->filename, sizeof(fmtctx->filename), 
             "rtp://%s:%d", "localhost", ENCODER_CONFIG->rtp.port);
 
-        stream = avformat_new_stream (fmtctx, encode_context->codec);
+        stream = avformat_new_stream (fmtctx, session->encode->codec);
 
-        avcodec_parameters_from_context(stream->codecpar,encode_context->context);
+        avcodec_parameters_from_context(stream->codecpar,session->encode->context);
         if (fmtctx->oformat->flags & AVFMT_GLOBALHEADER)
-            encode_context->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+            session->encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 
         fmtctx->streams[0] = stream;
@@ -153,6 +152,10 @@ namespace encoder
             return FALSE;
         }
 
+        avformat_free_context(fmtctx);
+        QUEUE_ARRAY_CLASS->stop(packets);
+        BUFFER_CLASS->unref(obj);
+        BUFFER_CLASS->unref(obj_ses);
         return TRUE;
     }
 
