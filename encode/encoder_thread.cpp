@@ -67,7 +67,7 @@ namespace encoder {
            libav::Frame* frame, 
            util::QueueArray* packets) 
     {
-        bool ret;
+        int ret;
         Session* session = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
         EncodeContext* encode = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
 

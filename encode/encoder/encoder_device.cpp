@@ -34,7 +34,7 @@ namespace encoder
         util::Buffer* obj  = NULL;
         libav::FormatContext* fmtctx   = NULL;
         libav::Stream* stream  = NULL;
-        encoder::EncodeContext* encode_context;
+        encoder::EncodeContext* encode_context = NULL;
         util::Buffer* obj_ses = NULL;
         platf::Image* img = NULL;
         libav::Frame* frame = NULL;
@@ -59,8 +59,7 @@ namespace encoder
         if(!session)
             goto fail;
         
-
-        obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
+        encode_context = (EncodeContext*)BUFFER_CLASS->ref(session->encode,NULL);
         img = disp->klass->alloc_img(disp);
         if(!img || disp->klass->dummy_img(disp,img)) 
             goto fail;
@@ -73,6 +72,7 @@ namespace encoder
         frame->pict_type = AV_PICTURE_TYPE_I;
 
         packets = QUEUE_ARRAY_CLASS->init();
+        obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
         while(!QUEUE_ARRAY_CLASS->peek(packets)) {
             if(!encode(1, obj_ses, frame, packets)) 
                 goto fail;
@@ -116,13 +116,12 @@ namespace encoder
             goto fail;
         }
 
-        res = av_write_frame(session->rtp->format, av_packet);
+        res = av_write_frame(fmtctx, av_packet);
         if(res != 0) {
             LOG_ERROR("write failed");
             goto fail;
         }
 
-        BUFFER_CLASS->unref(obj);
         ret = TRUE;
         goto done;
         fail:
@@ -130,10 +129,12 @@ namespace encoder
         done:
         if(fmtctx)
             avformat_free_context(fmtctx);
-        if(obj_ses)
-            BUFFER_CLASS->unref(obj_ses);
+        if(session && session->encode)
+            BUFFER_CLASS->unref(session->encode);
         if(packets)
             QUEUE_ARRAY_CLASS->stop(packets);
+        if(obj)
+            BUFFER_CLASS->unref(obj);
         return ret;
     }
 

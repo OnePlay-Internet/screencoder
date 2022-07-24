@@ -145,7 +145,7 @@ namespace util {
     void            
     queue_array_finalize(QueueArray* queue)
     {
-        std::lock_guard lg (queue->_lock);
+        queue->_lock.unlock();
         free(queue);
     }
 }
