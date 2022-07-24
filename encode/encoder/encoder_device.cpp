@@ -29,6 +29,18 @@ namespace encoder
     validate_config(Encoder* encoder, 
                     Config* config) 
     {
+        int res, ret;
+        libav::Packet* av_packet   = NULL;
+        util::Buffer* obj  = NULL;
+        libav::FormatContext* fmtctx   = NULL;
+        libav::Stream* stream  = NULL;
+        encoder::EncodeContext* encode_context;
+        util::Buffer* obj_ses = NULL;
+        platf::Image* img = NULL;
+        libav::Frame* frame = NULL;
+        util::QueueArray* packets = NULL;
+        Session* session = NULL;
+
         platf::Display* disp = platf::tryget_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
         if(!disp) 
             return FALSE;
@@ -39,64 +51,90 @@ namespace encoder
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
         platf::Device* device = disp->klass->make_hwdevice(disp,pix_fmt);
-        if(!device) {
-            return FALSE;
-        }
-
-        Session* session = make_session(encoder, config, disp->width, disp->height, device);
-        if(!session) {
-            return FALSE;
-        }
-        util::Buffer* obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
-
-        platf::Image* img = disp->klass->alloc_img(disp);
+        if(!device) 
+            goto fail;
         
+
+        session = make_session(encoder, config, disp->width, disp->height, device);
+        if(!session)
+            goto fail;
+        
+
+        obj_ses = BUFFER_CLASS->init(session,sizeof(Session),session_finalize);
+        img = disp->klass->alloc_img(disp);
         if(!img || disp->klass->dummy_img(disp,img)) 
-            return FALSE;
+            goto fail;
         
         if(device->klass->convert(device,img)) 
-            return FALSE;
+            goto fail;
         
 
-        libav::Frame* frame = device->frame;
+        frame = device->frame;
         frame->pict_type = AV_PICTURE_TYPE_I;
 
-        util::QueueArray* packets = QUEUE_ARRAY_CLASS->init();
+        packets = QUEUE_ARRAY_CLASS->init();
         while(!QUEUE_ARRAY_CLASS->peek(packets)) {
-            if(encode(1, 
-                obj_ses, 
-                frame, 
-                packets)) 
-            {
-                return FALSE;
-            }
+            if(!encode(1, obj_ses, frame, packets)) 
+                goto fail;
         }
 
-        util::Buffer* obj = QUEUE_ARRAY_CLASS->pop(packets);
+        obj = QUEUE_ARRAY_CLASS->pop(packets);
 
         int size;
         session    = (Session*)BUFFER_CLASS->ref(obj,&size);
         if(size != sizeof(Session)) {
             LOG_ERROR("wrong datatype");
-            return FALSE;
+            goto fail;
         }
 
-        libav::Packet* av_packet = session->packet;
+        av_packet = session->packet;
         if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
             LOG_ERROR("First packet type is not an IDR frame");
-            return FALSE;
+            goto fail;
         }
 
+        fmtctx = avformat_alloc_context();
+        fmtctx->oformat = av_guess_format("rtp",NULL,NULL);
+        snprintf(fmtctx->filename, sizeof(fmtctx->filename), 
+            "rtp://%s:%d", "localhost", ENCODER_CONFIG->rtp.port);
 
-        int res = av_write_frame(session->rtp->format, av_packet);
+        stream = avformat_new_stream (fmtctx, encode_context->codec);
+
+        avcodec_parameters_from_context(stream->codecpar,encode_context->context);
+        if (fmtctx->oformat->flags & AVFMT_GLOBALHEADER)
+            encode_context->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+
+        fmtctx->streams[0] = stream;
+        if (avio_open(&fmtctx->pb, fmtctx->filename, AVIO_FLAG_WRITE) < 0){
+            LOG_ERROR("Error opening output file");
+            goto fail;
+        }
+
+        if (avformat_write_header(fmtctx, NULL) < 0){
+            LOG_ERROR("Error writing header");
+            goto fail;
+        }
+
+        res = av_write_frame(session->rtp->format, av_packet);
         if(res != 0) {
             LOG_ERROR("write failed");
-            return FALSE;
+            goto fail;
         }
 
-        session_finalize(session);
         BUFFER_CLASS->unref(obj);
-        return TRUE;
+        ret = TRUE;
+        goto done;
+        fail:
+        ret = FALSE;
+        done:
+        if(fmtctx)
+            avformat_free_context(fmtctx);
+        if(obj_ses)
+            BUFFER_CLASS->unref(obj_ses);
+        if(packets)
+            QUEUE_ARRAY_CLASS->stop(packets);
+        return ret;
     }
 
     bool 

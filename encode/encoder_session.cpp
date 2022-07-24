@@ -303,7 +303,6 @@ namespace encoder
                                         ctx->color_range);
 
         session->pts = frame->pts;
-        session->rtp = rtp::make_rtp_context(encode_ctx);
         BUFFER_CLASS->unref(session->encode);
         return session;
     }
@@ -351,6 +350,9 @@ namespace encoder
         if(!ses)
             return NULL;
 
+        EncodeContext* encode_ctx = (EncodeContext*)BUFFER_CLASS->ref(ses->encode,NULL);
+        ses->rtp = rtp::make_rtp_context(encode_ctx);
+        BUFFER_CLASS->unref(ses->encode);
         return BUFFER_CLASS->init((pointer)ses,sizeof(Session),session_finalize);
     }
 } // namespace encoder

@@ -52,6 +52,7 @@ namespace rtp
 
         ret.stream = avformat_new_stream (ret.format, encode->codec);
 
+        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
         if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
             encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
@@ -67,9 +68,6 @@ namespace rtp
             return NULL;
         }
         done:
-        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
-        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
-            encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         return &ret;
     }
 

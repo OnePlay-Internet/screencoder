@@ -61,7 +61,7 @@ namespace encoder {
      * @param packets 
      * @return int 
      */
-    int 
+    bool
     encode(int frame_nr, 
            util::Buffer* session_buf, 
            libav::Frame* frame, 
@@ -80,7 +80,6 @@ namespace encoder {
         if(ret < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, ret));
-            ret = FALSE;
             goto fail;
         }
 
@@ -89,21 +88,24 @@ namespace encoder {
         ret = avcodec_receive_packet(libav_ctx, session->packet);
         if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) 
             goto success;
-        else if(ret < 0) {
-            ret = FALSE;
+        else if(ret < 0) 
             goto fail;
-        }
 
         // we pass the reference of session to packet
-
+        session->packet->pts = (int64_t)frame_nr;
         BUFFER_CLASS->unref(session->encode);
         QUEUE_ARRAY_CLASS->push(packets,session_buf);
         BUFFER_CLASS->unref(session_buf);
+
         success:
         ret = TRUE;
+        goto done;
         fail:
+        ret = FALSE;
+        done:
         BUFFER_CLASS->unref(session->encode);
-        return FALSE;
+        BUFFER_CLASS->unref(session_buf);
+        return ret;
     }
 
 
@@ -145,7 +147,7 @@ namespace encoder {
 
         // encode
         BUFFER_CLASS->unref(session->encode);
-        if(encode(thread_ctx->frame_nr++, 
+        if(!encode(thread_ctx->frame_nr++, 
                   buffer, 
                   frame, 
                   thread_ctx->packet_queue)) 
