@@ -84,7 +84,7 @@ namespace config
         if (!argc && !argv && init)
             return &encoder;
             
-        encoder.gop_size = 10;
+        encoder.gop_size = 20;
         encoder.packet_size = RTSP_TCP_MAX_PACKET_SIZE;
         encoder.framerate = 60;
         encoder.dwmflush = 0;
@@ -99,7 +99,7 @@ namespace config
         
         encoder.conf.width = 1920;
         encoder.conf.height = 1080;
-        encoder.conf.bitrate = 1000;
+        encoder.conf.bitrate = 10000;
         encoder.conf.framerate = 60;
         encoder.conf.encoderCscMode = 0;
         encoder.conf.videoFormat = 0;
