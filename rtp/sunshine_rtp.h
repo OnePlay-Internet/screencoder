@@ -10,27 +10,21 @@
  */
 #ifndef __SUNSHINE_RTP_H__
 #define __SUNSHINE_RTP_H__
-
+#include <sunshine_util.h>
 
 namespace rtp
 {
-    typedef struct _Config {
-        int packetsize;
-        int minRequiredFecPackets;
-        int featureFlags;
-        int controlProtocolType;
-    }Config;
-
-    typedef struct _Session Session;
-
-
-    enum State {
-        STOPPED,
-        STOPPING,
-        STARTING,
-        RUNNING,
+    struct _RtpContext {
+        libav::Stream* stream;
+        libav::FormatContext* format;
     };
-    
+
+
+
+    RtpContext*     make_rtp_context(encoder::EncodeContext* encode);
+
+    int             start_broadcast (util::Broadcaster* shutdown_event,
+                                     util::QueueArray* packet_queue) ;
 } // namespace rtp
 
 

@@ -1,3 +1,0 @@
-[submodule "third-party/moonlight-common-c"]
-	path = third-party/moonlight-common-c
-	url = https://github.com/moonlight-stream/moonlight-common-c.git

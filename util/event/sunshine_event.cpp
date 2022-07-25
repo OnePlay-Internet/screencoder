@@ -27,19 +27,22 @@ namespace util
     {
         Buffer* obj = BUFFER_CLASS->init((pointer)true,sizeof(bool),DO_NOTHING);
         QUEUE_ARRAY_CLASS->push(broadcaster,obj);
+        BUFFER_CLASS->unref(obj);
     }
 
     bool            
     wait_event(Broadcaster* broadcaster)
     {
-        while (!QUEUE_ARRAY_CLASS->peek(broadcaster)) { std::this_thread::sleep_for(100ms); }
+        while (!QUEUE_ARRAY_CLASS->peek(broadcaster)) 
+        { 
+            std::this_thread::sleep_for(100ms); 
+        }
         return true;
     }
 
     bool            
     is_invoked(Broadcaster* broadcaster)
     {
-        QUEUE_ARRAY_CLASS->peek(broadcaster);
-        return true;
+        return QUEUE_ARRAY_CLASS->peek(broadcaster);
     }
 } // namespace event

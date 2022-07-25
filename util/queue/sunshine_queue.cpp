@@ -9,11 +9,8 @@
  * 
  */
 #include <sunshine_queue.h>
-#include <sunshine_log.h>
 #include <sunshine_macro.h>
-#include <sunshine_error.h>
 #include <sunshine_datatype.h>
-#include <sunshine_object.h>
 #include <sunshine_object.h>
 #include <cstdlib>
 #include <mutex>
@@ -33,14 +30,6 @@ namespace util {
          * @brief 
          * 
          */
-        uint length;
-
-        std::mutex _lock;
-
-        /**
-         * @brief 
-         * 
-         */
         BufferLL* first;
     };
 
@@ -50,7 +39,11 @@ namespace util {
 
     bool            queue_array_peek        (QueueArray* queue);
 
-    Buffer*          queue_array_pop         (QueueArray* queue);
+
+    pointer         queue_array_pop         (QueueArray* queue, 
+                                             util::Buffer** buf,
+                                             int* size);
+
 
     QueueArray*     queue_array_init        ();
 
@@ -91,18 +84,21 @@ namespace util {
     queue_array_push(QueueArray* queue, 
                      util::Buffer* obj)
     {
-        std::lock_guard {queue->_lock};
-        BufferLL* container = queue->first;
-        while (!container->next) { container = container->next; }
-        
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
+        BUFFER_CLASS->ref(obj,NULL);
         last->obj  = obj;
         last->next = NULL;
 
-        container->next = last;
-        queue->length++;
+        if(!queue->first) {
+            queue->first = last;
+        } else {
+            BufferLL* container = queue->first;
+            while (container->next) { container = container->next; }
+            container->next = last;
+        }
+
         return true;
     }
 
@@ -110,27 +106,28 @@ namespace util {
     bool            
     queue_array_peek(QueueArray* queue)
     {
-        std::lock_guard {queue->_lock};
-        if (queue->length > 0)
-            return false;
-        else
-            return true;
+        return queue->first ? true : false;
     }
 
 
-    util::Buffer* 
-    queue_array_pop(QueueArray* queue)
+    pointer
+    queue_array_pop(QueueArray* queue, 
+                    util::Buffer** buf,
+                    int* size)
     {
-        std::lock_guard {queue->_lock};
         if (!queue_array_peek(queue))
             return NULL;
 
         BufferLL* container = queue->first;
         Buffer *ret = container->obj;
+
+
         queue->first = container->next;
         free(container);
-        queue->length--;
-        return ret;
+        *buf = ret;
+        pointer data = BUFFER_CLASS->ref(ret,size);
+        BUFFER_CLASS->unref(ret);
+        return data;
     }
 
 
@@ -140,7 +137,6 @@ namespace util {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
         memset(array,0,sizeof(QueueArray));
 
-        array->length = 0;
         array->first = NULL;
         return array;
     }
@@ -149,7 +145,6 @@ namespace util {
     void            
     queue_array_finalize(QueueArray* queue)
     {
-        std::lock_guard {queue->_lock};
         free(queue);
     }
 }

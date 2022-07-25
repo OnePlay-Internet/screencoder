@@ -44,21 +44,7 @@ namespace util
 {
     typedef void (*BufferFreeFunc) (pointer data);
 
-    typedef struct _Object{
-        uint ref_count;
-
-        bool free_lock;
-
-        BufferFreeFunc free_func;
-
-        uint size;
-
-        /**
-         * @brief 
-         * should not be used directly
-         */
-        pointer data;
-    }Buffer;
+    typedef struct _Buffer Buffer;
 
     typedef struct _BufferLL BufferLL;
 
@@ -76,6 +62,8 @@ namespace util
         pointer (*ref)      (Buffer* obj,
                              int* size);
 
+        Buffer* (*duplicate)(Buffer* obj);
+
         Buffer* (*merge)   (Buffer* self,
                              Buffer* inserter);
 
@@ -88,7 +76,8 @@ namespace util
                              util::Buffer* data,
                              InsertAction action);
 
-        pointer (*end_ptr)  (Buffer* obj);
+        uint    (*search)   (util::Buffer* string, 
+                             util::Buffer* substring);
 
         void    (*unref)    (Buffer* obj);
 

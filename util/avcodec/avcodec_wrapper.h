@@ -14,6 +14,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 }
 
 
@@ -26,10 +27,18 @@ namespace libav
     void    packet_free_func    (void* pk);
 
     typedef AVFrame             Frame;
-    typedef AVCodecContext      CodecContext;
+
+    typedef AVStream            Stream;
+
     typedef AVBufferRef         BufferRef;
     typedef AVPixelFormat       PixelFormat;
+
+    typedef AVCodec             Codec;
     typedef AVCodecID           CodecID;
+    typedef AVCodecContext      CodecContext;
+
+    typedef AVOutputFormat      OutputFormat;
+    typedef AVFormatContext     FormatContext;
 } // namespace libav
 
 

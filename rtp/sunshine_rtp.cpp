@@ -8,80 +8,77 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <encoder_packet.h>
+#include <encoder_session.h>
 #include <sunshine_util.h>
 
 #include <sunshine_rtp.h>
+#include <sunshine_config.h>
 
-extern "C" {
-#include <RtpAudioQueue.h>
-#include <Video.h>
-#include <rs.h>
-}
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#include <stdio.h>
 
 
-#include <boost/asio.hpp>
-#include <boost/asio/buffer.hpp>
+
+
 #include <thread>
 
 using namespace std::literals;
 
 namespace rtp
 {
-    typedef boost::asio::ip::udp::endpoint Endpoint;
-    typedef boost::asio::ip::udp::socket   Socket;
-    typedef boost::asio::ip::udp           Udp;
-    typedef boost::asio::io_service        IO;
-    typedef boost::system::error_code      Error;
-
-    typedef struct _Video {
-        int lowseq;
-        Endpoint peer;
-        util::Broadcaster* idr_event;
-    }Video;
-
-    typedef struct _VideoPacketRaw {
-        RTP_PACKET rtp;
-
-        char reserved[4];
-
-        NV_VIDEO_PACKET packet;
-    }VideoPacketRaw;
-
-
-    struct _Session {
-        Config config;
-
-        std::thread videoThread;
-
-        util::QueueArray* mail;
-
-        util::Broadcaster* shutdown_event;
-
-        State state;
-
-        Video video;
-    };
-
     typedef struct _BroadcastContext {
         std::thread video_thread;
 
-        IO io;
+        util::Broadcaster* shutdown_event;
+        util::Broadcaster* join_event;
 
-        Socket video_sock {io};
+        util::QueueArray* packet_queue;
     }BroadcastContext;
 
-
-
-
-    void
-    insert_action(util::Buffer* buf,
-                  int index, int max_index )
+    RtpContext*
+    make_rtp_context(encoder::EncodeContext* encode)
     {
-        int size;
-        VideoPacketRaw* video_packet = (VideoPacketRaw*)BUFFER_CLASS->ref(buf,&size);
-        video_packet->packet.flags = FLAG_CONTAINS_PIC_DATA;
+        static bool init = false;
+        static RtpContext ret;
+        if(!encode)
+            return &ret;
+        if(init)
+            goto done;
+
+        init = true;
+        ret.format = avformat_alloc_context();
+        ret.format->oformat = av_guess_format("rtp",NULL,NULL);
+        snprintf(ret.format->filename, sizeof(ret.format->filename), 
+            "rtp://%s:%d", "localhost", ENCODER_CONFIG->rtp.port);
+
+        ret.stream = avformat_new_stream (ret.format, encode->codec);
+
+        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
+        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
+            encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+
+        ret.format->streams[0] = ret.stream;
+        if (avio_open(&ret.format->pb, ret.format->filename, AVIO_FLAG_WRITE) < 0){
+            LOG_ERROR("Error opening output file");
+            return NULL;
+        }
+
+
+        char buf[200000];
+        av_sdp_create(&ret.format, 1, buf, 20000);
+        printf("sdp:\n%s\n", buf);
+
+        return &ret;
+        done:
+        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
+        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
+            encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        return &ret;
     }
+
+
 
     /**
      * @brief 
@@ -89,78 +86,46 @@ namespace rtp
      * @param sock 
      */
     void 
-    videoBroadcastThread(Socket *sock) 
+    videoBroadcastThread(BroadcastContext* ctx) 
     {
-        util::QueueArray* packets;
-        util::Broadcaster* shutdown_event;
+        util::QueueArray* packets = ctx->packet_queue;
+        util::Broadcaster* shutdown_event = ctx->shutdown_event;
 
-        while(QUEUE_ARRAY_CLASS->peek(packets)) {
+
+        while(TRUE) {
+            if(!QUEUE_ARRAY_CLASS->peek(packets)) {
+                std::this_thread::sleep_for(1ms);
+                continue;
+            }
+
             if(IS_INVOKED(shutdown_event))
                 break;
 
             int size;
-            util::Buffer* video_packet_buffer = QUEUE_ARRAY_CLASS->pop(packets);
-            encoder::Packet* video_packet = (encoder::Packet*)BUFFER_CLASS->ref(video_packet_buffer,&size);
-            if(size != sizeof(encoder::Packet))
-            {
+            util::Buffer* video_packet_buffer;
+            libav::Packet* av_packet = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(packets,&video_packet_buffer,&size);
+            if(size != sizeof(libav::Packet)) {
                 LOG_ERROR("wrong datatype");
+                continue;
             }
 
-            auto session = (Session*)video_packet->user_data;
-            auto lowseq  = session->video.lowseq;
+            RtpContext* rtp = make_rtp_context(NULL);
 
-
-            util::Buffer* av_packet_buffer = (util::Buffer*) video_packet->packet;
-            libav::Packet* av_packet = (libav::Packet*)BUFFER_CLASS->ref(av_packet_buffer,NULL);
-
-
-            const char* nv_packet_header = "\0017charss";
-            util::Buffer* nv_header = BUFFER_CLASS->init((pointer)nv_packet_header,strlen(nv_packet_header),DO_NOTHING);
-            util::Buffer* payload = BUFFER_CLASS->merge(nv_header,av_packet_buffer);
-
-            if(av_packet->flags & AV_PKT_FLAG_KEY) {
-                while(LIST_OBJECT_CLASS->has_data(video_packet->replacement_array,0)) {
-                    util::Buffer* replace_buffer= LIST_OBJECT_CLASS->get_data(video_packet->replacement_array,0);
-
-                    int size;
-                    encoder::Replace* replacement = (encoder::Replace*) BUFFER_CLASS->ref(replace_buffer,&size);
-                    if(size != sizeof(encoder::Replace))
-                    {
-                        LOG_ERROR("wrong datatype");
-                    }
-
-                    // TODO : reimplement replace
-                    util::Buffer* payload_new = BUFFER_CLASS->replace(payload, replacement->old, replacement->_new);
-                    BUFFER_CLASS->unref(payload);
-                    payload     = payload_new;
-                }
+            if(avformat_write_header(rtp->format,NULL) != 0) {
+                LOG_ERROR("write header failed");
+                break;
             }
-            BUFFER_CLASS->unref(av_packet_buffer);
+            // TODO
+            if(av_write_frame(rtp->format, av_packet) != 0) {
+                LOG_ERROR("write failed");
+                break;
+            }
+
             BUFFER_CLASS->unref(video_packet_buffer);
-
-
-            {
-                // insert packet headers
-                int blocksize         = session->config.packetsize + MAX_RTP_HEADER_SIZE;
-                int payload_blocksize = blocksize - sizeof(VideoPacketRaw);
-                util::Buffer* payload_new = BUFFER_CLASS->insert((uint64)sizeof(VideoPacketRaw), (uint64)payload_blocksize, payload, insert_action);
-                BUFFER_CLASS->unref(payload);
-                payload = payload_new;
-            }
-
-            try 
-            {
-                std::string_view buf = std::string_view ((char*)payload,(int)BUFFER_CLASS->size(payload));
-                sock->send_to(boost::asio::buffer(buf), session->video.peer);
-                session->video.lowseq = lowseq;
-            } catch(const std::exception &e) {
-                LOG_ERROR((char*)e.what());
-                std::this_thread::sleep_for(100ms);
-            }
-
-            BUFFER_CLASS->unref(payload);
         }
+
         RAISE_EVENT(shutdown_event);
+        RAISE_EVENT(ctx->join_event);
     }
 
 
@@ -171,15 +136,15 @@ namespace rtp
      * @return int 
      */
     int 
-    start_broadcast(BroadcastContext *ctx) 
+    start_broadcast(util::Broadcaster* shutdown_event,
+                    util::QueueArray* packet_queue) 
     {
-        Error ec;
-        ctx->video_sock.open(Udp::v4(),ec);
-        if(ec) {
-            LOG_ERROR("could not open port");
-            return -1;
-        }
-        ctx->video_thread = std::thread { videoBroadcastThread, &ctx->video_sock };
-        ctx->io.run();
+        BroadcastContext ctx;
+        memset(&ctx,0,sizeof(BroadcastContext));
+        ctx.packet_queue = packet_queue;
+        ctx.shutdown_event = shutdown_event;
+        ctx.join_event = NEW_EVENT;
+        ctx.video_thread = std::thread { videoBroadcastThread, &ctx};
+        WAIT_EVENT(ctx.join_event);
     }
 } // namespace rtp

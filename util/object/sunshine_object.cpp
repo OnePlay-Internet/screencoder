@@ -18,9 +18,41 @@
 
 namespace util 
 {
+    typedef struct _Buffer{
+        uint ref_count;
+
+        /**
+         * @brief 
+         * should not be used directly
+         */
+        BufferFreeFunc free_func;
+
+        /**
+         * @brief 
+         * should not be used directly
+         */
+        uint size;
+
+        /**
+         * @brief 
+         * should not be used directly
+         */
+        pointer data;
+    };
 
 
 
+    Buffer*
+    object_duplicate (Buffer* obj)
+    {
+        Buffer* object = (Buffer*)malloc(sizeof(Buffer));
+        memset(object,0,sizeof(Buffer));
+
+        memcpy(object->data,obj->data,obj->size);
+        memcpy(object,obj,sizeof(Buffer));
+        object->ref_count = 1;
+        return object;
+    }
 
     pointer 
     object_ref (Buffer* obj,
@@ -44,13 +76,6 @@ namespace util
         return BUFFER_CLASS->init(new_ptr,new_size,free);
     }
 
-    pointer 
-    object_end_pointer (Buffer* obj)
-    {
-        return ((byte*)obj->data) + obj->size;
-    }
-
-    
     uint
     object_size (Buffer* obj)
     {
@@ -67,6 +92,7 @@ namespace util
             free(obj);
         }
     }
+
 
     Buffer* 
     object_init (pointer data, 
@@ -185,8 +211,6 @@ namespace util
         uint origin_found = inserter;
 
         if(inserter != size_origin) {
-            // std::copy(std::begin(_new), std::end(_new), std::back_inserter(replaced));
-            // std::copy(next + old.size(), end, std::back_inserter(replaced));
             memcpy(replaced + inserter, _new, size_new);
             inserter += size_new;
             memcpy(replaced + inserter, original + size_old + origin_found, size_new);
@@ -211,10 +235,12 @@ namespace util
         klass.init  = object_init;
         klass.unref = object_unref;
         klass.ref   = object_ref;
+        klass.duplicate = object_duplicate;
         klass.size  = object_size;
         klass.merge = buffer_merge;
         klass.replace = replace;
         klass.insert  = insert;
+        klass.search = search;
         initialized = true;
         return &klass;
     }

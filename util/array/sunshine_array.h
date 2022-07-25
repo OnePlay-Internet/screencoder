@@ -40,5 +40,33 @@ namespace util
     }ListObjectClass;
 
     ListObjectClass* list_object_class_init    ();
+
+    typedef enum _Type
+    {
+        NONE,
+        STRING,
+        INT,
+    }Type;
+
+
+    typedef struct _KeyValue {
+        char* key;
+        Type type;
+        char* string_value;
+        int int_value;
+    }KeyValue;
+
+    KeyValue* new_keyvalue_pairs (int size);
+
+    void
+    keyval_new_intval(KeyValue* pair, 
+                      char* key, 
+                      int val);
+    
+
+    void
+    keyval_new_strval(KeyValue* pair, 
+                      char* key, 
+                      char* val);
 }
 #endif

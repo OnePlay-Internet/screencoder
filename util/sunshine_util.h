@@ -18,8 +18,24 @@
 #include <sunshine_queue.h>
 #include <sunshine_macro.h>
 #include <sunshine_log.h>
-#include <sunshine_error.h>
 #include <sunshine_event.h>
+
+
+namespace rtp {
+typedef struct _RtpContext RtpContext;
+}
+
+namespace encoder {
+typedef struct _EncodeContext EncodeContext;
+
+typedef struct _Session Session;
+
+typedef struct _EncodeThreadContext EncodeThreadContext;
+
+typedef struct _Config  Config;
+
+typedef struct _Encoder Encoder;
+}
 
 
 #endif

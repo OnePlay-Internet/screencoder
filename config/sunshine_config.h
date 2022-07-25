@@ -11,52 +11,53 @@
 #ifndef __SUNSHINE_CONFIG_H__
 #define __SUNSHINE_CONFIG_H__
 
-#define ENCODER_CONFIG          config::get_encoder_config()
+#define ENCODER_CONFIG          config::get_encoder_config(0,nullptr)
+
+#define RTSP_TCP_MAX_PACKET_SIZE 1472
+
+
+#include <encoder_datatype.h>
+
 
 namespace config
 {
+    typedef struct _NVidia {
+        int preset;
+        int rc;
+        int coder;
+    }Nvidia;
+
+    typedef struct _RTP {
+        int port;
+    }RTP;
+
+    typedef struct SW {
+        /**
+         * @brief 
+         * For software encoder
+         */
+        int min_threads; // Minimum number of threads/slices for CPU encoding
+    };
+
     typedef struct _Encoder{
         // ffmpeg params
         int qp; // higher == more compression and less quality
 
-        int hevc_mode;
-
-        int min_threads; // Minimum number of threads/slices for CPU encoding
-
-        struct {
-            char* preset;
-            char* tune;
-        } sw;
-
-        struct {
-            int preset;
-            int rc;
-            int coder;
-        } nv;
-
-        struct {
-            int quality;
-            int rc_h264;
-            int rc_hevc;
-            int coder;
-        } amd;
-
-        struct {
-            int allow_sw;
-            int require_sw;
-            int realtime;
-            int coder;
-        } vt;
-
+        Nvidia nv;
+        RTP rtp;
+        encoder::Config conf;
+        
         char* encoder;
         char* adapter_name;
         char* output_name;
 
+        int gop_size;
+        int packet_size;
         int framerate;
         bool dwmflush;
     }Encoder;
 
-    Encoder*       get_encoder_config       ();
+    Encoder*       get_encoder_config       (int argc, char** argv);
 }
 
 

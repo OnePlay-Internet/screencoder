@@ -132,5 +132,54 @@ namespace util
         klass.length       = array_object_length;
         return &klass;
     }
+
+
+
+    KeyValue* 
+    new_keyvalue_pairs(int size)
+    {
+        KeyValue* pairs = (KeyValue*)malloc((size + 1) * sizeof(KeyValue));
+        memset(pairs,0,(size + 1)  * sizeof(KeyValue));
+        return pairs;
+    }
+
+    void
+    keyval_new_strval(KeyValue* pair, 
+                      char* key, 
+                      char* val)
+    {
+        int i = 0;
+        while ((pair + i)->type)
+        {
+            (pair + i)->type = Type::INT;
+            (pair + i)->key  = key;
+            (pair + i)->string_value = val;
+            i++;
+        }
+    }
+
+    void
+    keyval_new_intval(KeyValue* pair, 
+                      char* key, 
+                      int val)
+    {
+        int i = 0;
+        while ((pair + i)->type)
+        {
+            (pair + i)->type = Type::INT;
+
+
+
+
+            (pair + i)->key = key;
+
+
+
+
+
+            (pair + i)->int_value = val;
+            i++;
+        }
+    }
 } // namespace util
 
