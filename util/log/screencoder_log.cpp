@@ -1,5 +1,5 @@
 /**
- * @file sunshine_log.cpp
+ * @file screencoder_log.cpp
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <sunshine_log.h>
+#include <screencoder_log.h>
 #include <cstdio>
 
 namespace error

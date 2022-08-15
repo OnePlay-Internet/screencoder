@@ -14,7 +14,7 @@
 #define __VIDEO_CAPTURER_H__
 
 
-#include <sunshine_object.h>
+#include <screencoder_object.h>
 
 #define QUEUE_ARRAY_CLASS       util::queue_array_class_init()
 

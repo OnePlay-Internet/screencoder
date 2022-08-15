@@ -4,7 +4,7 @@
 
 #ifndef SUNSHINE_COMMON_H
 #define SUNSHINE_COMMON_H
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 
 #include <bitset>
 #include <filesystem>

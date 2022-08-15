@@ -13,7 +13,7 @@
 #ifndef __SUNSHINE_OBJECT_H__
 #define __SUNSHINE_OBJECT_H__
 
-#include <sunshine_datatype.h>
+#include <screencoder_datatype.h>
 #include <string>
 
 #define BUFFER_CLASS         util::object_class_init() 

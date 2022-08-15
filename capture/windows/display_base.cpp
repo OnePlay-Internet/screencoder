@@ -8,13 +8,13 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 
 #include <cmath>
 #include <codecvt>
 
 #include <display_base.h>
-#include <sunshine_config.h>
+#include <screencoder_config.h>
 
 #include <platform_common.h>
 

@@ -1,5 +1,5 @@
 /**
- * @file sunshine_event.h
+ * @file screencoder_event.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -11,7 +11,7 @@
 #ifndef __SUNSHINE_EVENT_H__
 #define __SUNSHINE_EVENT_H__
 
-#include <sunshine_queue.h>
+#include <screencoder_queue.h>
 
 #define NEW_EVENT       util::new_event()
 #define RAISE_EVENT(x)  util::raise_event(x)

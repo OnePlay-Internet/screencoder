@@ -12,7 +12,7 @@
 #define __WINDOWS_HELPER_H__
 
 #include <d3d11_datatype.h>
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 #include <gpu_hw_device.h>
 
 namespace helper

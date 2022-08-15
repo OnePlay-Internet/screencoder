@@ -1,5 +1,5 @@
 /**
- * @file sunshine_array.h
+ * @file screencoder_array.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -12,8 +12,8 @@
 #define __SUNSHINE_ARRAY_H__
 
 
-#include <sunshine_datatype.h>
-#include <sunshine_object.h>
+#include <screencoder_datatype.h>
+#include <screencoder_object.h>
 
 #define LIST_OBJECT_CLASS       util::list_object_class_init()
 

@@ -85,7 +85,9 @@ file(GLOB ENCODER_SOURCE_LIST
 )
 
 file(GLOB RTP_SOURCE_LIST 
-	rtp/*.cpp
+	sink/*.cpp
+	sink/rtp/*.cpp
+	sink/appsink/*.cpp
 )
 
 file(GLOB CONFIG_SOURCE_LIST 
@@ -97,10 +99,10 @@ file(GLOB SESSION_SOURCE_LIST
 )
 
 file(GLOB PLATFORM_SOURCE_LIST 
-	platform/*.cpp
-	platform/windows/*.cpp
-	platform/windows/gpu/*.cpp
-	platform/windows/duplication/*.cpp
+	capture/*.cpp
+	capture/windows/*.cpp
+	capture/windows/gpu/*.cpp
+	capture/windows/duplication/*.cpp
 )
 
 
@@ -124,7 +126,9 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/encode/encoder
 
   ${CMAKE_CURRENT_SOURCE_DIR}/input
-  ${CMAKE_CURRENT_SOURCE_DIR}/rtp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink/rtp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink
   ${CMAKE_CURRENT_SOURCE_DIR}/session
 
   ${CMAKE_CURRENT_SOURCE_DIR}/util
@@ -137,10 +141,10 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/util/avcodec
   ${CMAKE_CURRENT_SOURCE_DIR}/util/array
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/platform
-  ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows
-  ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/gpu
-  ${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/duplication
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows/gpu
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows/duplication
 
   ${FFMPEG_INCLUDE_DIRS}
   ${PLATFORM_INCLUDE_DIRS}

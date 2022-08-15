@@ -1,5 +1,5 @@
 /**
- * @file sunshine_event.cpp
+ * @file screencoder_event.cpp
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <sunshine_event.h>
-#include <sunshine_macro.h>
+#include <screencoder_event.h>
+#include <screencoder_macro.h>
 #include <thread>
 
 using namespace std::literals;

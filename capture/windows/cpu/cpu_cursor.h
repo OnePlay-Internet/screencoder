@@ -12,7 +12,7 @@
 #define __CPU_CURSOR_H__
 
 
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 #include <d3d11_datatype.h>
 
 namespace cpu

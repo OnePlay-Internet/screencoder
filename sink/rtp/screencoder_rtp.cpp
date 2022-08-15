@@ -1,5 +1,5 @@
 /**
- * @file sunshine_rtp.cpp
+ * @file screencoder_rtp.cpp
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -9,10 +9,10 @@
  * 
  */
 #include <encoder_session.h>
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 
-#include <sunshine_rtp.h>
-#include <sunshine_config.h>
+#include <screencoder_rtp.h>
+#include <screencoder_config.h>
 
 #include <winsock2.h>
 #include <Ws2tcpip.h>
@@ -23,128 +23,102 @@
 
 #include <thread>
 
-using namespace std::literals;
 
 namespace rtp
 {
-    typedef struct _BroadcastContext {
-        std::thread video_thread;
 
-        util::Broadcaster* shutdown_event;
-        util::Broadcaster* join_event;
 
-        util::QueueArray* packet_queue;
-    }BroadcastContext;
-
-    RtpContext*
-    make_rtp_context(encoder::EncodeContext* encode)
+    void
+    rtpsink_preset(sink::GenericSink* sink,
+                   encoder::EncodeContext* encode)
     {
-        static bool init = false;
-        static RtpContext ret;
-        if(!encode)
-            return &ret;
-        if(init)
-            goto done;
-
-        init = true;
-        ret.format = avformat_alloc_context();
-        ret.format->oformat = av_guess_format("rtp",NULL,NULL);
-        snprintf(ret.format->filename, sizeof(ret.format->filename), 
-            "rtp://%s:%d", "localhost", ENCODER_CONFIG->rtp.port);
-
-        ret.stream = avformat_new_stream (ret.format, encode->codec);
-
-        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
-        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
+        rtp::RtpSink* rtp = (rtp::RtpSink*)sink;
+        rtp->stream = avformat_new_stream (rtp->format, encode->codec);
+        avcodec_parameters_from_context(rtp->stream->codecpar,encode->context);
+        if (rtp->format->oformat->flags & AVFMT_GLOBALHEADER)
             encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
 
+    char*
+    rtpsink_describe(sink::GenericSink* sink)
+    {
+        static char buf[2000];
+        memset(buf,0,2000);
 
-        ret.format->streams[0] = ret.stream;
-        if (avio_open(&ret.format->pb, ret.format->filename, AVIO_FLAG_WRITE) < 0){
+        rtp::RtpSink* rtp = (rtp::RtpSink*)sink;
+
+        av_sdp_create(&rtp->format, 1, buf, 2000);
+        return buf;
+    }
+
+    int
+    rtpsink_start(sink::GenericSink* sink)
+    {
+        rtp::RtpSink* rtp = (rtp::RtpSink*)sink;
+
+        rtp->format->streams[0] = rtp->stream;
+        if (avio_open(&rtp->format->pb, rtp->format->filename, AVIO_FLAG_WRITE) < 0){
             LOG_ERROR("Error opening output file");
-            return NULL;
+            return -1;
+        }
+    }
+
+    void
+    rtpsink_handle(sink::GenericSink* sink, 
+                    libav::Packet* pkt)
+    {
+        RtpSink* rtp = (RtpSink*)sink;
+        if(avformat_write_header(rtp->format,NULL) != 0) {
+            LOG_ERROR("write header failed");
         }
 
-
-        char buf[200000];
-        av_sdp_create(&ret.format, 1, buf, 20000);
-        printf("sdp:\n%s\n", buf);
-
-        return &ret;
-        done:
-        avcodec_parameters_from_context(ret.stream->codecpar,encode->context);
-        if (ret.format->oformat->flags & AVFMT_GLOBALHEADER)
-            encode->context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-        return &ret;
-    }
-
-
-
-    /**
-     * @brief 
-     * 
-     * @param sock 
-     */
-    void 
-    videoBroadcastThread(BroadcastContext* ctx) 
-    {
-        util::QueueArray* packets = ctx->packet_queue;
-        util::Broadcaster* shutdown_event = ctx->shutdown_event;
-
-
-        while(TRUE) {
-            if(!QUEUE_ARRAY_CLASS->peek(packets)) {
-                std::this_thread::sleep_for(1ms);
-                continue;
-            }
-
-            if(IS_INVOKED(shutdown_event))
-                break;
-
-            int size;
-            util::Buffer* video_packet_buffer;
-            libav::Packet* av_packet = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(packets,&video_packet_buffer,&size);
-            if(size != sizeof(libav::Packet)) {
-                LOG_ERROR("wrong datatype");
-                continue;
-            }
-
-            RtpContext* rtp = make_rtp_context(NULL);
-
-            if(avformat_write_header(rtp->format,NULL) != 0) {
-                LOG_ERROR("write header failed");
-                break;
-            }
-            // TODO
-            if(av_write_frame(rtp->format, av_packet) != 0) {
-                LOG_ERROR("write failed");
-                break;
-            }
-
-            BUFFER_CLASS->unref(video_packet_buffer);
+        // TODO
+        if(av_write_frame(rtp->format, pkt) != 0) {
+            LOG_ERROR("write failed");
         }
-
-        RAISE_EVENT(shutdown_event);
-        RAISE_EVENT(ctx->join_event);
     }
 
-
-    /**
-     * @brief 
-     * 
-     * @param ctx 
-     * @return int 
-     */
-    int 
-    start_broadcast(util::Broadcaster* shutdown_event,
-                    util::QueueArray* packet_queue) 
+    void
+    config_rtpsink(RtpSink* sink)
     {
-        BroadcastContext ctx;
-        memset(&ctx,0,sizeof(BroadcastContext));
-        ctx.packet_queue = packet_queue;
-        ctx.shutdown_event = shutdown_event;
-        ctx.join_event = NEW_EVENT;
-        ctx.video_thread = std::thread { videoBroadcastThread, &ctx};
-        WAIT_EVENT(ctx.join_event);
+        sink->format = avformat_alloc_context();
+        sink->format->oformat = av_guess_format("rtp",NULL,NULL);
+
+        int i =0;
+        while ((sink->base.options+i) &&
+               (sink->base.options+i)->type == util::Type::INT && 
+               string_compare((sink->base.options+i)->key,"port") ){
+            snprintf(sink->format->filename, sizeof(sink->format->filename), 
+                "rtp://%s:%d", "localhost", (sink->base.options+i)->int_value);
+            i++;
+        }
     }
+
+
+    sink::GenericSink*    
+    new_rtp_sink    ()
+    {
+        static bool init = FALSE;
+        static RtpSink sink = {0};
+        if(init)
+            return (sink::GenericSink*)&sink;
+
+        init = TRUE;
+        sink.base.name = "rtp";
+        sink.base.options = util::new_keyvalue_pairs(2);
+        util::keyval_new_intval(sink.base.options,"port",6000);
+
+        sink.base.describe  = rtpsink_describe;
+        sink.base.preset    = rtpsink_preset;
+        sink.base.start     = rtpsink_start;
+        sink.base.handle    = rtpsink_handle;
+
+        config_rtpsink(&sink);
+        return (sink::GenericSink*)&sink;
+    }
+
+
+
+
+
 } // namespace rtp

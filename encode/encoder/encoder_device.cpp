@@ -9,15 +9,15 @@
  * 
  */
 #include <encoder_device.h>
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 
 
 #include <platform_common.h>
-#include <sunshine_config.h>
+#include <screencoder_config.h>
 
 #include <encoder_session.h>
 #include <encoder_thread.h>
-#include <sunshine_rtp.h>
+#include <screencoder_rtp.h>
 
 
 
@@ -114,7 +114,7 @@ namespace encoder
         fmtctx = avformat_alloc_context();
         fmtctx->oformat = av_guess_format("rtp",NULL,NULL);
         snprintf(fmtctx->filename, sizeof(fmtctx->filename), 
-            "rtp://%s:%d", "localhost", ENCODER_CONFIG->rtp.port);
+            "rtp://%s:%d", "localhost", 6000);
 
         stream = avformat_new_stream (fmtctx, session->encode->codec);
 

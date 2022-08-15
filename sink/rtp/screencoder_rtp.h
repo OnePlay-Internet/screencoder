@@ -1,5 +1,5 @@
 /**
- * @file sunshine_rtp.h
+ * @file screencoder_rtp.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -10,21 +10,27 @@
  */
 #ifndef __SUNSHINE_RTP_H__
 #define __SUNSHINE_RTP_H__
-#include <sunshine_util.h>
+#include <screencoder_util.h>
+#include <generic_sink.h>
+
+#define RTP_SINK       rtp::new_rtp_sink()
+
 
 namespace rtp
 {
     struct _RtpContext {
+        sink::GenericSink base;
+
         libav::Stream* stream;
+
         libav::FormatContext* format;
     };
 
 
+    sink::GenericSink*    new_rtp_sink    ();
 
-    RtpContext*     make_rtp_context(encoder::EncodeContext* encode);
 
-    int             start_broadcast (util::Broadcaster* shutdown_event,
-                                     util::QueueArray* packet_queue) ;
+
 } // namespace rtp
 
 

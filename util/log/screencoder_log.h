@@ -1,5 +1,5 @@
 /**
- * @file sunshine_error.h
+ * @file screencoder_error.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0

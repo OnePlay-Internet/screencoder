@@ -11,7 +11,7 @@
 #ifndef __SUNSHINE_ENCODER_DEVICE_H__
 #define __SUNSHINE_ENCODER_DEVICE_H__
 
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 #include <platform_common.h>
 
 namespace encoder

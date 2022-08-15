@@ -12,7 +12,7 @@
 #ifndef __ENCODER_THREAD_H__
 #define __ENCODER_THREAD_H__
 
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 #include <encoder_device.h>
 
 #include <thread>

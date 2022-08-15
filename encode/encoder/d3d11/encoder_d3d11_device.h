@@ -10,7 +10,7 @@
  */
 #ifndef __ENCODER_D3D11_DEVICE_H__
 #define __ENCODER_D3D11_DEVICE_H__
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 #include <encoder_device.h>
 
 

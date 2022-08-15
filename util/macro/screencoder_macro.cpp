@@ -1,5 +1,5 @@
 /**
- * @file sunshine_macro.cpp
+ * @file screencoder_macro.cpp
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2022
  * 
  */
-#include <sunshine_macro.h>
+#include <screencoder_macro.h>
 #include <string.h>
 
 

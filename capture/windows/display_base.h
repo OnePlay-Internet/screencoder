@@ -4,7 +4,7 @@
 
 #ifndef SUNSHINE_DISPLAY_H
 #define SUNSHINE_DISPLAY_H
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 
 #include <d3d11.h>
 #include <d3d11_4.h>

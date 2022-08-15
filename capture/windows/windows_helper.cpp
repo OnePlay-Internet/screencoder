@@ -11,7 +11,7 @@
 #include <windows_helper.h>
 #include <d3d11_datatype.h>
 #include <display_vram.h>
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 
 #include <d3dcompiler.h>
 #include <directxmath.h>

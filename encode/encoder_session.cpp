@@ -11,11 +11,11 @@
 #include <encoder_session.h>
 #include <encoder_datatype.h>
 
-#include <sunshine_util.h>
-#include <sunshine_rtp.h>
+#include <screencoder_util.h>
+#include <screencoder_rtp.h>
 #include <encoder_device.h>
 
-#include <sunshine_config.h>
+#include <screencoder_config.h>
 #include <encoder_thread.h>
 
 extern "C" {
@@ -344,7 +344,7 @@ namespace encoder
         if(!ses)
             return NULL;
 
-        rtp::make_rtp_context(ses->encode);
+        RTP_SINK->preset(RTP_SINK,ses->encode);
         return BUFFER_CLASS->init((pointer)ses,sizeof(Session),session_finalize);
     }
 } // namespace encoder

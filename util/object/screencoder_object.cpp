@@ -9,9 +9,9 @@
  * 
  */
 
-#include <sunshine_object.h>
-#include <sunshine_datatype.h>
-#include <sunshine_macro.h>
+#include <screencoder_object.h>
+#include <screencoder_datatype.h>
+#include <screencoder_macro.h>
 #include <cstdlib>
 #include <string.h>
 #include <mutex>

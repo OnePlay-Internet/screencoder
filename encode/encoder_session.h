@@ -11,7 +11,7 @@
 #ifndef __ENCODER_SESSION_H__
 #define __ENCODER_SESSION_H__
 
-#include <sunshine_util.h>
+#include <screencoder_util.h>
 #include <encoder_datatype.h>
 
 #include <platform_common.h>

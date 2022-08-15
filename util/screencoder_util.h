@@ -1,5 +1,5 @@
 /**
- * @file sunshine_util.h
+ * @file screencoder_util.h
  * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
  * @brief 
  * @version 1.0
@@ -12,17 +12,17 @@
 #define __SUNSHINE_UTIL_H___
 
 #include <avcodec_wrapper.h>
-#include <sunshine_datatype.h>
-#include <sunshine_object.h>
-#include <sunshine_array.h>
-#include <sunshine_queue.h>
-#include <sunshine_macro.h>
-#include <sunshine_log.h>
-#include <sunshine_event.h>
+#include <screencoder_datatype.h>
+#include <screencoder_object.h>
+#include <screencoder_array.h>
+#include <screencoder_queue.h>
+#include <screencoder_macro.h>
+#include <screencoder_log.h>
+#include <screencoder_event.h>
 
 
 namespace rtp {
-typedef struct _RtpContext RtpContext;
+typedef struct _RtpContext RtpSink;
 }
 
 namespace encoder {
