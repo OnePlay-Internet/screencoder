@@ -26,6 +26,7 @@ main(int argc, char ** argv)
 
     session::Session sess;
     memset(&sess,0,sizeof(session::Session));
+
     session::init_session(&sess);
     session::start_session(&sess);
     return 0;
