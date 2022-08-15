@@ -41,9 +41,12 @@ namespace encoder
         int height;
         int framerate;
         int bitrate;
+
         int slicesPerFrame;
         int numRefFrames;
+
         int encoderCscMode;
+
         int videoFormat;
         int dynamicRange;
     };
