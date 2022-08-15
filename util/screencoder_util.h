@@ -22,7 +22,11 @@
 
 
 namespace rtp {
-typedef struct _RtpContext RtpSink;
+    typedef struct _RtpSink RtpSink;
+
+}
+namespace sink {
+    typedef struct _GenericSink          GenericSink;
 }
 
 namespace encoder {

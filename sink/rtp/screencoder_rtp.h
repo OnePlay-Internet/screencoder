@@ -18,12 +18,15 @@
 
 namespace rtp
 {
-    struct _RtpContext {
+    struct _RtpSink {
+
         sink::GenericSink base;
 
         libav::Stream* stream;
 
         libav::FormatContext* format;
+
+        bool preseted;
     };
 
 

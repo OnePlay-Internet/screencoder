@@ -23,6 +23,7 @@
 
 #include <thread>
 
+using namespace std::literals;
 
 namespace rtp
 {
@@ -33,6 +34,7 @@ namespace rtp
                    encoder::EncodeContext* encode)
     {
         rtp::RtpSink* rtp = (rtp::RtpSink*)sink;
+        rtp->preseted = TRUE;
         rtp->stream = avformat_new_stream (rtp->format, encode->codec);
         avcodec_parameters_from_context(rtp->stream->codecpar,encode->context);
         if (rtp->format->oformat->flags & AVFMT_GLOBALHEADER)
@@ -55,6 +57,10 @@ namespace rtp
     rtpsink_start(sink::GenericSink* sink)
     {
         rtp::RtpSink* rtp = (rtp::RtpSink*)sink;
+
+        while(!rtp->preseted) {
+            std::this_thread::sleep_for(100ms);
+        }
 
         rtp->format->streams[0] = rtp->stream;
         if (avio_open(&rtp->format->pb, rtp->format->filename, AVIO_FLAG_WRITE) < 0){
@@ -113,6 +119,7 @@ namespace rtp
         sink.base.start     = rtpsink_start;
         sink.base.handle    = rtpsink_handle;
 
+        sink.preseted = FALSE;
         config_rtpsink(&sink);
         return (sink::GenericSink*)&sink;
     }

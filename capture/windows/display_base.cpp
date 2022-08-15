@@ -17,6 +17,7 @@
 #include <screencoder_config.h>
 
 #include <platform_common.h>
+#include <encoder_device.h>
 
 
 
@@ -32,6 +33,44 @@ using namespace std::literals;
 
 
 namespace display{
+
+
+
+    // display selection
+    platf::Display*
+    get_display(encoder::Encoder* encoder)
+    {
+        platf::Display* disp;
+
+        char* chosen_display  = NULL;
+        char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
+
+        if(!display_names) 
+            chosen_display = ENCODER_CONFIG->output_name;
+
+        int count = 0;
+        while (*(display_names+count))
+        {
+            if(*(display_names+count) == ENCODER_CONFIG->output_name) {
+                chosen_display = *(display_names+count);
+                break;
+            }
+            count++;
+        }
+
+        // reset display every 200ms until display is ready
+        disp = platf::tryget_display(encoder->dev_type, 
+                                        chosen_display, 
+                                        ENCODER_CONFIG->framerate);
+        if(!disp) {
+            LOG_ERROR("unable to create display");
+            return NULL;
+        }
+
+        return disp;
+    }
+
+
     typedef enum _D3DKMT_SCHEDULINGPRIORITYCLASS {
         D3DKMT_SCHEDULINGPRIORITYCLASS_IDLE,
         D3DKMT_SCHEDULINGPRIORITYCLASS_BELOW_NORMAL,

@@ -30,7 +30,10 @@ namespace encoder
      * @param config 
      * @param data 
      */
-    void                capture          (util::Broadcaster* shutdown_event,
+    void                capture          (platf::Display* capture,
+                                          encoder::Encoder* encoder,
+                                          sink::GenericSink* sink,
+                                          util::Broadcaster* shutdown_event,
                                           util::QueueArray* packet_queue);
     
 

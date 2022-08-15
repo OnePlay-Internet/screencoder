@@ -17,6 +17,7 @@
 
 
 
+
 namespace platf
 {
     platf::Color 
@@ -78,7 +79,6 @@ namespace platf
 
         return PixelFormat::unknown_pixelformat;
     }
-
 
 
 } // namespace platf

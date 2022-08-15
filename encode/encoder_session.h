@@ -34,7 +34,7 @@ namespace encoder
     make_session_buffer(platf::Image* img, 
                         Encoder* encoder,
                         platf::Display* display,
-                        Config* config);
+                        sink::GenericSink* sink);
 } // namespace encoder
 
 #endif

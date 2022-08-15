@@ -327,9 +327,9 @@ namespace encoder
     make_session_buffer(platf::Image* img, 
                         Encoder* encoder,
                         platf::Display* display,
-                        Config* config) 
+                        sink::GenericSink* sink) 
     {
-        platf::PixelFormat pix_fmt = config->dynamicRange == 0 ? 
+        platf::PixelFormat pix_fmt = ENCODER_CONFIG->conf.dynamicRange == 0 ? 
                                         platf::map_pix_fmt(encoder->static_pix_fmt) : 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
@@ -337,14 +337,14 @@ namespace encoder
         if(!device) 
             return NULL;
 
-        Session* ses = make_session(encoder,config, 
+        Session* ses = make_session(encoder,&ENCODER_CONFIG->conf, 
                                     img->width, 
                                     img->height, 
                                     device);
         if(!ses)
             return NULL;
 
-        RTP_SINK->preset(RTP_SINK,ses->encode);
+        sink->preset(sink,ses->encode);
         return BUFFER_CLASS->init((pointer)ses,sizeof(Session),session_finalize);
     }
 } // namespace encoder

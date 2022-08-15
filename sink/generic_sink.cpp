@@ -30,9 +30,6 @@ namespace sink
         util::QueueArray* packets = ctx->packet_queue;
         util::Broadcaster* shutdown_event = ctx->shutdown_event;
 
-        GenericSink* sink = RTP_SINK;
-        sink->start(sink);
-
 
         while(true) {
             if(!QUEUE_ARRAY_CLASS->peek(packets)) {
@@ -51,7 +48,7 @@ namespace sink
                 continue;
             }
 
-            sink->handle(sink,av_packet);          
+            ctx->sink->handle(ctx->sink,av_packet);          
             BUFFER_CLASS->unref(video_packet_buffer);
         }
 
@@ -67,7 +64,8 @@ namespace sink
      * @return int 
      */
     int 
-    start_broadcast(util::Broadcaster* shutdown_event,
+    start_broadcast(sink::GenericSink* sink,
+                    util::Broadcaster* shutdown_event,
                     util::QueueArray* packet_queue) 
     {
         BroadcastContext ctx;
@@ -75,6 +73,9 @@ namespace sink
         ctx.packet_queue = packet_queue;
         ctx.shutdown_event = shutdown_event;
         ctx.join_event = NEW_EVENT;
+        ctx.sink = sink;
+
+        sink->start(sink);
         ctx.video_thread = std::thread { videoBroadcastThread, &ctx};
         WAIT_EVENT(ctx.join_event);
     }

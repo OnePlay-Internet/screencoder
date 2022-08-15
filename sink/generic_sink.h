@@ -16,7 +16,6 @@
 
 namespace sink
 {
-    typedef struct _GenericSink          GenericSink;
 
     typedef void  (*EncoderContextPreset) (GenericSink* sink,
                                           encoder::EncodeContext* ctx);
@@ -46,6 +45,7 @@ namespace sink
 
     typedef struct _BroadcastContext {
         std::thread video_thread;
+        sink::GenericSink* sink;
 
         util::Broadcaster* shutdown_event;
         util::Broadcaster* join_event;
@@ -53,7 +53,8 @@ namespace sink
         util::QueueArray* packet_queue;
     }BroadcastContext;
 
-    int             start_broadcast (util::Broadcaster* shutdown_event,
+    int             start_broadcast (sink::GenericSink* sink,
+                                     util::Broadcaster* shutdown_event,
                                      util::QueueArray* packet_queue) ;
 } // namespace sink
 

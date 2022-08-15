@@ -15,6 +15,9 @@
 #include <screencoder_rtp.h>
 #include <encoder_thread.h>
 
+#include <encoder_d3d11_device.h>
+#include <display_base.h>
+
 #include <thread>
 
 namespace session {
@@ -33,11 +36,18 @@ namespace session {
     void
     start_session(Session* session)
     {
+        encoder::Encoder* encoder = NVENC;
+        platf::Display* display = DISPLAY(encoder);
+        sink::GenericSink* sink = RTP_SINK;
+
+
         std::thread capture   { encoder::capture, 
+                                display,encoder,sink,
                                 session->shutdown_event, 
                                 session->packet_queue };
 
         std::thread broadcast { sink::start_broadcast , 
+                                sink,
                                 session->shutdown_event, 
                                 session->packet_queue };
 

@@ -12,12 +12,12 @@
 
 #include <screencoder_util.h>
 
-#include <encoder_d3d11_device.h>
 #include <screencoder_config.h>
 #include <encoder_device.h>
 
 #include <platform_common.h>
 #include <display_base.h>
+#include <generic_sink.h>
 
 
 extern "C" {
@@ -45,10 +45,9 @@ namespace encoder {
 
         std::thread thread;
 
-        Config* config;
-
         encoder::Encoder* encoder;
         platf::Display* display;
+        sink::GenericSink* sink;
     };
 
     void
@@ -179,7 +178,7 @@ namespace encoder {
         util::Buffer* buf = make_session_buffer(img, 
                                                 ctx->encoder,
                                                 ctx->display,
-                                                ctx->config);
+                                                ctx->sink);
         if(!buf)
             return platf::Capture::error;
 
@@ -204,42 +203,6 @@ namespace encoder {
     void 
     captureThread(EncodeThreadContext* ctx) 
     {
-        // start capture thread sync thread and create a reference to its context
-        platf::Display* disp;
-        Encoder* encoder = NVENC;
-
-        // display selection
-        {
-            char* chosen_display  = NULL;
-            char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
-
-            if(!display_names) 
-                chosen_display = ENCODER_CONFIG->output_name;
-
-            int count = 0;
-            while (*(display_names+count))
-            {
-                if(*(display_names+count) == ENCODER_CONFIG->output_name) {
-                    chosen_display = *(display_names+count);
-                    break;
-                }
-                count++;
-            }
-
-            // reset display every 200ms until display is ready
-            disp = platf::tryget_display(encoder->dev_type, 
-                                         chosen_display, 
-                                         ENCODER_CONFIG->framerate);
-            if(!disp) {
-                LOG_ERROR("unable to create display");
-                goto done;
-            }
-        }
-
-        ctx->display = disp;
-        ctx->encoder = encoder;
-
-
         // run encoder in infinite loop
         while(TRUE) {
             platf::Capture result = encode_run_sync(ctx);
@@ -265,7 +228,10 @@ namespace encoder {
      * @param data 
      */
     void 
-    capture( util::Broadcaster* shutdown_event,
+    capture( platf::Display* capture,
+             encoder::Encoder* encoder,
+             sink::GenericSink* sink,
+             util::Broadcaster* shutdown_event,
              util::QueueArray* packet_queue) 
     {
         util::Broadcaster* join_event = NEW_EVENT;
@@ -275,9 +241,13 @@ namespace encoder {
         ss_ctx.shutdown_event = shutdown_event;
         ss_ctx.join_event = join_event;
         ss_ctx.packet_queue = packet_queue;
-
-        ss_ctx.config = &ENCODER_CONFIG->conf;
         ss_ctx.frame_nr = 1;
+
+        ss_ctx.display = capture;
+        ss_ctx.encoder = encoder;
+        ss_ctx.sink = sink;
+
+
         ss_ctx.thread = std::thread {captureThread, &ss_ctx };
 
         // Wait for join signal
