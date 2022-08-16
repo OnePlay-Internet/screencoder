@@ -11,6 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/pion/rtp"
+	"github.com/Oneplay-Internet/screencoder/sink/appsink/go/h264"
 )
 
 type Appsink struct {
@@ -21,6 +22,9 @@ type Appsink struct {
 
 func newAppsink() *Appsink {
 	app := &Appsink{};
+
+	app.packetizer = h264.NewH264Payloader();
+	app.channel = make(chan *rtp.Packet,1000);
 
 	go func ()  {
 		for {
@@ -54,4 +58,9 @@ func (s *Appsink) WriteSample(buffer unsafe.Pointer,
 	for _, p := range packets {
 		s.channel <- p;
 	}
+}
+
+
+func (sink *Appsink) ReadRTP() *rtp.Packet {
+	return <-sink.channel;
 }

@@ -1,4 +1,4 @@
-package appsink
+package h264
 
 import (
 	"encoding/binary"
@@ -15,23 +15,9 @@ func min(a, b int) int {
 	return b
 }
 
-// H264Payloader payloads H264 packets
-type H264Payloader struct {
-	spsNalu, ppsNalu []byte
 
 
-	MTU              uint16
-	PayloadType      uint8
-	SSRC             uint32
-	Sequencer        rtp.Sequencer
-	Timestamp        uint32
-	ClockRate        uint32
-	extensionNumbers struct { // put extension numbers in here. If they're 0, the extension is disabled (0 is not a legal extension number)
-		AbsSendTime int // http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
-	}
-	timegen func() time.Time
-}
-
+// https://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream/24890903#24890903
 const (
 	stapaNALUType  = 24		  // 00011000
 	fubNALUType    = 29		  // 00011101
@@ -57,6 +43,38 @@ const (
 	NALU_AVCC
 	NALU_ANNEXB
 )
+
+
+// H264Payloader payloads H264 packets
+type H264Payloader struct {
+	spsNalu, ppsNalu []byte
+
+
+	MTU              uint16
+	PayloadType      uint8
+	SSRC             uint32
+	Sequencer        rtp.Sequencer
+	Timestamp        uint32
+	ClockRate        uint32
+	extensionNumbers struct { // put extension numbers in here. If they're 0, the extension is disabled (0 is not a legal extension number)
+		AbsSendTime int // http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
+	}
+	timegen func() time.Time
+}
+
+func NewH264Payloader() *H264Payloader {
+	return &H264Payloader{
+		Sequencer: rtp.NewRandomSequencer(),
+		extensionNumbers: struct{AbsSendTime int}{AbsSendTime: 22},
+		timegen: time.Now,
+	}
+}
+
+
+
+
+
+
 
 func SplitNALUs(payload []byte) (nalus [][]byte, typ int) {
 	if len(payload) < 4 {
@@ -141,6 +159,7 @@ func SplitNALUs(payload []byte) (nalus [][]byte, typ int) {
 
 func emitNalus(nals []byte, emit func([]byte)) {
 
+	// TODO : update libav indicator
 	// findInd : find indicator
 	// +----------------------------------------+
 	// |0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|...
@@ -252,7 +271,7 @@ func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
 		// FUs are sequentially concatenated, the payload of the fragmented NAL
 		// unit can be reconstructed.  The NAL unit type octet of the fragmented
 		// NAL unit is not included as such in the fragmentation unit payload,
-		// 	but rather the information of the NAL unit type octet of the
+		// but rather the information of the NAL unit type octet of the
 		// fragmented NAL unit is conveyed in the F and NRI fields of the FU
 		// indicator octet of the fragmentation unit and in the type field of
 		// the FU header.  An FU payload MAY have any number of octets and MAY
@@ -316,6 +335,8 @@ func (p *H264Payloader) Packetize(payload []byte, samples uint32) []*rtp.Packet 
 	if len(payload) == 0 {
 		return nil
 	}
+
+
 
 	payloads := p.Payload(p.MTU-12, payload)
 	packets := make([]*rtp.Packet, len(payloads))
