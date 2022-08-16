@@ -77,11 +77,11 @@ namespace config
 
 
     Encoder*       
-    get_encoder_config(int argc,char** argv)
+    get_encoder_config()
     {
         static bool init = false;
         static Encoder encoder = {0};
-        if (!argc && !argv && init)
+        if (init)
             return &encoder;
             
         encoder.gop_size = 20;
@@ -107,12 +107,5 @@ namespace config
 
         init = true;
         return &encoder;
-    }
-
-    
-    int 
-    parse(int argc, 
-          char** argv) 
-    {
     }
 }

@@ -4,7 +4,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 project(SunshineSDK VERSION 0.1.0 DESCRIPTION "Sunshine is a Gamestream host for Moonlight.")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(SUNSHINE_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
+set(SCREENCODER_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 
 
@@ -22,31 +22,31 @@ file(ARCHIVE_EXTRACT
 	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/pre-compiled)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
-if(NOT DEFINED SUNSHINE_PREPARED_BINARIES)
-	set(SUNSHINE_PREPARED_BINARIES "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled/windows")
+if(NOT DEFINED SCREENCODER_PREPARED_BINARIES)
+	set(SCREENCODER_PREPARED_BINARIES "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled/windows")
 endif()
 
 
 set(PLATFORM_INCLUDE_DIR
-	${SUNSHINE_PREPARED_BINARIES}/platform
-	${SUNSHINE_PREPARED_BINARIES}/platform/windows
+	${SCREENCODER_PREPARED_BINARIES}/platform
+	${SCREENCODER_PREPARED_BINARIES}/platform/windows
     )
 
 set(FFMPEG_INCLUDE_DIRS
-	${SUNSHINE_PREPARED_BINARIES}/include)
+	${SCREENCODER_PREPARED_BINARIES}/include)
 
 set(FFMPEG_LIBRARIES
-	${SUNSHINE_PREPARED_BINARIES}/lib/libavformat.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libavcodec.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libavdevice.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libavfilter.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libavutil.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libpostproc.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libswresample.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libswscale.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libx264.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libx265.a
-	${SUNSHINE_PREPARED_BINARIES}/lib/libhdr10plus.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libavformat.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libavcodec.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libavdevice.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libavfilter.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libavutil.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libpostproc.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libswresample.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libswscale.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libx264.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libx265.a
+	${SCREENCODER_PREPARED_BINARIES}/lib/libhdr10plus.a
 	z lzma bcrypt libiconv.a)
 
 list(PREPEND PLATFORM_LIBRARIES
@@ -106,7 +106,7 @@ file(GLOB PLATFORM_SOURCE_LIST
 )
 
 
-set(SUNSHINE_TARGET_FILES
+set(SCREENCODER_TARGET_FILES
 	${UTIL_SOURCE_LIST}
 	${SESSION_SOURCE_LIST}
 	${ENCODER_SOURCE_LIST}
@@ -129,6 +129,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/sink
   ${CMAKE_CURRENT_SOURCE_DIR}/sink/rtp
   ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink/go
   ${CMAKE_CURRENT_SOURCE_DIR}/session
 
   ${CMAKE_CURRENT_SOURCE_DIR}/util
@@ -154,7 +155,7 @@ include_directories(
 
 
 
-list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
+list(APPEND SCREENCODER_EXTERNAL_LIBRARIES
     ${CBS_EXTERNAL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FFMPEG_LIBRARIES}
@@ -162,17 +163,30 @@ list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
     ${Boost_LIBRARIES}
 )
 
-add_executable(sunshine 
-	main.cpp
-	${SUNSHINE_TARGET_FILES}
+
+
+
+
+add_library(screencoderlib STATIC
+	${SCREENCODER_TARGET_FILES}
 )
 
 
-target_link_libraries(sunshine ${SUNSHINE_EXTERNAL_LIBRARIES} ${EXTRA_LIBS})
-target_compile_definitions(sunshine PUBLIC ${SUNSHINE_DEFINITIONS})
-set_target_properties(sunshine PROPERTIES CXX_STANDARD 17
-                            VERSION ${PROJECT_VERSION}
-                            SOVERSION ${PROJECT_VERSION_MAJOR}
-                            )
+target_link_libraries(screencoderlib ${SCREENCODER_EXTERNAL_LIBRARIES})
+target_compile_definitions(screencoderlib PUBLIC ${SCREENCODER_DEFINITIONS})
+set_target_properties(screencoderlib PROPERTIES CXX_STANDARD 17
+                               VERSION ${PROJECT_VERSION}
+                               SOVERSION ${PROJECT_VERSION_MAJOR})
 
+add_executable(screencoder 
+	examples/rtp/main.cpp
+)
 
+target_link_libraries(screencoder 
+	${CMAKE_CURRENT_BINARY_DIR}/libscreencoderlib.a
+	${SCREENCODER_EXTERNAL_LIBRARIES}
+)
+target_compile_definitions(screencoder PUBLIC ${SCREENCODER_DEFINITIONS})
+set_target_properties(screencoder PROPERTIES CXX_STANDARD 17
+                               VERSION ${PROJECT_VERSION}
+                               SOVERSION ${PROJECT_VERSION_MAJOR})

@@ -22,11 +22,7 @@
 int 
 main(int argc, char ** argv)
 {
-    config::get_encoder_config(argc,argv);
-
-    session::Session sess;
-    memset(&sess,0,sizeof(session::Session));
-
+    session::Session sess = {0};
     session::init_session(&sess);
     session::start_session(&sess);
     return 0;

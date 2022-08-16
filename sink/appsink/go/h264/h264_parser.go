@@ -39,9 +39,10 @@ const (
 )
 
 const (
-	NALU_RAW = iota
-	NALU_AVCC
-	NALU_ANNEXB
+	NALU_NONE = 0
+	NALU_RAW = 1
+	NALU_AVCC = 2
+	NALU_ANNEXB = 3
 )
 
 
@@ -72,95 +73,41 @@ func NewH264Payloader() *H264Payloader {
 
 
 
+func findIndicator(nalu []byte, start int) (indStart int, indLen int) {
+	zCount := 0 // zeroCount
+
+	for i, b := range nalu[start:] {
+		if b == 0 {
+			zCount++
+			continue
+		} else if b == 1 {
+			if zCount >= 2 {
+				return start + i - zCount, zCount + 1
+			}
+		}
+		zCount = 0
+	}
+	return -1, -1 // return -1 if no indicator found
+}
 
 
 
 
 func SplitNALUs(payload []byte) (nalus [][]byte, typ int) {
+	typ = NALU_NONE
+	nalus = [][]byte{}
+	defer func ()  {
+		if len(nalus) == 0 || typ == NALU_NONE {
+			nalus = append(nalus, payload)
+			typ = NALU_RAW
+		}
+	}()
+
 	if len(payload) < 4 {
-		return [][]byte{payload}, NALU_RAW
-	}
-
-	val3 := pio.U24BE(payload)
-	val4 := pio.U32BE(payload)
-
-	// maybe AVCC
-	if val4 <= uint32(len(payload)) {
-		val4tmp := val4
-		payloadtmp := payload[4:]
-		nalus := [][]byte{}
-		for {
-			if val4tmp > uint32(len(payloadtmp)) {
-				break
-			}
-			nalus = append(nalus, payloadtmp[:val4tmp])
-			payloadtmp = payloadtmp[val4tmp:]
-			if len(payloadtmp) < 4 {
-				break
-			}
-			val4tmp = pio.U32BE(payloadtmp)
-			payloadtmp = payloadtmp[4:]
-			if val4tmp > uint32(len(payloadtmp)) {
-				break
-			}
-		}
-		if len(payloadtmp) == 0 {
-			return nalus, NALU_AVCC
-		}
-	}
-
-	// is Annex B
-	if val3 == 1 || val4 == 1 {
-		val3tmp := val3
-		val4tmp := val4
-		start := 0
-		pos := 0
-		for {
-			if start != pos {
-				nalus = append(nalus, payload[start:pos])
-			}
-			if val3tmp == 1 {
-				pos += 3
-			} else if val4tmp == 1 {
-				pos += 4
-			}
-			start = pos
-			if start == len(payload) {
-				break
-			}
-			val3tmp = 0
-			val4tmp = 0
-			for pos < len(payload) {
-				if pos+2 < len(payload) && payload[pos] == 0 {
-					val3tmp = pio.U24BE(payload[pos:])
-					if val3tmp == 0 {
-						if pos+3 < len(payload) {
-							val4tmp = uint32(payload[pos+3])
-							if val4tmp == 1 {
-								break
-							}
-						}
-					} else if val3tmp == 1 {
-						break
-					}
-					pos++
-				} else {
-					pos++
-				}
-			}
-		}
-		typ = NALU_ANNEXB
 		return
 	}
 
-	return [][]byte{payload}, NALU_RAW
-}
-
-
-func emitNalus(nals []byte, emit func([]byte)) {
-
-	// TODO : update libav indicator
-	// findInd : find indicator
+	// is Annex B
 	// +----------------------------------------+
 	// |0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|...
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -169,42 +116,63 @@ func emitNalus(nals []byte, emit func([]byte)) {
 	// |   |indLen   |     			nalu	   |
 	// |   |<--indStart   					   |
 	// +---------------------------------------+
-	findInd := func(nalu []byte, start int) (indStart int, indLen int) {
-		zCount := 0 // zeroCount
-
-		for i, b := range nalu[start:] {
-			if b == 0 {
-				zCount++
-				continue
-			} else if b == 1 {
-				if zCount >= 2 {
-					return start + i - zCount, zCount + 1
-				}
-			}
-			zCount = 0
-		}
-		return -1, -1 // return -1 if no indicator found
-	}
-
-
-	nextIndStart, nextIndLen := findInd(nals, 0)
-	if nextIndStart == -1 {
-		// emit on whole nals if indicator not found
-		emit(nals)
-	} else {
+	nextIndStart, nextIndLen := findIndicator(payload, 0)
+	if nextIndStart != -1 {
 		for nextIndStart != -1 {
 			prevStart := nextIndStart + nextIndLen
-			nextIndStart, nextIndLen = findInd(nals, prevStart)
+			nextIndStart, nextIndLen = findIndicator(payload, prevStart)
 			if nextIndStart != -1 {
 				// emit on nalu
-				emit(nals[prevStart:nextIndStart])
+				nalus = append(nalus, payload[prevStart:nextIndStart])
 			} else {
 				// Emit until end of stream, no end indicator found
-				emit(nals[prevStart:])
+				nalus = append(nalus, payload[prevStart:])
 			}
 		}
+
+		typ = NALU_ANNEXB;
+		return
+	} 
+
+
+	// is AVCC
+	// +----------------------------------------+
+	// |0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|...
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+	// |x|x|s|s|s|s|x|x|x|x|x|x|x|x|x|x|x|x|x|x|...
+	// |   |naluSz |     			nalu	   |
+	// +---------------------------------------+
+	val4 := pio.U32BE(payload)
+	if val4 <= uint32(len(payload)) {
+		naluSz := val4
+		nalu := payload[4:]
+
+		for {
+			if naluSz > uint32(len(nalu)) { // break if nalu size is greater than size of payload left
+				break
+			}
+
+			nalus = append(nalus, nalu[:naluSz])  // append slice from payload with naluSz size
+			nalu = nalu[naluSz:]  // move pointer naluSz byte to the left
+			if len(nalu) < 4 { // break if size of nalu left smaller than 4 (sizeof uint32)
+				break
+			}
+
+			naluSz = pio.U32BE(nalu) // get naluSize from 4 first bytes left
+			nalu = nalu[4:] // shift pointer 4 byte to the left
+		}
+
+		if len(nalu) == 0 {
+			return nalus, NALU_AVCC
+		} else {
+			// reset nalus
+			nalus = [][]byte{};
+		}
 	}
+	return;
 }
+
+
 
 // Payload fragments a H264 packet across one or more byte arrays
 func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
@@ -212,12 +180,11 @@ func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
 	if len(payload) == 0 {
 		return payloads
 	}
-	
 
-
-	emitNalus(payload, func(nalu []byte) {
+	nalus,_ := SplitNALUs(payload)
+	for _,nalu := range nalus {
 		if len(nalu) == 0 {
-			return
+			continue
 		}
 
 		naluType   := nalu[0] & naluTypeBitmask     // AND operator on first byte of nal Unit
@@ -225,13 +192,13 @@ func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
 
 		switch {
 		case naluType == audNALUType || naluType == fillerNALUType:
-			return
+			continue
 		case naluType == spsNALUType:
 			p.spsNalu = nalu
-			return
+			continue
 		case naluType == ppsNALUType:
 			p.ppsNalu = nalu
-			return
+			continue
 		case p.spsNalu != nil && p.ppsNalu != nil:
 			// Pack current NALU with SPS and PPS as STAP-A
 			spsLen := make([]byte, 2)
@@ -260,7 +227,7 @@ func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
 			out := make([]byte, len(nalu))
 			copy(out, nalu)
 			payloads = append(payloads, out)
-			return
+			continue
 		}
 
 		// FU-A
@@ -284,7 +251,7 @@ func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
 		naluDataRemaining := naluDataLength
 
 		if min(maxFragmentSize, naluDataRemaining) <= 0 {
-			return
+			continue
 		}
 
 		for naluDataRemaining > 0 {
@@ -320,7 +287,7 @@ func (p *H264Payloader) Payload(mtu uint16, payload []byte) [][]byte {
 			naluDataRemaining -= currentFragmentSize
 			naluDataIndex += currentFragmentSize
 		}
-	})
+	}
 
 	return payloads
 }

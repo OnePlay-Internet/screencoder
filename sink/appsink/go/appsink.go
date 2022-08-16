@@ -1,10 +1,4 @@
 package appsink
-
-/*
-#include "go_adapter.h"
-
-*/
-import "C"
 import (
 	"fmt"
 	"time"
@@ -13,6 +7,11 @@ import (
 	"github.com/pion/rtp"
 	"github.com/Oneplay-Internet/screencoder/sink/appsink/go/h264"
 )
+
+
+// #cgo LDFLAGS:  ${SRCDIR}/../../../build/libscreencoderlib.a ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavcodec.a ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavutil.a 
+// #include "go_adapter.h"
+import "C"
 
 type Appsink struct {
 	packetizer Packetizer

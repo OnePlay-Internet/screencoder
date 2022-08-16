@@ -11,7 +11,7 @@
 #ifndef __SUNSHINE_CONFIG_H__
 #define __SUNSHINE_CONFIG_H__
 
-#define ENCODER_CONFIG          config::get_encoder_config(0,nullptr)
+#define ENCODER_CONFIG          config::get_encoder_config()
 
 #define RTSP_TCP_MAX_PACKET_SIZE 1472
 
@@ -56,7 +56,7 @@ namespace config
         bool dwmflush;
     }Encoder;
 
-    Encoder*       get_encoder_config       (int argc, char** argv);
+    Encoder*       get_encoder_config       ();
 }
 
 

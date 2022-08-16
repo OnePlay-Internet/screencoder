@@ -9,7 +9,10 @@
  * 
  */
 #include <app_sink.h>
+
+extern "C" {
 #include <go_adapter.h>
+}
 
 
 namespace appsink
@@ -58,7 +61,7 @@ GoHandleAVPacket(void** data,
 {
     appsink::AppSink* sink = (appsink::AppSink*)APP_SINK;
     if(QUEUE_ARRAY_CLASS->peek(sink->out)) {
-        libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,buf,size);
+        libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size);
         *data = pkt->data;
         *size = pkt->size;
         *duration = pkt->duration;
