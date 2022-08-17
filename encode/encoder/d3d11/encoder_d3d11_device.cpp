@@ -95,10 +95,8 @@ namespace encoder {
             (int)hevc::Profile::main_10 
         };
 
-        encoder.conf.width = 1920;
-        encoder.conf.height = 1080;
-        encoder.conf.bitrate = 10000;
-        encoder.conf.framerate = 60;
+        encoder.conf.bitrate = 1000;
+
         encoder.conf.encoderCscMode = 0;
         encoder.conf.videoFormat = 0;
         encoder.conf.dynamicRange = 0;

@@ -57,8 +57,6 @@ namespace platf {
 
     typedef struct _Image {
         byte* data;
-        int32 width;
-        int32 height;
         int32 pixel_pitch;
         int32 row_pitch;
     }Image;
@@ -84,10 +82,10 @@ namespace platf {
         int (*convert)          (Device* self,
                                  Image* img);
 
-        void (*finalize)         (Device* self);
         /**
          * @brief 
-         * do the conversion from libav::Frame to ImageD3D
+         * allocate avcodec and d3d11 texture resources
+         * call once during make_session_buffer
          */
         int (*set_frame)        (Device* self,
                                  libav::Frame* frame);
@@ -115,19 +113,17 @@ namespace platf {
 
     struct _Display {
         DisplayClass* klass;
+        char name[100];
 
         // Offsets for when streaming a specific monitor. By default, they are 0.
         int offset_x, offset_y;
         int env_width, env_height;
         int width, height;
-        char name[100];
+        int framerate;
     };
 
     struct _DisplayClass {
-        Display*    (*init)             (int framerate, 
-                                         char* display_name);
-
-        void        (*finalize)         (void* self);
+        Display*    (*init)             (char* display_name);
 
         int         (*dummy_img)        (Display* self,
                                          Image* img);
@@ -143,26 +139,16 @@ namespace platf {
                                          util::Buffer* data,
                                          encoder::EncodeThreadContext* thread_ctx,
                                          bool cursor);
-
-        Capture     (*snapshot)         (Display* self,
-                                         platf::Image *img_base, 
-                                         std::chrono::milliseconds timeout, 
-                                         bool cursor_visible); 
     };
 
 
     /**
      * display_name --> The name of the monitor that SHOULD be displayed
-     *    If display_name is empty --> Use the first monitor that's compatible you can find
-     *    If you require to use this parameter in a seperate thread --> make a copy of it.
-     * 
-     * framerate --> The peak number of images per second
      * 
      * Returns Display based on hwdevice_type
      */
     Display*                get_display_by_name       (MemoryType hwdevice_type , 
-                                                      char* display_name , 
-                                                      int framerate);
+                                                       char* display_name);
 
 
     // A list of names of displays accepted as display_name with the MemoryType

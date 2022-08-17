@@ -87,15 +87,16 @@ namespace rtp
     void
     config_rtpsink(RtpSink* sink)
     {
+        sink::GenericSink* base = (sink::GenericSink*)sink;
         sink->format = avformat_alloc_context();
         sink->format->oformat = av_guess_format("rtp",NULL,NULL);
 
         int i =0;
-        while ((sink->base.options+i) &&
-               (sink->base.options+i)->type == util::Type::INT && 
-               string_compare((sink->base.options+i)->key,"port") ){
+        while ((base->options+i) &&
+               (base->options+i)->type == util::Type::INT && 
+               string_compare((base->options+i)->key,"port") ){
             snprintf(sink->format->filename, sizeof(sink->format->filename), 
-                "rtp://%s:%d", "localhost", (sink->base.options+i)->int_value);
+                "rtp://%s:%d", "localhost", (base->options+i)->int_value);
             i++;
         }
     }

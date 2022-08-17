@@ -63,6 +63,7 @@ namespace encoder
         session = make_session(encoder, 
                                disp->width, 
                                disp->height, 
+                               disp->framerate,
                                device);
         if(!session) {
             session_finalize(session);
@@ -170,8 +171,8 @@ namespace encoder
 
         // First, test encoder viability
         {
-            Config config_max_ref_frames { 1920, 1080, 60, 1000, 1, 1, 1, 0, 0 };
-            Config config_autoselect { 1920, 1080, 60, 1000, 1, 0, 1, 0, 0 };
+            Config config_max_ref_frames { 1000, 1, 1, 1, 0, 0 };
+            Config config_autoselect { 1000, 1, 0, 1, 0, 0 };
 
             retry:
             auto max_ref_frames_h264 = validate_config(encoder, &config_max_ref_frames);
@@ -195,8 +196,8 @@ namespace encoder
         }
         
         {
-            Config config_max_ref_frames { 1920, 1080, 60, 1000, 1, 1, 1, 0, 0 };
-            Config config_autoselect { 1920, 1080, 60, 1000, 1, 0, 1, 0, 0 };
+            Config config_max_ref_frames { 1000, 1, 1, 1, 0, 0 };
+            Config config_autoselect { 1000, 1, 0, 1, 0, 0 };
 
             config_max_ref_frames.videoFormat = 1;
             config_autoselect.videoFormat     = 1;
@@ -223,7 +224,7 @@ namespace encoder
         // test DYNAMIC_RANGE and SLICE
         {
             std::vector<std::pair<FrameFlags, Config>> configs {
-                { FrameFlags::DYNAMIC_RANGE, { 1920, 1080, 60, 1000, 1, 0, 3, 1, 1 } },
+                { FrameFlags::DYNAMIC_RANGE, { 1000, 1, 0, 3, 1, 1 } },
             };
 
             if (encoder->flags[SINGLE_SLICE_ONLY])
@@ -232,7 +233,7 @@ namespace encoder
                 encoder->hevc.capabilities[FrameFlags::SLICE] = false;
             } else {
                 configs.emplace_back( std::pair<FrameFlags, Config> { 
-                    FrameFlags::SLICE, { 1920, 1080, 60, 1000, 2, 1, 1, 0, 0 } 
+                    FrameFlags::SLICE, { 1000, 2, 1, 1, 0, 0 } 
                 });
             }
 

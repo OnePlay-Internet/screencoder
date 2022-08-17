@@ -51,13 +51,12 @@ namespace gpu
       // Clear nv12 render target to black
       ImageGpu back_img;
 
-      d3d11::VertexShader convert_UV_vs;
-      d3d11::PixelShader convert_UV_ps;
-      d3d11::PixelShader convert_Y_ps;
+      d3d11::VertexShader convert_UV_vs;   // shader to convert color matrix (described in hlsl file)
+      d3d11::PixelShader convert_UV_ps;    // shader to convert color matrix (described in hlsl file)
+      d3d11::PixelShader convert_Y_ps;     // shader to convert color matrix (described in hlsl file)
+      d3d11::PixelShader scene_ps;         // shader to convert color matrix (described in hlsl file)
+      d3d11::VertexShader scene_vs;        // shader to convert color matrix (described in hlsl file)
 
-      d3d11::PixelShader scene_ps;
-
-      d3d11::VertexShader scene_vs;
 
       D3D11_VIEWPORT outY_view;
       D3D11_VIEWPORT outUV_view;

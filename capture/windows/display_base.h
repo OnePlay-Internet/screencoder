@@ -31,8 +31,8 @@ namespace display {
         d3d11::DeviceContext device_ctx;
 
         duplication::Duplication dup;
+        platf::Device* dev;
 
-        std::chrono::nanoseconds delay;
         DXGI_FORMAT format;
         D3D_FEATURE_LEVEL feature_level;
     }DisplayBase;
@@ -45,12 +45,11 @@ namespace display {
     /**
      * @brief 
      * 
-     * @param framerate 
+     * @param self
      * @param display_name 
      * @return int 
      */
     int             display_base_init           (DisplayBase* self,
-                                                 int framerate, 
                                                  char* display_name);
 
 } // namespace platf::dxgi

@@ -37,9 +37,6 @@ namespace encoder
     };
     
     struct _Config{
-        int width;
-        int height;
-        int framerate;
         int bitrate;
 
         int slicesPerFrame;

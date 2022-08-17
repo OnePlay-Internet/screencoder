@@ -51,12 +51,11 @@ namespace config
             
         encoder->qp = 28;
         encoder->gop_size = 20;
-        encoder->framerate = 60;
         encoder->dwmflush = 0;
 
-        encoder->nv.coder = coder_e::_auto;
         encoder->nv.rc = rc_e::cbr;
-        encoder->nv.rc = preset_e::_default;
+        encoder->nv.coder = coder_e::_auto;
+        encoder->nv.preset = preset_e::_default;
 
         return encoder;
     }

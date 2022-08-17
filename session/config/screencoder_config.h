@@ -41,11 +41,8 @@ namespace config
     typedef struct _Constant{
         NVconfig nv;
         
-        char* display_name;
-
         int qp; // higher == more compression and less quality
         int gop_size;
-        int framerate;
         bool dwmflush;
     }Constant;
 

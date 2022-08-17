@@ -307,11 +307,10 @@ namespace platf {
   
     Display* 
     get_display_by_name(MemoryType hwdevice_type, 
-                        char* display_name, 
-                        int framerate) 
+                        char* display_name) 
     {
         if(hwdevice_type == MemoryType::dxgi) 
-            return ((platf::DisplayClass*)DISPLAY_VRAM_CLASS)->init(framerate, display_name);
+            return ((platf::DisplayClass*)DISPLAY_VRAM_CLASS)->init(display_name);
         
         if(hwdevice_type == MemoryType::system)
             // TODO display ram

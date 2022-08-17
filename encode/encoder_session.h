@@ -18,22 +18,42 @@
 
 namespace encoder
 {    
-
-
-
-    Session*            make_session    (Encoder* encoder, 
-                                         int width, int height, 
-                                         platf::Device* hwdevice); 
+    /**
+     * @brief 
+     * 
+     * @param encoder 
+     * @param width 
+     * @param height 
+     * @param framerate 
+     * @param hwdevice 
+     * @return Session* 
+     */
+    Session*            make_session           (Encoder* encoder, 
+                                               int width, int height, int framerate,
+                                               platf::Device* hwdevice); 
 
     
-    void                session_finalize(pointer session);
+    /**
+     * @brief 
+     * 
+     * @param session 
+     */
+    void                session_finalize       (pointer session);
 
  
-    util::Buffer*
-    make_session_buffer(platf::Image* img, 
-                        Encoder* encoder,
-                        platf::Display* display,
-                        sink::GenericSink* sink);
+    /**
+     * @brief 
+     * 
+     * @param img 
+     * @param encoder 
+     * @param display 
+     * @param sink 
+     * @return util::Buffer* 
+     */
+    util::Buffer*       make_session_buffer    (platf::Image* img, 
+                                                Encoder* encoder,
+                                                platf::Display* display,
+                                                sink::GenericSink* sink);
 } // namespace encoder
 
 #endif

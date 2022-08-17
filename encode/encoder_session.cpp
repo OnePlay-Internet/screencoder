@@ -79,7 +79,6 @@ namespace encoder
     {
         EncodeContext* ctx = (EncodeContext*)data;
         avcodec_free_context(&ctx->context);
-        ctx->device->klass->finalize(ctx->device);
         free(data);
     }
 
@@ -109,7 +108,7 @@ namespace encoder
 
     Session*
     make_session(Encoder* encoder, 
-                 int width, int height, 
+                 int width, int height, int framerate,
                  platf::Device* device) 
     {
         bool hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
@@ -129,8 +128,8 @@ namespace encoder
         libav::CodecContext* ctx = encode_ctx->context;
         ctx->width     = width;
         ctx->height    = height;
-        ctx->time_base = AVRational { 1, ENCODER_CONFIG->framerate };
-        ctx->framerate = AVRational { ENCODER_CONFIG->framerate, 1 };
+        ctx->time_base = AVRational { 1, framerate };
+        ctx->framerate = AVRational { framerate, 1 };
 
         if(encoder->conf.videoFormat == 0) {
             ctx->profile = encoder->profile.h264_high;
@@ -259,8 +258,8 @@ namespace encoder
 
         libav::Frame* frame = av_frame_alloc();
         frame->format = ctx->pix_fmt;
-        frame->width  = ctx->width;
-        frame->height = ctx->height;
+        frame->width  = width;
+        frame->height = height;
 
 
         if(hardware) 
@@ -314,8 +313,9 @@ namespace encoder
             return NULL;
 
         Session* ses = make_session(encoder,
-                                    img->width, 
-                                    img->height, 
+                                    display->width, 
+                                    display->height, 
+                                    display->framerate,
                                     device);
         if(!ses)
             return NULL;
