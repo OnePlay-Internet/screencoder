@@ -22,7 +22,6 @@ namespace encoder
 
 
     Session*            make_session    (Encoder* encoder, 
-                                         Config* config, 
                                          int width, int height, 
                                          platf::Device* hwdevice); 
 

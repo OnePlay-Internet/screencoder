@@ -37,27 +37,33 @@ namespace display{
     platf::Display**
     get_all_display(encoder::Encoder* encoder)
     {
+        static platf::Display* displays[10] = {0};
         char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
-        platf::Display** displays = (platf::Display**)malloc(sizeof(platf::Display*) * 10);
-
 
         int count = 0;
-        while (*(display_names+count))
-        {
-            char* chosen_display;
-            if(*(display_names+count) == ENCODER_CONFIG->display_name) {
-                chosen_display = *(display_names+count);
-                break;
+        while (*(display_names+count)) {
+            platf::Display* display = NULL;
+            char* name = *(display_names+count);
+
+            int y = 0;
+            while (displays[y]) {
+                if (string_compare(displays[y]->name,name))
+                  goto next;
+                y++;
             }
 
-            platf::Display* display = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), 
-                                              chosen_display, 
-                                              ENCODER_CONFIG->framerate);
+            // get display by name if its name does not exist in display list
+            display = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), name, ENCODER_CONFIG->framerate);
             if(!display) {
                 LOG_ERROR("unable to create display");
             } else {
-                *(displays + count) = display;
+                y=0;
+                while(displays[y]) 
+                    y++;
+                
+                displays[y] = display;
             }
+        next:
             count++;
         }
 
@@ -132,9 +138,6 @@ namespace display{
       dxgi::Adapter adapter_temp = adapter_p;
       adapter_temp->GetDesc1(&adapter_desc);
 
-      char str[100] = {0};
-      wcstombs(str, adapter_desc.Description, 12);
-
       dxgi::Output output;
       for(int y = 0; adapter_temp->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
         DXGI_OUTPUT_DESC desc;
@@ -142,7 +145,7 @@ namespace display{
 
         char str2[100] = {0};
         wcstombs(str2, desc.DeviceName, 12);
-        if(ENCODER_CONFIG->display_name && string_compare(str2,display_name)) {
+        if(display_name && string_compare(str2,display_name)) {
           continue;
         }
 

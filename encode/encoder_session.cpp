@@ -109,34 +109,33 @@ namespace encoder
 
     Session*
     make_session(Encoder* encoder, 
-                 Config* config, 
                  int width, int height, 
                  platf::Device* device) 
     {
         bool hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
 
-        CodecConfig* video_format = (config->videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
+        CodecConfig* video_format = (encoder->conf.videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
             LOG_ERROR("encoder not supported");
             return NULL;
         }
 
-        if(config->dynamicRange && !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
+        if(encoder->conf.dynamicRange && !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
             LOG_ERROR("dynamic range not supported");
             return NULL;
         }
 
         EncodeContext* encode_ctx = make_encode_context(device,video_format->name);
         libav::CodecContext* ctx = encode_ctx->context;
-        ctx->width     = config->width;
-        ctx->height    = config->height;
-        ctx->time_base = AVRational { 1, config->framerate };
-        ctx->framerate = AVRational { config->framerate, 1 };
+        ctx->width     = width;
+        ctx->height    = height;
+        ctx->time_base = AVRational { 1, ENCODER_CONFIG->framerate };
+        ctx->framerate = AVRational { ENCODER_CONFIG->framerate, 1 };
 
-        if(config->videoFormat == 0) {
+        if(encoder->conf.videoFormat == 0) {
             ctx->profile = encoder->profile.h264_high;
         }
-        else if(config->dynamicRange == 0) {
+        else if(encoder->conf.dynamicRange == 0) {
             ctx->profile = encoder->profile.hevc_main;
         }
         else {
@@ -146,29 +145,24 @@ namespace encoder
         // B-frames delay decoder output, so never use them
         ctx->max_b_frames = 0;
 
-        // Use an infinite GOP length since I-frames are generated on demand
-        ctx->gop_size = encoder->flags[LIMITED_GOP_SIZE] ? INT16_MAX : INT_MAX;
-
         // if gop_size are set then 
-        ctx->gop_size = ENCODER_CONFIG->gop_size >= 0 ? ENCODER_CONFIG->gop_size : ctx->gop_size;
-
+        ctx->gop_size = ENCODER_CONFIG->gop_size >= 0 ? ENCODER_CONFIG->gop_size : (encoder->flags[LIMITED_GOP_SIZE] ? INT16_MAX : INT_MAX);
         ctx->keyint_min = ENCODER_CONFIG->gop_size - 5;
 
-        if(config->numRefFrames == 0) {
+        if(encoder->conf.numRefFrames == 0) {
             ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
-        }
-        else {
+        } else {
             // Some client decoders have limits on the number of reference frames
-            ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? config->numRefFrames : 0;
+            ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? encoder->conf.numRefFrames : 0;
         }
 
         ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
         ctx->flags2 |= AV_CODEC_FLAG2_FAST;
 
-        ctx->color_range = (config->encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+        ctx->color_range = (encoder->conf.encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
 
         int sws_color_space;
-        switch(config->encoderCscMode >> 1) {
+        switch(encoder->conf.encoderCscMode >> 1) {
         case 0:
         default:
             // Rec. 601
@@ -199,10 +193,9 @@ namespace encoder
         }
 
         libav::PixelFormat sw_fmt;
-        if(config->dynamicRange == 0) {
+        if(encoder->conf.dynamicRange == 0) {
             sw_fmt = encoder->static_pix_fmt;
-        }
-        else {
+        } else {
             sw_fmt = encoder->dynamic_pix_fmt;
         }
 
@@ -221,8 +214,8 @@ namespace encoder
             if(hwframe_ctx(ctx, hwdevice_ctx, sw_fmt) != 0) 
                 return NULL;
             
-            ctx->slices = config->slicesPerFrame;
-        } else /* software */ {
+            ctx->slices = encoder->conf.slicesPerFrame;
+        } else {
             // TODO software 
             // ctx->pix_fmt = sw_fmt;
 
@@ -246,16 +239,13 @@ namespace encoder
         AVDictionary *options = NULL;
         handle_options(options,video_format->options);
         if(video_format->capabilities[FrameFlags::CBR]) {
-            auto bitrate        = config->bitrate * (hardware ? 1000 : 800); // software bitrate overshoots by ~20%
-            ctx->rc_max_rate    = bitrate;
-            ctx->rc_buffer_size = bitrate / 10;
-            ctx->bit_rate       = bitrate;
-            ctx->rc_min_rate    = bitrate;
-        }
-        else if(video_format->qp) {
+            ctx->rc_max_rate    = encoder->conf.bitrate;
+            ctx->rc_buffer_size = encoder->conf.bitrate / 10;
+            ctx->bit_rate       = encoder->conf.bitrate;
+            ctx->rc_min_rate    = encoder->conf.bitrate / 2;
+        } else if(video_format->qp) {
             handle_options(options,video_format->qp);
-        }
-        else {
+        } else {
             LOG_ERROR("Couldn't set video quality");
             return NULL;
         }
@@ -277,26 +267,12 @@ namespace encoder
             frame->hw_frames_ctx = av_buffer_ref(ctx->hw_frames_ctx);
         
 
-        if(!device->data) {
-            // TODO software encoder
-            // auto device_tmp = std::make_unique<swdevice_t>();
-            // if(device_tmp->init(width, height, frame.get(), sw_fmt)) 
-            // {
-            //     return FALSE;
-            // }
-
-            // device = std::move(device_tmp);
-        }
-
-
         if(device->klass->set_frame(device,frame)) 
             return NULL;
-        
 
         device->klass->set_colorspace(device,
                                         sws_color_space, 
                                         ctx->color_range);
-
 
         Session* session = (Session*)malloc(sizeof(Session));
         memset(session,0,sizeof(Session));
@@ -329,7 +305,7 @@ namespace encoder
                         platf::Display* display,
                         sink::GenericSink* sink) 
     {
-        platf::PixelFormat pix_fmt = ENCODER_CONFIG->conf.dynamicRange == 0 ? 
+        platf::PixelFormat pix_fmt = encoder->conf.dynamicRange == 0 ? 
                                         platf::map_pix_fmt(encoder->static_pix_fmt) : 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
@@ -337,7 +313,7 @@ namespace encoder
         if(!device) 
             return NULL;
 
-        Session* ses = make_session(encoder,&ENCODER_CONFIG->conf, 
+        Session* ses = make_session(encoder,
                                     img->width, 
                                     img->height, 
                                     device);

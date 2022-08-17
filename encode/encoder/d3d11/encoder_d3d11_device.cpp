@@ -95,6 +95,16 @@ namespace encoder {
             (int)hevc::Profile::main_10 
         };
 
+        encoder.conf.width = 1920;
+        encoder.conf.height = 1080;
+        encoder.conf.bitrate = 10000;
+        encoder.conf.framerate = 60;
+        encoder.conf.encoderCscMode = 0;
+        encoder.conf.videoFormat = 0;
+        encoder.conf.dynamicRange = 0;
+        encoder.conf.numRefFrames = 0;
+        encoder.conf.slicesPerFrame = 1;
+
         util::KeyValue* hevcqp = util::new_keyvalue_pairs(1);
         util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);
         util::keyval_new_intval(hevcpairs,"forced-idr",1);

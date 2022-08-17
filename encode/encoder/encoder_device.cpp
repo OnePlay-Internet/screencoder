@@ -60,9 +60,11 @@ namespace encoder
             return FALSE;
         }
         
-        session = make_session(encoder, config, disp->width, disp->height, device);
-        if(!session)
-        {
+        session = make_session(encoder, 
+                               disp->width, 
+                               disp->height, 
+                               device);
+        if(!session) {
             session_finalize(session);
             return FALSE;
         }

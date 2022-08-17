@@ -166,34 +166,6 @@ namespace encoder {
 
 
 
-    // TODO add encoder and display to context
-    platf::Capture
-    encode_run_sync(EncodeThreadContext* ctx) 
-    {
-        // allocate display image and intialize with dummy data
-        platf::Image* img = ctx->display->klass->alloc_img(ctx->display);
-        if(!img || ctx->display->klass->dummy_img(ctx->display,img)) 
-            return platf::Capture::error;
-
-        util::Buffer* buf = make_session_buffer(img, 
-                                                ctx->encoder,
-                                                ctx->display,
-                                                ctx->sink);
-        if(!buf)
-            return platf::Capture::error;
-
-        // cursor
-        // run image capture in while loop, 
-        platf::Capture ret = ctx->display->klass->capture(ctx->display, 
-                                                    img,
-                                                    (platf::SnapshootCallback)on_image_snapshoot, 
-                                                    buf, 
-                                                    ctx,
-                                                    FALSE);
-        
-        BUFFER_CLASS->unref(buf);
-        return ret;
-    }
 
     /**
      * @brief 
@@ -203,18 +175,28 @@ namespace encoder {
     void 
     captureThread(EncodeThreadContext* ctx) 
     {
-        // run encoder in infinite loop
-        while(TRUE) {
-            platf::Capture result = encode_run_sync(ctx);
-            switch (result)
-            {
-            case platf::Capture::error:
-                break;
-            default:
-                continue;
-            }
-        }
-        done:
+        // allocate display image and intialize with dummy data
+        platf::Image* img = ctx->display->klass->alloc_img(ctx->display);
+        if(!img || ctx->display->klass->dummy_img(ctx->display,img)) 
+            return;
+
+        util::Buffer* buf = make_session_buffer(img, 
+                                                ctx->encoder,
+                                                ctx->display,
+                                                ctx->sink);
+        if(!buf)
+            return;
+
+        // run image capture in while loop, 
+        platf::Capture ret = ctx->display->klass->capture(ctx->display, 
+                                                    img,
+                                                    (platf::SnapshootCallback)on_image_snapshoot, 
+                                                    buf, 
+                                                    ctx,
+                                                    FALSE);
+        
+        BUFFER_CLASS->unref(buf);
+        
         RAISE_EVENT(ctx->shutdown_event);
         RAISE_EVENT(ctx->join_event);
     }

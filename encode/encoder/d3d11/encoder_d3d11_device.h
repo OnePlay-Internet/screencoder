@@ -19,7 +19,6 @@
 namespace encoder
 {
     Encoder* make_d3d11_encoder();
-
 }
 
 

@@ -38,7 +38,7 @@ namespace session {
         platf::Display** display = display::get_all_display(encoder);
 
         std::thread capture   { encoder::capture, 
-                                (platf::Display*)display,
+                                *display,
                                 encoder,
                                 session->sink,
                                 session->shutdown_event, 

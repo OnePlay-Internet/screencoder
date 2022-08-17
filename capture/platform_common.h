@@ -71,8 +71,8 @@ namespace platf {
 
     typedef struct _HWDevice {
         DeviceClass* klass;
-        void *data;
         libav::Frame* frame;
+        void *data;
     }Device;
 
     struct _HWDeviceClass {
@@ -120,6 +120,7 @@ namespace platf {
         int offset_x, offset_y;
         int env_width, env_height;
         int width, height;
+        char name[100];
     };
 
     struct _DisplayClass {

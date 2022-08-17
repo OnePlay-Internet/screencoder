@@ -40,7 +40,6 @@ namespace config
 
     typedef struct _Constant{
         NVconfig nv;
-        encoder::Config conf;
         
         char* display_name;
 

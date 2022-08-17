@@ -18,21 +18,6 @@ namespace config
         cabac,
         cavlc
     };
-
-    int 
-    coder_from_view(char* coder) 
-    {
-        if(string_compare(coder,"auto")) 
-            return coder_e::_auto;
-        if(string_compare("cabac",coder) || 
-           string_compare(coder,"ac")) 
-            return coder_e::cabac;
-        if(string_compare(coder,"cavlc") || 
-           string_compare(coder,"vlc")) 
-            return coder_e::cavlc;
-        return -1;
-    }
-
     enum rc_e {
         constqp   = 0x0,  /**< Constant QP mode */
         vbr       = 0x1,  /**< Variable bitrate mode */
@@ -42,23 +27,6 @@ namespace config
         vbr_hq    = 0x20,  /**< VBR, high quality (slower) */
         none
     };
-
-    rc_e 
-    rc_from_view(char* rc) {
-        if(string_compare(rc,"constqp"))
-            return rc_e::constqp;
-        if(string_compare(rc,"vbr"))
-            return rc_e::vbr;
-        if(string_compare(rc,"cbr"))
-            return rc_e::cbr;
-        if(string_compare(rc,"cbr_hq"))
-            return rc_e::cbr_hq;
-        if(string_compare(rc,"vbr_hq"))
-            return rc_e::vbr_hq;
-        if(string_compare(rc,"cbr_ld_hq"))
-            return rc_e::cbr_ld_hq;
-        return rc_e::none;
-    }
 
     enum preset_e {
         _default = 0,
@@ -90,16 +58,6 @@ namespace config
         encoder->nv.rc = rc_e::cbr;
         encoder->nv.rc = preset_e::_default;
 
-        encoder->conf.width = 1920;
-        encoder->conf.height = 1080;
-        encoder->conf.bitrate = 10000;
-        encoder->conf.framerate = 60;
-
-        encoder->conf.encoderCscMode = 0;
-        encoder->conf.videoFormat = 0;
-        encoder->conf.dynamicRange = 0;
-        encoder->conf.numRefFrames = 0;
-        encoder->conf.slicesPerFrame = 1;
         return encoder;
     }
 }

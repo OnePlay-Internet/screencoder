@@ -344,7 +344,10 @@ namespace platf {
           DXGI_OUTPUT_DESC desc;
           output->GetDesc(&desc);
 
-          char* name =  (char*)desc.DeviceName;
+          char* name = (char*)malloc(100);
+          memset(name,0,100);
+
+          wcstombs(name, desc.DeviceName, 100);
           long width  = desc.DesktopCoordinates.right - desc.DesktopCoordinates.left;
           long height = desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top;
 

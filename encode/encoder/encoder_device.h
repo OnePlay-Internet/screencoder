@@ -14,6 +14,8 @@
 #include <screencoder_util.h>
 #include <platform_common.h>
 
+#include <encoder_datatype.h>
+
 namespace encoder
 {
     typedef struct _Profile{
@@ -21,8 +23,6 @@ namespace encoder
         int hevc_main;
         int hevc_main_10;
     } Profile;
-
-
 
 
     typedef enum _EncodingFlags{
@@ -64,19 +64,20 @@ namespace encoder
 
     struct _Encoder{
         char* name;
+        encoder::Config conf;
 
         CodecConfig h264;
         CodecConfig hevc;
 
         Profile profile;
 
+        std::bitset<EncodingFlags::MAX_FLAGS_ENCODING> flags;
+
         libav::HWDeviceType dev_type;
         libav::PixelFormat dev_pix_fmt;
 
         libav::PixelFormat static_pix_fmt;
         libav::PixelFormat dynamic_pix_fmt;
-
-        std::bitset<EncodingFlags::MAX_FLAGS_ENCODING> flags;
 
         libav::BufferRef* (*make_hw_ctx_func) (platf::Device *hwdevice);
     };
