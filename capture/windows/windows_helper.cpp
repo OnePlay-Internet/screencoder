@@ -380,11 +380,9 @@ namespace platf {
                   char* display_name, 
                   int framerate) 
     {
-        static Display* disp = NULL;
+        Display* disp = NULL;
         // We try this twice, in case we still get an error on reinitialization
         for(int x = 0; x < DISPLAY_RETRY; ++x) {
-            if (disp)
-                break;
             disp = get_display(helper::map_dev_type(type), display_name, framerate);
             if (disp)
                 break;

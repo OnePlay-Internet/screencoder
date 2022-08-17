@@ -43,7 +43,7 @@ namespace config
         encoder::Config conf;
         
         char* adapter_name;
-        char* output_name;
+        char* display_name;
 
         int qp; // higher == more compression and less quality
         int gop_size;

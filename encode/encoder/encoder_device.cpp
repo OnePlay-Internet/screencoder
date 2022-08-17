@@ -43,7 +43,7 @@ namespace encoder
         Session* session = NULL;
         platf::Image* img = NULL;
 
-        platf::Display* disp = platf::tryget_display( encoder->dev_type, ENCODER_CONFIG->output_name, config->framerate);
+        platf::Display* disp = platf::tryget_display(encoder->dev_type, ENCODER_CONFIG->display_name, config->framerate);
         if(!disp) 
             return FALSE;
         
