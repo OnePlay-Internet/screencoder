@@ -8,8 +8,21 @@ import (
 	"github.com/Oneplay-Internet/screencoder/sink/appsink/go/h264"
 )
 
-
-// #cgo LDFLAGS:  ${SRCDIR}/../../../build/libscreencoderlib.a ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavcodec.a ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavutil.a 
+// #cgo CXXFLAGS: -std=c++14
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/libscreencoderlib.a 
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavformat.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavcodec.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavdevice.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavfilter.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavutil.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libpostproc.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libswresample.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libswscale.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libx264.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libx265.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libhdr10plus.a
+// #cgo LDFLAGS: -lz -llzma -lbcrypt 
+// #cgo LDFLAGS: -lksuser -lwsock32 -lws2_32 -ld3d11 -ldxgi -lD3DCompiler -lsetupapi -ldwmapi -lbz2 -lSecur32 -lBcrypt -lole32
 // #include "go_adapter.h"
 import "C"
 

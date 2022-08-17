@@ -17,15 +17,6 @@
 namespace sink
 {
 
-    typedef void  (*EncoderContextPreset) (GenericSink* sink,
-                                          encoder::EncodeContext* ctx);
-
-    typedef char* (*SinkDescription)      (GenericSink* sink);
-
-    typedef int   (*SinkStart)            (GenericSink* sink);
-
-    typedef void  (*HandlePacket)         (GenericSink* sink,
-                                            libav::Packet* pkt);
 
     struct _GenericSink {
         char* name;
@@ -37,10 +28,15 @@ namespace sink
         util::KeyValue* options;
 
 
-        EncoderContextPreset preset;
-        SinkDescription describe;
-        SinkStart start;
-        HandlePacket handle;
+        void  (*preset)     (GenericSink* sink,
+                            encoder::EncodeContext* ctx);
+
+        char* (*describe)   (GenericSink* sink);
+
+        int   (*start)      (GenericSink* sink);
+
+        void  (*handle)     (GenericSink* sink,
+                            libav::Packet* pkt);
     };
 
     typedef struct _BroadcastContext {

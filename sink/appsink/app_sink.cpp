@@ -14,6 +14,8 @@ extern "C" {
 #include <go_adapter.h>
 }
 
+#include <screencoder_session.h>
+
 
 namespace appsink
 {
@@ -33,6 +35,24 @@ namespace appsink
         BUFFER_CLASS->unref(buf);
     }
 
+    char*
+    appsink_describe(sink::GenericSink* sink)
+    {
+        return "application sink";
+    }
+
+    int
+    appsink_start(sink::GenericSink* sink)
+    {
+        return 0;
+    }
+    
+    void
+    appsink_preset(sink::GenericSink* sink,
+                   encoder::EncodeContext* encoder)
+    {
+        return ;
+    }
 
     sink::GenericSink*    
     new_app_sink()
@@ -44,10 +64,13 @@ namespace appsink
         
         sink.base.name = "appsink";
         sink.base.options = util::new_keyvalue_pairs(1);
-        sink.base.handle = appsink_handle;
+
+        sink.base.handle    = appsink_handle;
+        sink.base.preset    = appsink_preset;
+        sink.base.describe  = appsink_describe;
+        sink.base.start     = appsink_start;
 
         sink.out = QUEUE_ARRAY_CLASS->init();
-
         return (sink::GenericSink*)&sink;
     }
     
@@ -75,4 +98,14 @@ int
 GoDestroyAVPacket(void* buf){
     util::Buffer* buffer = (util::Buffer*)buf;
     BUFFER_CLASS->unref(buffer);
+}
+
+
+void*
+InitScreencoder()
+{
+    session::Session sess = {0};
+    session::init_session(&sess);
+    session::start_session(&sess);
+    return (pointer)&sess;
 }

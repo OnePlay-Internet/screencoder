@@ -28,9 +28,6 @@ namespace appsink
 
 
     sink::GenericSink*    new_app_sink    ();
-
-
-
 } // namespace rtp
 
 

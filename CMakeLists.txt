@@ -47,7 +47,8 @@ set(FFMPEG_LIBRARIES
 	${SCREENCODER_PREPARED_BINARIES}/lib/libx264.a
 	${SCREENCODER_PREPARED_BINARIES}/lib/libx265.a
 	${SCREENCODER_PREPARED_BINARIES}/lib/libhdr10plus.a
-	z lzma bcrypt libiconv.a)
+	z lzma bcrypt libiconv.a
+	)
 
 list(PREPEND PLATFORM_LIBRARIES
 	libstdc++.a

@@ -15,6 +15,7 @@
 
 #include <screencoder_util.h>
 #include <screencoder_config.h>
+#include <generic_sink.h>
 
 
 namespace session
@@ -24,6 +25,8 @@ namespace session
         util::Broadcaster* shutdown_event;
 
         util::QueueArray* packet_queue;
+
+       sink::GenericSink* sink; 
     }Session;
     
 

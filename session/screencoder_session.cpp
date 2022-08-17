@@ -21,14 +21,12 @@
 #include <thread>
 
 namespace session {
-
-
-
     void        
     init_session(Session* session)
     {
         session->shutdown_event = NEW_EVENT;
         session->packet_queue = QUEUE_ARRAY_CLASS->init();
+        session->sink = RTP_SINK;
     }
 
 
@@ -38,20 +36,18 @@ namespace session {
     {
         encoder::Encoder* encoder = NVENC;
         platf::Display* display = DISPLAY(encoder);
-        sink::GenericSink* sink = RTP_SINK;
-
 
         std::thread capture   { encoder::capture, 
-                                display,encoder,sink,
+                                display,encoder,
+                                session->sink,
                                 session->shutdown_event, 
                                 session->packet_queue };
 
         std::thread broadcast { sink::start_broadcast , 
-                                sink,
+                                session->sink,
                                 session->shutdown_event, 
                                 session->packet_queue };
 
         WAIT_EVENT(session->shutdown_event);
-        
     }
 }

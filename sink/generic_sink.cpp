@@ -69,7 +69,6 @@ namespace sink
                     util::QueueArray* packet_queue) 
     {
         BroadcastContext ctx;
-        memset(&ctx,0,sizeof(BroadcastContext));
         ctx.packet_queue = packet_queue;
         ctx.shutdown_event = shutdown_event;
         ctx.join_event = NEW_EVENT;
