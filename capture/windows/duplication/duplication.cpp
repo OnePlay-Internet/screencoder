@@ -87,11 +87,12 @@ namespace duplication
       static DuplicationClass klass = {0};
       if (initialize)
         return &klass;
+      else
+        initialize = true;
       
 
       klass.next_frame    =   duplication_get_next_frame;
       klass.finalize      =   duplication_finalize;
-      initialize = true;
       return &klass;
     }
   

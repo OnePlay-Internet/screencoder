@@ -108,18 +108,19 @@ namespace rtp
         static RtpSink sink = {0};
         if(init)
             return (sink::GenericSink*)&sink;
+        else
+            init = TRUE;
 
-        init = TRUE;
         sink.base.name = "rtp";
         sink.base.options = util::new_keyvalue_pairs(2);
         util::keyval_new_intval(sink.base.options,"port",6000);
 
+        sink.preseted = FALSE;
         sink.base.describe  = rtpsink_describe;
         sink.base.preset    = rtpsink_preset;
         sink.base.start     = rtpsink_start;
         sink.base.handle    = rtpsink_handle;
 
-        sink.preseted = FALSE;
         config_rtpsink(&sink);
         return (sink::GenericSink*)&sink;
     }

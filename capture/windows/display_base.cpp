@@ -140,8 +140,7 @@ namespace display{
 
       char str[100] = {0};
       wcstombs(str, adapter_desc.Description, 12);
-      if(ENCODER_CONFIG->adapter_name && string_compare(str,ENCODER_CONFIG->adapter_name)) 
-      {
+      if(ENCODER_CONFIG->adapter_name && string_compare(str,ENCODER_CONFIG->adapter_name)) {
           continue;
       }
 

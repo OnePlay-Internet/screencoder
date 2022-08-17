@@ -1,6 +1,5 @@
 package appsink
 import (
-	"fmt"
 	"time"
 	"unsafe"
 
@@ -32,7 +31,7 @@ type Appsink struct {
 }
 
 
-func newAppsink() *Appsink {
+func NewAppsink() *Appsink {
 	app := &Appsink{};
 
 	app.packetizer = h264.NewH264Payloader();
@@ -44,12 +43,10 @@ func newAppsink() *Appsink {
 			var data,buf  unsafe.Pointer;
 
 			res := C.GoHandleAVPacket(&data,&buf,&size,&duration);
-			if int(res) == -1 {
-				fmt.Printf("Fail to get packet")
+			if int(res) == 0 {
+				app.writeSample(data,size,duration);
+				C.GoDestroyAVPacket(buf);
 			}
-
-			app.WriteSample(data,size,duration);
-			C.GoDestroyAVPacket(buf);
 		}	
 	}();
 	return app;
@@ -57,7 +54,7 @@ func newAppsink() *Appsink {
 
 
 
-func (s *Appsink) WriteSample(buffer unsafe.Pointer, 
+func (s *Appsink) writeSample(buffer unsafe.Pointer, 
 							  bufferLen C.int, 
 							  C_duration C.int) {
 	c_byte := C.GoBytes(buffer, bufferLen)

@@ -89,6 +89,7 @@ file(GLOB RTP_SOURCE_LIST
 	sink/*.cpp
 	sink/rtp/*.cpp
 	sink/appsink/*.cpp
+	sink/appsink/go/*.cpp
 )
 
 file(GLOB CONFIG_SOURCE_LIST 

@@ -255,10 +255,13 @@ namespace helper
     HLSL*
     init_hlsl() 
     {
-      static bool initialize = false;
       static HLSL hlsl = {0};
+      static bool initialize = false;
       if (initialize)
         return &hlsl;
+      else 
+        initialize = true;
+
       
 
 
@@ -288,7 +291,6 @@ namespace helper
         return NULL;
       }
       LOG_INFO("Compiled shaders");
-      initialize = true;
       return &hlsl;
     }    
 } // namespace helper

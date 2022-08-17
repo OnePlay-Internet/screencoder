@@ -80,10 +80,12 @@ namespace encoder {
     Encoder*
     make_d3d11_encoder()
     {
-        static bool initialized = false;
         static Encoder encoder = {0};
+        static bool initialized = false;
         if (initialized)
             return &encoder;
+        else
+            initialized = true;
         
         encoder.name = "nvenc";
         encoder.profile = 
@@ -144,7 +146,6 @@ namespace encoder {
         encoder.flags[EncodingFlags::DEFAULT] = true;
         encoder.make_hw_ctx_func = dxgi_make_hwdevice_ctx;
 
-        initialized = true;
         encoder::validate_encoder(&encoder);
         return &encoder;
     }

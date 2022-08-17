@@ -490,8 +490,9 @@ namespace gpu {
         static DisplayVramClass klass;
         if (init)
             return &klass;
+        else 
+            init = true;
         
-        init = true;
         klass.base.init          = display_vram_init;
         klass.base.finalize      = display_vram_finalize;
         klass.base.alloc_img     = display_vram_alloc_img;

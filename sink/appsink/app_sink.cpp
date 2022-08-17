@@ -57,10 +57,12 @@ namespace appsink
     sink::GenericSink*    
     new_app_sink()
     {
-        static bool init = false;
         static AppSink sink;
+        static bool init = false;
         if(init)
             return (sink::GenericSink*)&sink;
+        else
+            init = true;
         
         sink.base.name = "appsink";
         sink.base.options = util::new_keyvalue_pairs(1);

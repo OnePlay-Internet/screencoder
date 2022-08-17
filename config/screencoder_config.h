@@ -13,7 +13,6 @@
 
 #define ENCODER_CONFIG          config::get_encoder_config()
 
-#define RTSP_TCP_MAX_PACKET_SIZE 1472
 
 
 #include <encoder_datatype.h>
@@ -40,18 +39,14 @@ namespace config
     };
 
     typedef struct _Encoder{
-        // ffmpeg params
-        int qp; // higher == more compression and less quality
-
         Nvidia nv;
         encoder::Config conf;
         
-        char* encoder;
         char* adapter_name;
         char* output_name;
 
+        int qp; // higher == more compression and less quality
         int gop_size;
-        int packet_size;
         int framerate;
         bool dwmflush;
     }Encoder;

@@ -363,6 +363,8 @@ namespace gpu
         static GpuDeviceClass klass = {0};
         if (initialize)
             return &klass;
+        else 
+            initialize = TRUE;
         
         klass.base.convert            = hw_device_convert;
         klass.base.init               = hw_device_init;
@@ -370,7 +372,6 @@ namespace gpu
         klass.base.set_frame          = hw_device_set_frame;
         klass.base.set_colorspace     = hw_device_set_colorspace;
         klass.init_view_port          = d3d11_device_init_view_port;
-        initialize = TRUE;
         return &klass;
     }
     

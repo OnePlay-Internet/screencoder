@@ -24,7 +24,6 @@ namespace encoder
 
 
 
-    typedef libav::BufferRef* (*MakeHWDeviceContext) (platf::Device *hwdevice);
 
     typedef enum _EncodingFlags{
         DEFAULT,
@@ -79,7 +78,7 @@ namespace encoder
 
         std::bitset<EncodingFlags::MAX_FLAGS_ENCODING> flags;
 
-        MakeHWDeviceContext make_hw_ctx_func;
+        libav::BufferRef* (*make_hw_ctx_func) (platf::Device *hwdevice);
     };
 
 

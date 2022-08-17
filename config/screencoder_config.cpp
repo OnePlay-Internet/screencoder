@@ -79,33 +79,24 @@ namespace config
     Encoder*       
     get_encoder_config()
     {
-        static bool init = false;
-        static Encoder encoder = {0};
-        if (init)
-            return &encoder;
+        Encoder* encoder = (Encoder*)malloc(sizeof(Encoder));
             
-        encoder.gop_size = 20;
-        encoder.packet_size = RTSP_TCP_MAX_PACKET_SIZE;
-        encoder.framerate = 60;
-        encoder.dwmflush = 0;
-
-        encoder.qp = 28;
-
-        encoder.nv.coder = coder_e::_auto;
-        encoder.nv.rc = rc_e::cbr;
-        encoder.nv.rc = preset_e::_default;
-        
-        encoder.conf.width = 1920;
-        encoder.conf.height = 1080;
-        encoder.conf.bitrate = 10000;
-        encoder.conf.framerate = 60;
-        encoder.conf.encoderCscMode = 0;
-        encoder.conf.videoFormat = 0;
-        encoder.conf.dynamicRange = 0;
-        encoder.conf.numRefFrames = 0;
-        encoder.conf.slicesPerFrame = 1;
-
-        init = true;
-        return &encoder;
+        encoder->qp = 28;
+        encoder->gop_size = 20;
+        encoder->framerate = 60;
+        encoder->dwmflush = 0;
+        encoder->nv.coder = coder_e::_auto;
+        encoder->nv.rc = rc_e::cbr;
+        encoder->nv.rc = preset_e::_default;
+        encoder->conf.width = 1920;
+        encoder->conf.height = 1080;
+        encoder->conf.bitrate = 10000;
+        encoder->conf.framerate = 60;
+        encoder->conf.encoderCscMode = 0;
+        encoder->conf.videoFormat = 0;
+        encoder->conf.dynamicRange = 0;
+        encoder->conf.numRefFrames = 0;
+        encoder->conf.slicesPerFrame = 1;
+        return encoder;
     }
 }

@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "rtp example",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/examples/go_rtp/main.go"
+        },
+        {
+            "name": "Launch file",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/main.exe"
+        },
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",

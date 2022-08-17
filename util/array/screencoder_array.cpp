@@ -167,16 +167,7 @@ namespace util
         while ((pair + i)->type)
         {
             (pair + i)->type = Type::INT;
-
-
-
-
             (pair + i)->key = key;
-
-
-
-
-
             (pair + i)->int_value = val;
             i++;
         }

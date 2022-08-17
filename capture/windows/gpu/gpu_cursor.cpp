@@ -45,6 +45,8 @@ namespace gpu
     static GpuCursorClass klass = {0};
     if (init)
       return &klass;
+    else
+      init = true;
     
     klass.set_pos = cursor_set_pos;
     klass.set_texture = cursor_set_texture;
