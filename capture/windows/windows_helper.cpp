@@ -326,9 +326,7 @@ namespace platf {
 
       HRESULT status;
 
-      //  "Detecting monitors...";
-
-
+      LOG_INFO("Detecting monitors...");
       dxgi::Factory factory;
       status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&factory);
       if(FAILED(status)) {
@@ -341,18 +339,6 @@ namespace platf {
         DXGI_ADAPTER_DESC1 adapter_desc;
         adapter->GetDesc1(&adapter_desc);
 
-        // BOOST_LOG(debug)
-        //   << std::endl
-        //   << "====== ADAPTER ====="sv << std::endl
-        //   << "Device Name      : "sv << converter.to_bytes(adapter_desc.Description) << std::endl
-        //   << "Device Vendor ID : 0x"sv << util::hex(adapter_desc.VendorId).to_string_view() << std::endl
-        //   << "Device Device ID : 0x"sv << util::hex(adapter_desc.DeviceId).to_string_view() << std::endl
-        //   << "Device Video Mem : "sv << adapter_desc.DedicatedVideoMemory / 1048576 << " MiB"sv << std::endl
-        //   << "Device Sys Mem   : "sv << adapter_desc.DedicatedSystemMemory / 1048576 << " MiB"sv << std::endl
-        //   << "Share Sys Mem    : "sv << adapter_desc.SharedSystemMemory / 1048576 << " MiB"sv << std::endl
-        //   << std::endl
-        //   << "    ====== OUTPUT ======"sv << std::endl;
-
         IDXGIOutput* output = NULL;
         for(int y = 0; adapter->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
           DXGI_OUTPUT_DESC desc;
@@ -362,13 +348,6 @@ namespace platf {
           long width  = desc.DesktopCoordinates.right - desc.DesktopCoordinates.left;
           long height = desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top;
 
-
-
-          // BOOST_LOG(debug)
-          //   << "    Output Name       : "sv << device_name << std::endl
-          //   << "    AttachedToDesktop : "sv << (desc.AttachedToDesktop ? "yes"sv : "no"sv) << std::endl
-          //   << "    Resolution        : "sv << width << 'x' << height << std::endl
-          //   << std::endl;
           *(display_names + y) = name;
         }
       }

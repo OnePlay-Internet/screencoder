@@ -42,7 +42,6 @@ namespace config
         Nvidia nv;
         encoder::Config conf;
         
-        char* adapter_name;
         char* display_name;
 
         int qp; // higher == more compression and less quality

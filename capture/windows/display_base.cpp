@@ -46,12 +46,12 @@ namespace display{
         char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
 
         if(!display_names) 
-            chosen_display = ENCODER_CONFIG->display_name;
+            chosen_display = ENCODER_CONFIG->output_name;
 
         int count = 0;
         while (*(display_names+count))
         {
-            if(*(display_names+count) == ENCODER_CONFIG->display_name) {
+            if(*(display_names+count) == ENCODER_CONFIG->output_name) {
                 chosen_display = *(display_names+count);
                 break;
             }
@@ -140,9 +140,6 @@ namespace display{
 
       char str[100] = {0};
       wcstombs(str, adapter_desc.Description, 12);
-      if(ENCODER_CONFIG->adapter_name && string_compare(str,ENCODER_CONFIG->adapter_name)) {
-          continue;
-      }
 
       dxgi::Output output;
       for(int y = 0; adapter_temp->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
@@ -151,7 +148,7 @@ namespace display{
 
         char str2[100] = {0};
         wcstombs(str2, desc.DeviceName, 12);
-        if(ENCODER_CONFIG->display_name && string_compare(str2,display_name)) {
+        if(ENCODER_CONFIG->output_name && string_compare(str2,display_name)) {
           continue;
         }
 
