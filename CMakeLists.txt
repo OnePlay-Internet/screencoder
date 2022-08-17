@@ -92,12 +92,10 @@ file(GLOB RTP_SOURCE_LIST
 	sink/appsink/go/*.cpp
 )
 
-file(GLOB CONFIG_SOURCE_LIST 
-	config/*.cpp
-)
 
 file(GLOB SESSION_SOURCE_LIST 
 	session/*.cpp
+	session/config/*.cpp
 )
 
 file(GLOB PLATFORM_SOURCE_LIST 
@@ -113,14 +111,12 @@ set(SCREENCODER_TARGET_FILES
 	${SESSION_SOURCE_LIST}
 	${ENCODER_SOURCE_LIST}
 	${RTP_SOURCE_LIST}
-	${CONFIG_SOURCE_LIST}
 	${PLATFORM_SOURCE_LIST}
 )
 
 
 
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/config
   ${CMAKE_CURRENT_SOURCE_DIR}/audio
 
   ${CMAKE_CURRENT_SOURCE_DIR}/encode
@@ -133,6 +129,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink
   ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink/go
   ${CMAKE_CURRENT_SOURCE_DIR}/session
+  ${CMAKE_CURRENT_SOURCE_DIR}/session/config
 
   ${CMAKE_CURRENT_SOURCE_DIR}/util
   ${CMAKE_CURRENT_SOURCE_DIR}/util/queue

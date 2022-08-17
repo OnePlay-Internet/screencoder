@@ -159,9 +159,9 @@ namespace platf {
      * 
      * Returns Display based on hwdevice_type
      */
-    Display*                get_display       (MemoryType hwdevice_type , 
-                                          char* display_name , 
-                                          int framerate);
+    Display*                get_display_by_name       (MemoryType hwdevice_type , 
+                                                      char* display_name , 
+                                                      int framerate);
 
 
     // A list of names of displays accepted as display_name with the MemoryType
@@ -174,10 +174,6 @@ namespace platf {
      */
     Color*                  get_color     ();
 
-
-    Display*                tryget_display(libav::HWDeviceType type, 
-                                           char* display_name, 
-                                           int framerate);
 
     PixelFormat             map_pix_fmt     (libav::PixelFormat fmt);
 } // namespace platf

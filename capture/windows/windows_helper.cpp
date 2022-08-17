@@ -28,7 +28,7 @@ extern "C" {
 
 
 // TODO: setup shader dir
-#define SUNSHINE_ASSETS_DIR "C:/Users/developer/Desktop/sunshine/sunshine-util"
+#define SUNSHINE_ASSETS_DIR "E:/ideacrawler/oneplay/sunshine-util/capture/windows"
 #define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/directx"
 
 #define DISPLAY_RETRY   5
@@ -306,9 +306,9 @@ namespace platf {
 
   
     Display* 
-    get_display(MemoryType hwdevice_type, 
-            char* display_name, 
-            int framerate) 
+    get_display_by_name(MemoryType hwdevice_type, 
+                        char* display_name, 
+                        int framerate) 
     {
         if(hwdevice_type == MemoryType::dxgi) 
             return ((platf::DisplayClass*)DISPLAY_VRAM_CLASS)->init(framerate, display_name);
@@ -322,8 +322,8 @@ namespace platf {
     char**
     display_names(MemoryType type) 
     {
-      char** display_names;
-
+      char** display_names = (char**)malloc(sizeof(char*) * 10);
+      memset(display_names,0,sizeof(char*) * 10);
       HRESULT status;
 
       LOG_INFO("Detecting monitors...");
@@ -352,21 +352,5 @@ namespace platf {
         }
       }
       return display_names;
-    }
-
-    Display*
-    tryget_display(libav::HWDeviceType type, 
-                  char* display_name, 
-                  int framerate) 
-    {
-        Display* disp = NULL;
-        // We try this twice, in case we still get an error on reinitialization
-        for(int x = 0; x < DISPLAY_RETRY; ++x) {
-            disp = get_display(helper::map_dev_type(type), display_name, framerate);
-            if (disp)
-                break;
-            std::this_thread::sleep_for(200ms);
-        }
-        return disp;
     }
 } // namespace platf

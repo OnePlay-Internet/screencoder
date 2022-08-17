@@ -18,7 +18,6 @@
 #include <platform_common.h>
 #include <duplication.h>
 
-#define DISPLAY(x)      display::get_display(x)
 
 
 namespace display {
@@ -40,7 +39,7 @@ namespace display {
 
 
     // display selection
-    platf::Display* get_display(encoder::Encoder* encoder);
+    platf::Display** get_all_display(encoder::Encoder* encoder);
 
 
     /**

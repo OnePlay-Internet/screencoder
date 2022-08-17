@@ -35,10 +35,11 @@ namespace session {
     start_session(Session* session)
     {
         encoder::Encoder* encoder = NVENC;
-        platf::Display* display = DISPLAY(encoder);
+        platf::Display** display = display::get_all_display(encoder);
 
         std::thread capture   { encoder::capture, 
-                                display,encoder,
+                                (platf::Display*)display,
+                                encoder,
                                 session->sink,
                                 session->shutdown_event, 
                                 session->packet_queue };

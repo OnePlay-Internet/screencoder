@@ -22,8 +22,6 @@
 int 
 main(int argc, char ** argv)
 {
-    session::Session sess = {0};
-    session::init_session(&sess);
-    session::start_session(&sess);
+    char** disp = platf::display_names(platf::MemoryType::system);
     return 0;
 }

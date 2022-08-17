@@ -20,11 +20,11 @@
 
 namespace config
 {
-    typedef struct _NVidia {
+    typedef struct _NVconfig{
         int preset;
         int rc;
         int coder;
-    }Nvidia;
+    }NVconfig;
 
     typedef struct _RTP {
         int port;
@@ -38,8 +38,8 @@ namespace config
         int min_threads; // Minimum number of threads/slices for CPU encoding
     };
 
-    typedef struct _Encoder{
-        Nvidia nv;
+    typedef struct _Constant{
+        NVconfig nv;
         encoder::Config conf;
         
         char* display_name;
@@ -48,9 +48,9 @@ namespace config
         int gop_size;
         int framerate;
         bool dwmflush;
-    }Encoder;
+    }Constant;
 
-    Encoder*       get_encoder_config       ();
+    Constant*       get_encoder_config       ();
 }
 
 

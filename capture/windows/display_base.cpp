@@ -33,41 +33,35 @@ using namespace std::literals;
 
 
 namespace display{
-
-
-
     // display selection
-    platf::Display*
-    get_display(encoder::Encoder* encoder)
+    platf::Display**
+    get_all_display(encoder::Encoder* encoder)
     {
-        platf::Display* disp;
-
-        char* chosen_display  = NULL;
         char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
+        platf::Display** displays = (platf::Display**)malloc(sizeof(platf::Display*) * 10);
 
-        if(!display_names) 
-            chosen_display = ENCODER_CONFIG->output_name;
 
         int count = 0;
         while (*(display_names+count))
         {
-            if(*(display_names+count) == ENCODER_CONFIG->output_name) {
+            char* chosen_display;
+            if(*(display_names+count) == ENCODER_CONFIG->display_name) {
                 chosen_display = *(display_names+count);
                 break;
+            }
+
+            platf::Display* display = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), 
+                                              chosen_display, 
+                                              ENCODER_CONFIG->framerate);
+            if(!display) {
+                LOG_ERROR("unable to create display");
+            } else {
+                *(displays + count) = display;
             }
             count++;
         }
 
-        // reset display every 200ms until display is ready
-        disp = platf::tryget_display(encoder->dev_type, 
-                                        chosen_display, 
-                                        ENCODER_CONFIG->framerate);
-        if(!disp) {
-            LOG_ERROR("unable to create display");
-            return NULL;
-        }
-
-        return disp;
+        return displays;
     }
 
 
@@ -148,7 +142,7 @@ namespace display{
 
         char str2[100] = {0};
         wcstombs(str2, desc.DeviceName, 12);
-        if(ENCODER_CONFIG->output_name && string_compare(str2,display_name)) {
+        if(ENCODER_CONFIG->display_name && string_compare(str2,display_name)) {
           continue;
         }
 

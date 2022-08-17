@@ -76,22 +76,25 @@ namespace config
     };
 
 
-    Encoder*       
+    Constant*       
     get_encoder_config()
     {
-        Encoder* encoder = (Encoder*)malloc(sizeof(Encoder));
+        Constant* encoder = (Constant*)malloc(sizeof(Constant));
             
         encoder->qp = 28;
         encoder->gop_size = 20;
         encoder->framerate = 60;
         encoder->dwmflush = 0;
+
         encoder->nv.coder = coder_e::_auto;
         encoder->nv.rc = rc_e::cbr;
         encoder->nv.rc = preset_e::_default;
+
         encoder->conf.width = 1920;
         encoder->conf.height = 1080;
         encoder->conf.bitrate = 10000;
         encoder->conf.framerate = 60;
+
         encoder->conf.encoderCscMode = 0;
         encoder->conf.videoFormat = 0;
         encoder->conf.dynamicRange = 0;

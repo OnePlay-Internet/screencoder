@@ -19,6 +19,7 @@
 #include <encoder_thread.h>
 #include <screencoder_rtp.h>
 
+#include <display_base.h>
 
 
 
@@ -43,7 +44,7 @@ namespace encoder
         Session* session = NULL;
         platf::Image* img = NULL;
 
-        platf::Display* disp = platf::tryget_display(encoder->dev_type, ENCODER_CONFIG->display_name, config->framerate);
+        platf::Display* disp = (platf::Display*)display::get_all_display(encoder);
         if(!disp) 
             return FALSE;
         
