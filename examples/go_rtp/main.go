@@ -12,6 +12,11 @@ func main() {
 		rtp := sink.ReadRTP()
 		if rtp != nil {
 			fmt.Printf("receive rtp packet\n");
+			out,err := rtp.Marshal()
+			if err != nil {
+				fmt.Printf("%s\n",err.Error());
+			}
+			fmt.Printf("%s\n",string(out));
 		}
 	}
 }
