@@ -54,9 +54,7 @@ namespace encoder
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
         platf::Device* device = disp->klass->make_hwdevice(disp,pix_fmt);
-        if(!device) 
-        {
-            LOG_ERROR("Fail to create hwdevice");
+        if(!device) {
             return FALSE;
         }
         

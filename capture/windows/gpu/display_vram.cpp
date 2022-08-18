@@ -149,7 +149,7 @@ namespace gpu {
         }
 
         if(frame_update_flag) {
-            // self->src->Release();
+            // self->src->Release(); // uncomment will cause segfault, goodluck
             status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
             if(FAILED(status)) {
                 LOG_ERROR("Couldn't query interface");
@@ -436,7 +436,6 @@ namespace gpu {
         DisplayVram* self = (DisplayVram*) disp; 
         
         if(pix_fmt != platf::PixelFormat::nv12) {
-            LOG_ERROR("DisplayVram doesn't support pixel format");
             return nullptr;
         }
 
