@@ -149,7 +149,7 @@ namespace gpu {
         }
 
         if(frame_update_flag) {
-            self->src->Release();
+            // self->src->Release();
             status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
             if(FAILED(status)) {
                 LOG_ERROR("Couldn't query interface");

@@ -146,13 +146,10 @@ namespace util
                       char* val)
     {
         int i = 0;
-        while ((pair + i)->type)
-        {
-            (pair + i)->type = Type::INT;
-            (pair + i)->key  = key;
-            (pair + i)->string_value = val;
-            i++;
-        }
+        while ((pair + i)->type) { i++; }
+        (pair + i)->type = Type::STRING;
+        (pair + i)->key  = key;
+        (pair + i)->string_value = val;
     }
 
     void
@@ -161,13 +158,10 @@ namespace util
                       int val)
     {
         int i = 0;
-        while ((pair + i)->type)
-        {
-            (pair + i)->type = Type::INT;
-            (pair + i)->key = key;
-            (pair + i)->int_value = val;
-            i++;
-        }
+        while ((pair + i)->type) { i++; }
+        (pair + i)->type = Type::INT;
+        (pair + i)->key = key;
+        (pair + i)->int_value = val;
     }
 } // namespace util
 

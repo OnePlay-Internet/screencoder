@@ -67,6 +67,10 @@ namespace rtp
             LOG_ERROR("Error opening output file");
             return -1;
         }
+        
+        if(avformat_write_header(rtp->format,NULL) != 0) {
+            LOG_ERROR("write header failed");
+        }
     }
 
     void
@@ -74,9 +78,6 @@ namespace rtp
                     libav::Packet* pkt)
     {
         RtpSink* rtp = (RtpSink*)sink;
-        if(avformat_write_header(rtp->format,NULL) != 0) {
-            LOG_ERROR("write header failed");
-        }
 
         // TODO
         if(av_write_frame(rtp->format, pkt) != 0) {
