@@ -44,7 +44,7 @@ namespace encoder
         Session* session = NULL;
         platf::Image* img = NULL;
 
-        platf::Display* disp = (platf::Display*)display::get_all_display(encoder);
+        platf::Display* disp = *display::get_all_display(encoder);
         if(!disp) 
             return FALSE;
         

@@ -29,7 +29,7 @@ extern "C" {
 
 // TODO: setup shader dir
 #define SUNSHINE_ASSETS_DIR "E:/ideacrawler/oneplay/sunshine-util/capture/windows"
-#define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/directx"
+#define SUNSHINE_SHADERS_DIR "C:/Users/developer/Desktop/oneplay/sunshine-util/capture/windows/directx"
 
 #define DISPLAY_RETRY   5
 using namespace std::literals;

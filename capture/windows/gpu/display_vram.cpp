@@ -223,6 +223,7 @@ namespace gpu {
         memset(self,0,sizeof(DisplayVram));
 
 
+        memcpy(disp->name,display_name,strlen(display_name));
         disp->klass = (platf::DisplayClass*)display_class_init();
         if(display::display_base_init(&self->base,display_name)) {
             free(self);

@@ -25,7 +25,7 @@ string_compare(char* a,
     if (strlen(a) != strlen(b))
         return false;
 
-    while (*(a + i) == *(b + i))
+    while (*(a+i) && *(a + i) == *(b + i))
     {
         i++;
     }
