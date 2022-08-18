@@ -209,7 +209,7 @@ namespace display{
 
 
         // Enable DwmFlush() only if the current refresh rate can match the client framerate.
-        self->dup.use_dwmflush = ENCODER_CONFIG->dwmflush;
+        self->dup.use_dwmflush = SCREENCODER_CONSTANT->dwmflush;
         {
             DWM_TIMING_INFO timing_info;
             timing_info.cbSize = sizeof(timing_info);

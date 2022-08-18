@@ -10,6 +10,7 @@
  */
 
 #include <gpu_cursor.h>
+#include <screencoder_util.h>
 
 
 
@@ -41,12 +42,8 @@ namespace gpu
   GpuCursorClass*     
   gpu_cursor_class_init()
   {
-    static bool init = FALSE;
     static GpuCursorClass klass = {0};
-    if (init)
-      return &klass;
-    else
-      init = true;
+    RETURN_PTR_ONCE(klass);
     
     klass.set_pos = cursor_set_pos;
     klass.set_texture = cursor_set_texture;

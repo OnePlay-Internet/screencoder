@@ -58,17 +58,14 @@ namespace util {
     QueueArrayClass*
     queue_array_class_init()
     {
-        static bool initialized = false;
         static QueueArrayClass klass = {0};
-        if (initialized)
-            return &klass;
+        RETURN_PTR_ONCE(klass);
 
         klass.init = queue_array_init;
         klass.peek = queue_array_peek;
         klass.pop  = queue_array_pop;
         klass.push = queue_array_push;
         klass.stop = queue_array_finalize;
-        initialized = true;
         return &klass;
     }
 

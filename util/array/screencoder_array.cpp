@@ -118,12 +118,9 @@ namespace util
     ListObjectClass* 
     list_object_class_init()
     {
-        static bool initialize = false;
         static ListObjectClass klass = {0};
-        if (initialize)
-            return &klass;
-        
-        initialize = true;
+        RETURN_PTR_ONCE(klass);
+
         klass.emplace_back = array_object_emplace_back;
         klass.finalize     = array_object_finalize;
         klass.has_data     = array_object_has_data;

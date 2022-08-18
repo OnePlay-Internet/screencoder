@@ -19,7 +19,9 @@ int GoHandleAVPacket(void** data,
 
 int GoDestroyAVPacket(void* buf);
 
-void* InitScreencoder();
+void InitScreencoder();
+
+void GoSetBitrate(int bitrate);
 
 
 #endif

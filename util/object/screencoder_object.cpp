@@ -227,10 +227,8 @@ namespace util
     BufferClass*
     object_class_init()
     {
-        static bool initialized = false;
         static BufferClass klass = {0};
-        if (initialized)
-            return &klass;
+        RETURN_PTR_ONCE(klass);
 
         klass.init  = object_init;
         klass.unref = object_unref;
@@ -241,7 +239,6 @@ namespace util
         klass.replace = replace;
         klass.insert  = insert;
         klass.search = search;
-        initialized = true;
         return &klass;
     }
 } // namespace object

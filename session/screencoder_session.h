@@ -20,21 +20,14 @@
 
 namespace session
 {
-    typedef struct _Session
-    {
-        util::Broadcaster* shutdown_event;
-
-        util::QueueArray* packet_queue;
-
-       sink::GenericSink* sink; 
-    }Session;
     
+    typedef bool (*SelectMonitor)   (char* name);
 
-    void        init_session        (Session* session);
+    typedef int (*SetBitrate)       ();
 
-    void        start_session       (Session* session);
-
-        
+    void        start_session       (SetBitrate bitrate_control,
+                                     SelectMonitor select,
+                                     sink::GenericSink* sink);
 } // namespace singleton
 
 

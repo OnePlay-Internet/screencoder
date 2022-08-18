@@ -458,12 +458,8 @@ namespace gpu {
     DisplayVramClass*    
     display_class_init()
     {
-        static bool init = false;
         static DisplayVramClass klass;
-        if (init)
-            return &klass;
-        else 
-            init = true;
+        RETURN_PTR_ONCE(klass);
         
         klass.base.init          = display_vram_init;
         klass.base.alloc_img     = display_vram_alloc_img;

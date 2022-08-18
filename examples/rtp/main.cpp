@@ -18,22 +18,24 @@
 
 #include <display_base.h>
 #include <encoder_device.h>
-
+#include <screencoder_rtp.h>
 #include <iostream>
+
+
+bool 
+select_monitor (char* name)
+{
+    return TRUE;
+}
+
+int
+set_bitrate ()
+{
+    return 1000;
+}
 
 int 
 main(int argc, char ** argv)
 {
-    char** display_names = platf::display_names(platf::MemoryType::system);
-
-    int count = 0;
-    while (*(display_names+count))
-    {
-        char* chosen_display = *(display_names+count);
-        printf("%s\n",chosen_display);
-        count++;
-    }
-
-    display::get_all_display(NVENC);
-    return 0;
+    session::start_session(set_bitrate,select_monitor,RTP_SINK);
 }

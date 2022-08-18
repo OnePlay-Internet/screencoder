@@ -336,12 +336,8 @@ namespace gpu
     GpuDeviceClass*       
     d3d11_device_class_init()
     {
-        static bool initialize = FALSE;
-        static GpuDeviceClass klass = {0};
-        if (initialize)
-            return &klass;
-        else 
-            initialize = TRUE;
+        static GpuDeviceClass klass;
+        RETURN_PTR_ONCE(klass);
         
         klass.base.convert            = hw_device_convert;
         klass.base.init               = hw_device_init;

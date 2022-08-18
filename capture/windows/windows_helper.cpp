@@ -256,13 +256,7 @@ namespace helper
     init_hlsl() 
     {
       static HLSL hlsl = {0};
-      static bool initialize = false;
-      if (initialize)
-        return &hlsl;
-      else 
-        initialize = true;
-
-      
+      RETURN_PTR_ONCE(hlsl);
 
 
       LOG_INFO("Compiling shaders...");

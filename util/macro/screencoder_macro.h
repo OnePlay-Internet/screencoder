@@ -24,6 +24,9 @@
 
 #define LOG_OUTPUT_PIPE(content) printf(content)
 
+#define RETURN_PTR_ONCE(x)  { static bool init = false; if(init) { return &x; } else { init = true; } }
+#define RETURN_ONCE(x)  { static bool init = false; if(init) { return x; } else { init = true; } }
+
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
 #define DO_NOTHING do_nothing

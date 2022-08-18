@@ -83,13 +83,8 @@ namespace duplication
     DuplicationClass*
     duplication_class_init()
     {
-      static bool initialize = false;
       static DuplicationClass klass = {0};
-      if (initialize)
-        return &klass;
-      else
-        initialize = true;
-      
+      RETURN_PTR_ONCE(klass);
 
       klass.next_frame    =   duplication_get_next_frame;
       klass.finalize      =   duplication_finalize;

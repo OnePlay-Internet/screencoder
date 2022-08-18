@@ -44,12 +44,12 @@ namespace rtp
     char*
     rtpsink_describe(sink::GenericSink* sink)
     {
-        static char buf[2000];
-        memset(buf,0,2000);
+        static char buf[200];
+        memset(buf,0,200);
 
         rtp::RtpSink* rtp = (rtp::RtpSink*)sink;
 
-        av_sdp_create(&rtp->format, 1, buf, 2000);
+        av_sdp_create(&rtp->format, 1, buf, 200);
         return buf;
     }
 
@@ -105,12 +105,8 @@ namespace rtp
     sink::GenericSink*    
     new_rtp_sink    ()
     {
-        static bool init = FALSE;
         static RtpSink sink = {0};
-        if(init)
-            return (sink::GenericSink*)&sink;
-        else
-            init = TRUE;
+        RETURN_ONCE((sink::GenericSink*)&sink);
 
         sink.base.name = "rtp";
         sink.base.options = util::new_keyvalue_pairs(2);
@@ -125,9 +121,4 @@ namespace rtp
         config_rtpsink(&sink);
         return (sink::GenericSink*)&sink;
     }
-
-
-
-
-
 } // namespace rtp

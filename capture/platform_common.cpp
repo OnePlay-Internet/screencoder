@@ -48,12 +48,8 @@ namespace platf
     Color*
     get_color()
     {
-        static bool init = false;
         static Color colors[4];
-        if(init)
-            return colors;
-        else 
-            init = true; 
+        RETURN_ONCE(colors);
 
         colors[0] = make_color_matrix(0.299f,   0.114f,     0.436f,    0.615f,  0.0625,     0.5f, { 16.0f, 235.0f },    { 16.0f, 240.0f });   // BT601 MPEG
         colors[1] = make_color_matrix(0.299f,   0.114f,     0.5f,      0.5f,    0.0f,       0.5f, { 0.0f, 255.0f },     { 0.0f, 255.0f });           // BT601 JPEG

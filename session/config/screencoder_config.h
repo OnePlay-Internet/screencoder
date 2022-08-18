@@ -11,7 +11,7 @@
 #ifndef __SUNSHINE_CONFIG_H__
 #define __SUNSHINE_CONFIG_H__
 
-#define ENCODER_CONFIG          config::get_encoder_config()
+#define SCREENCODER_CONSTANT          config::get_encoder_config()
 
 
 
@@ -26,23 +26,21 @@ namespace config
         int coder;
     }NVconfig;
 
-    typedef struct _RTP {
-        int port;
-    }RTP;
-
-    typedef struct SW {
+    typedef struct _SWconfig {
         /**
          * @brief 
          * For software encoder
          */
         int min_threads; // Minimum number of threads/slices for CPU encoding
-    };
+    }SWconfig;
 
     typedef struct _Constant{
         NVconfig nv;
+        SWconfig sw;
         
         int qp; // higher == more compression and less quality
         int gop_size;
+        int gop_size_min;
         bool dwmflush;
     }Constant;
 

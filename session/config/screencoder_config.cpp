@@ -47,16 +47,16 @@ namespace config
     Constant*       
     get_encoder_config()
     {
-        Constant* encoder = (Constant*)malloc(sizeof(Constant));
+        static Constant encoder;
+        RETURN_PTR_ONCE(encoder);
             
-        encoder->qp = 28;
-        encoder->gop_size = 20;
-        encoder->dwmflush = 0;
-
-        encoder->nv.rc = rc_e::cbr;
-        encoder->nv.coder = coder_e::_auto;
-        encoder->nv.preset = preset_e::_default;
-
-        return encoder;
+        encoder.qp = 28;
+        encoder.gop_size = 10;
+        encoder.gop_size_min = 3;
+        encoder.dwmflush = true;
+        encoder.nv.rc = rc_e::cbr;
+        encoder.nv.coder = coder_e::_auto;
+        encoder.nv.preset = preset_e::_default;
+        return &encoder;
     }
 }

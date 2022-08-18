@@ -145,8 +145,8 @@ namespace encoder
         ctx->max_b_frames = 0;
 
         // if gop_size are set then 
-        ctx->gop_size = ENCODER_CONFIG->gop_size >= 0 ? ENCODER_CONFIG->gop_size : (encoder->flags[LIMITED_GOP_SIZE] ? INT16_MAX : INT_MAX);
-        ctx->keyint_min = ENCODER_CONFIG->gop_size - 5;
+        ctx->gop_size = SCREENCODER_CONSTANT->gop_size;
+        ctx->keyint_min = SCREENCODER_CONSTANT->gop_size_min;
 
         if(encoder->conf.numRefFrames == 0) {
             ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
@@ -221,7 +221,7 @@ namespace encoder
             // // Clients will request for the fewest slices per frame to get the
             // // most efficient encode, but we may want to provide more slices than
             // // requested to ensure we have enough parallelism for good performance.
-            // ctx->slices = MAX(config->slicesPerFrame, ENCODER_CONFIG->min_threads);
+            // ctx->slices = MAX(config->slicesPerFrame, SCREENCODER_CONSTANT->min_threads);
         }
 
         if(!video_format->capabilities[FrameFlags::SLICE]) {

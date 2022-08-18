@@ -78,14 +78,11 @@ namespace encoder {
 
 
     Encoder*
-    make_d3d11_encoder()
+    make_d3d11_encoder(int bitrate)
     {
         static Encoder encoder = {0};
-        static bool initialized = false;
-        if (initialized)
-            return &encoder;
-        else
-            initialized = true;
+        encoder.conf.bitrate = bitrate;
+        RETURN_PTR_ONCE(encoder);
         
         encoder.name = "nvenc";
         encoder.profile = 
@@ -95,7 +92,6 @@ namespace encoder {
             (int)hevc::Profile::main_10 
         };
 
-        encoder.conf.bitrate = 1000;
 
         encoder.conf.encoderCscMode = 0;
         encoder.conf.videoFormat = 0;
@@ -107,8 +103,8 @@ namespace encoder {
         util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);
         util::keyval_new_intval(hevcpairs,"forced-idr",1);
         util::keyval_new_intval(hevcpairs,"zerolatency",1);
-        util::keyval_new_intval(hevcpairs,"preset",ENCODER_CONFIG->nv.rc);
-        util::keyval_new_intval(hevcpairs,"rc",ENCODER_CONFIG->nv.rc);
+        util::keyval_new_intval(hevcpairs,"preset",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(hevcpairs,"rc",SCREENCODER_CONSTANT->nv.rc);
         encoder.hevc = CodecConfig {
             "hevc_nvenc",
             hevcqp,
@@ -116,13 +112,13 @@ namespace encoder {
         };
 
         util::KeyValue* h264qp = util::new_keyvalue_pairs(2);
-        util::keyval_new_intval(h264qp,"qp",ENCODER_CONFIG->qp);
+        util::keyval_new_intval(h264qp,"qp",SCREENCODER_CONSTANT->qp);
         util::KeyValue* h264pairs = util::new_keyvalue_pairs(6);
         util::keyval_new_intval(h264pairs,"forced-idr",1);
         util::keyval_new_intval(h264pairs,"zerolatency",1);
-        util::keyval_new_intval(h264pairs,"preset",ENCODER_CONFIG->nv.rc);
-        util::keyval_new_intval(h264pairs,"rc",ENCODER_CONFIG->nv.rc);
-        util::keyval_new_intval(h264pairs,"coder",ENCODER_CONFIG->nv.coder);
+        util::keyval_new_intval(h264pairs,"preset",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(h264pairs,"rc",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(h264pairs,"coder",SCREENCODER_CONSTANT->nv.coder);
         encoder.h264 = 
         {
             "h264_nvenc",
