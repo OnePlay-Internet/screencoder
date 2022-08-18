@@ -10,9 +10,6 @@
  */
 #include <app_sink.h>
 
-extern "C" {
-#include <go_adapter.h>
-}
 
 #include <screencoder_session.h>
 

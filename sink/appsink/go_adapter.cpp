@@ -14,6 +14,9 @@
 #include <screencoder_util.h>
 #include <screencoder_session.h>
 
+extern "C" {
+#include <go_adapter.h>
+}
 
 #define DEFAULT_BITRATE 1000
 

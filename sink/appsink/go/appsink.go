@@ -7,7 +7,6 @@ import (
 	"github.com/Oneplay-Internet/screencoder/sink/appsink/go/h264"
 )
 
-// #cgo CXXFLAGS: -std=c++14
 // #cgo LDFLAGS: ${SRCDIR}/../../../build/libscreencoderlib.a 
 // #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavformat.a
 // #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavcodec.a
