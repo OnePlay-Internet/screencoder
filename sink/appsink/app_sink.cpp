@@ -12,24 +12,20 @@
 
 
 #include <screencoder_session.h>
+extern "C" {
+#include <go_adapter.h>
+}
 
 
 namespace appsink
 {
-    void
-    free_av_packet(void* pkt)
-    {
-        av_free_packet((libav::Packet*)pkt);
-    }
 
     void
     appsink_handle(sink::GenericSink* sink, 
-                   libav::Packet* pkt)
+                   util::Buffer* buf)
     {
         appsink::AppSink* app = (appsink::AppSink*)sink;
-        util::Buffer* buf = BUFFER_CLASS->init(pkt,sizeof(libav::Packet),free_av_packet);
         QUEUE_ARRAY_CLASS->push(app->out,buf);
-        BUFFER_CLASS->unref(buf);
     }
 
     char*
@@ -71,3 +67,51 @@ namespace appsink
     
 } // namespace appsink
 
+
+#define DEFAULT_BITRATE 1000
+
+int
+GoHandleAVPacket(void** data,
+                 void** buf, 
+                 int* size, 
+                 int* duration)
+{
+    appsink::AppSink* sink = (appsink::AppSink*)APP_SINK;
+    if(QUEUE_ARRAY_CLASS->peek(sink->out)) {
+        int avsz = 0;
+        libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,&avsz);
+        if(avsz != sizeof(libav::Packet)) {
+            LOG_ERROR("unknown data type");
+            return-1;
+        }
+
+        *data = pkt->data;
+        *size = pkt->size;
+        *duration = pkt->duration;
+        return 0;
+    } else {
+        return -1;
+    }
+}
+    
+int 
+GoDestroyAVPacket(void* buf){
+    util::Buffer* buffer = (util::Buffer*)buf;
+    BUFFER_CLASS->unref(buffer);
+}
+
+int go_shared_bitrate = DEFAULT_BITRATE;
+void GoSetBitrate(int bitrate) { go_shared_bitrate = bitrate; }
+int  GoGetBitrate()            { return go_shared_bitrate; }
+
+static bool 
+select_monitor (char* name)
+{
+    return TRUE;
+}
+
+void
+InitScreencoder()
+{
+    session::start_session(GoGetBitrate,select_monitor,APP_SINK);
+}

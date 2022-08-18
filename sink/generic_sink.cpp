@@ -48,7 +48,7 @@ namespace sink
                 continue;
             }
 
-            ctx->sink->handle(ctx->sink,av_packet);          
+            ctx->sink->handle(ctx->sink,video_packet_buffer);          
             BUFFER_CLASS->unref(video_packet_buffer);
         }
 
