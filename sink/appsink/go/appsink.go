@@ -37,6 +37,7 @@ func NewAppsink() *Appsink {
 	app.packetizer = h264.NewH264Payloader();
 	app.channel = make(chan *rtp.Packet,1000);
 
+	go C.InitScreencoder();
 	go func ()  {
 		for {
 			var size,duration  C.int;
