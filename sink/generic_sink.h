@@ -36,7 +36,7 @@ namespace sink
         int   (*start)      (GenericSink* sink);
 
         void  (*handle)     (GenericSink* sink,
-                            libav::Packet* pkt);
+                            util::Buffer* pkt);
     };
 
     typedef struct _BroadcastContext {

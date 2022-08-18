@@ -12,24 +12,20 @@
 
 
 #include <screencoder_session.h>
+extern "C" {
+#include <go_adapter.h>
+}
 
 
 namespace appsink
 {
-    void
-    free_av_packet(void* pkt)
-    {
-        av_free_packet((libav::Packet*)pkt);
-    }
 
     void
     appsink_handle(sink::GenericSink* sink, 
-                   libav::Packet* pkt)
+                   util::Buffer* buf)
     {
         appsink::AppSink* app = (appsink::AppSink*)sink;
-        util::Buffer* buf = BUFFER_CLASS->init(pkt,sizeof(libav::Packet),free_av_packet);
         QUEUE_ARRAY_CLASS->push(app->out,buf);
-        BUFFER_CLASS->unref(buf);
     }
 
     char*

@@ -67,7 +67,7 @@ namespace rtp
             LOG_ERROR("Error opening output file");
             return -1;
         }
-        
+
         if(avformat_write_header(rtp->format,NULL) != 0) {
             LOG_ERROR("write header failed");
         }
@@ -75,11 +75,18 @@ namespace rtp
 
     void
     rtpsink_handle(sink::GenericSink* sink, 
-                    libav::Packet* pkt)
+                    util::Buffer* buf)
     {
         RtpSink* rtp = (RtpSink*)sink;
 
         // TODO
+        int size;
+        libav::Packet* pkt = (libav::Packet*)BUFFER_CLASS->ref(buf,&size);
+        if (size != sizeof(libav::Packet)) {
+            LOG_ERROR("unknown datatype, dropped");
+            return;
+        }
+        
         if(av_write_frame(rtp->format, pkt) != 0) {
             LOG_ERROR("write failed");
         }
