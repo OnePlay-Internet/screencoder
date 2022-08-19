@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Oneplay-Internet/screencoder/sink/appsink/go/pio"
+	"github.com/pion/randutil"
 	"github.com/pion/rtp"
 )
 
@@ -15,7 +16,17 @@ func min(a, b int) int {
 	return b
 }
 
+const (
+	// Unknown defines default public constant to use for "enum" like struct
+	// comparisons when no value was defined.
+	Unknown    = iota
+	unknownStr = "unknown"
 
+	rtpOutboundMTU = 1200
+
+
+	
+)
 
 // https://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream/24890903#24890903
 const (
@@ -56,7 +67,6 @@ type H264Payloader struct {
 	SSRC             uint32
 	Sequencer        rtp.Sequencer
 	Timestamp        uint32
-	ClockRate        uint32
 	extensionNumbers struct { // put extension numbers in here. If they're 0, the extension is disabled (0 is not a legal extension number)
 		AbsSendTime int // http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
 	}
@@ -65,7 +75,11 @@ type H264Payloader struct {
 
 func NewH264Payloader() *H264Payloader {
 	return &H264Payloader{
+		MTU: rtpOutboundMTU,
+		PayloadType: 0,
+		SSRC: 0,
 		Sequencer: rtp.NewRandomSequencer(),
+		Timestamp: randutil.NewMathRandomGenerator().Uint32(),
 		extensionNumbers: struct{AbsSendTime int}{AbsSendTime: 22},
 		timegen: time.Now,
 	}

@@ -19,12 +19,14 @@
 
 #define LOG_DEBUG(content)  error::log(__FILE__,__LINE__,"debug",content)
 
-// #define LOG_INFO(content)  error::log(__FILE__,__LINE__,"info",content)
-#define LOG_INFO(content)  
+#define LOG_INFO(content)  error::log(__FILE__,__LINE__,"info",content)
 
-#define LOG_OUTPUT_PIPE(content) printf(content)
+#define FILTER_ERROR(buffer)  (error::Error)((long long)buffer < error::Error::ENCODER_ERROR_MAX && (long long)buffer > error::Error::ENCODER_ERROR_MIN ? (long long)buffer : 0)
+
+#define NEW_ERROR(x)  if(x < error::Error::ENCODER_ERROR_MAX && x > error::Error::ENCODER_ERROR_MIN) { return(util::Buffer*)x; } else { LOG_ERROR("invalid error"); return(util::Buffer*)x;}
 
 #define RETURN_PTR_ONCE(x)  { static bool init = false; if(init) { return &x; } else { init = true; } }
+
 #define RETURN_ONCE(x)  { static bool init = false; if(init) { return x; } else { init = true; } }
 
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))

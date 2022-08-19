@@ -37,10 +37,9 @@ namespace encoder
                                           util::QueueArray* packet_queue);
     
 
-    bool                 encode           (int frame_nr, 
+    util::Buffer*       encode           (int frame_nr, 
                                           util::Buffer* sync_session, 
-                                          libav::Frame* frame, 
-                                          util::QueueArray* packets);
+                                          libav::Frame* frame);
 } // namespace error
 
 

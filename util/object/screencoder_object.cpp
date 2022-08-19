@@ -16,8 +16,12 @@
 #include <string.h>
 #include <mutex>
 
+
+
 namespace util 
 {
+
+
     typedef struct _Buffer{
         uint ref_count;
 
@@ -38,6 +42,11 @@ namespace util
          * should not be used directly
          */
         pointer data;
+
+    #ifdef BUFFER_TRACE
+
+        error::BufferLog log;
+    #endif
     };
 
 
@@ -54,46 +63,7 @@ namespace util
         return object;
     }
 
-    pointer 
-    object_ref (Buffer* obj,
-                int* size)
-    {
-        obj->ref_count++;
-        if (size)
-            *size = obj->size;
-        
-        return obj->data;
-    }
-
-    Buffer*
-    buffer_merge(Buffer* buffer,
-                 Buffer* inserter)
-    {
-        uint new_size = buffer->size+inserter->size;
-        pointer new_ptr = malloc(new_size);
-        memcpy(new_ptr,buffer,buffer->size);
-        memcpy(new_ptr+buffer->size,inserter,inserter->size);
-        return BUFFER_CLASS->init(new_ptr,new_size,free);
-    }
-
-    uint
-    object_size (Buffer* obj)
-    {
-        return obj->size;
-    }
-
-    void    
-    object_unref (Buffer* obj)
-    {
-        obj->ref_count--;
-        if (!obj->ref_count)
-        {
-            obj->free_func(obj->data);
-            free(obj);
-        }
-    }
-
-
+#ifndef BUFFER_TRACE
     Buffer* 
     object_init (pointer data, 
                  uint size,
@@ -108,6 +78,107 @@ namespace util
         object->ref_count = 1;
         return object;
     }
+    pointer 
+    object_ref (Buffer* obj,
+                int* size)
+    {
+
+        if(FILTER_ERROR(obj))
+            return;
+
+        obj->ref_count++;
+        if (size)
+            *size = obj->size;
+        
+        return obj->data;
+    }
+
+    void    
+    object_unref (Buffer* obj)
+    {
+        if(FILTER_ERROR(obj))
+            return;
+
+        obj->ref_count--;
+        if (!obj->ref_count)
+        {
+            obj->free_func(obj->data);
+            free(obj);
+        }
+    }
+#else
+    Buffer* 
+    object_init (pointer data, 
+                 uint size,
+                 BufferFreeFunc free_func,
+                 char* file,
+                 int line,
+                 char* type)
+    {
+        Buffer* object = (Buffer*)malloc(sizeof(Buffer));
+        memset(object,0,sizeof(Buffer));
+
+        object->data = data;
+        object->free_func = free_func;
+        object->size = size,
+        object->ref_count = 1;
+        return object;
+    }
+    pointer 
+    object_ref (Buffer* obj,
+                int* size,
+                char* file,
+                int line)
+    {
+
+        if(FILTER_ERROR(obj))
+            return NULL;
+
+        obj->ref_count++;
+        if (size)
+            *size = obj->size;
+        
+        return obj->data;
+    }
+
+    void    
+    object_unref (Buffer* obj,
+                 char* file,
+                 int line)
+    {
+        if(FILTER_ERROR(obj))
+            return;
+
+        obj->ref_count--;
+        if (!obj->ref_count)
+        {
+            obj->free_func(obj->data);
+            free(obj);
+        }
+    }
+
+#endif
+
+    Buffer*
+    buffer_merge(Buffer* buffer,
+                 Buffer* inserter)
+    {
+        uint new_size = buffer->size+inserter->size;
+        pointer new_ptr = malloc(new_size);
+        memcpy(new_ptr,buffer,buffer->size);
+        memcpy(new_ptr+buffer->size,inserter,inserter->size);
+        return BUFFER_INIT(new_ptr,new_size,free);
+    }
+
+    uint
+    object_size (Buffer* obj)
+    {
+        return obj->size;
+    }
+
+
+
+
 
     /**
      * @brief 
@@ -138,9 +209,9 @@ namespace util
         for(int x = 0; x < elements; ++x) {
             pointer p = ptr + (x * (insert_size + slice_size));
 
-            Buffer* buf = BUFFER_CLASS->init(p,insert_size,DO_NOTHING);
+            Buffer* buf = BUFFER_INIT(p,insert_size,DO_NOTHING);
             action(buf,x,elements);
-            BUFFER_CLASS->unref(buf);
+            BUFFER_UNREF(buf);
 
             /**
              * @brief 
@@ -172,8 +243,8 @@ namespace util
            util::Buffer* substring)
     {
         int size_string, size_substring;
-        byte* string_ptr = (byte*)BUFFER_CLASS->ref(string,&size_string);
-        byte* substring_ptr = (byte*)BUFFER_CLASS->ref(substring,&size_substring);
+        byte* string_ptr = (byte*)BUFFER_REF(string,&size_string);
+        byte* substring_ptr = (byte*)BUFFER_REF(substring,&size_substring);
 
         int ret = 1;
         while (ret < size_string)
@@ -188,8 +259,8 @@ namespace util
             }
             ret++;
         }
-        BUFFER_CLASS->unref(string);
-        BUFFER_CLASS->unref(substring);
+        BUFFER_UNREF(string);
+        BUFFER_UNREF(substring);
         return ret;
     }
     
@@ -199,9 +270,9 @@ namespace util
             util::Buffer* _new) 
     {
         int size_origin, size_old, size_new;
-        byte* origin_ptr = (byte*)BUFFER_CLASS->ref(original,&size_origin);
-        byte* old_ptr = (byte*)BUFFER_CLASS->ref(old,&size_old);
-        byte* new_ptr = (byte*)BUFFER_CLASS->ref(_new,&size_new);
+        byte* origin_ptr = (byte*)BUFFER_REF(original,&size_origin);
+        byte* old_ptr = (byte*)BUFFER_REF(old,&size_old);
+        byte* new_ptr = (byte*)BUFFER_REF(_new,&size_new);
 
         uint replace_size = size_origin - size_old + MAX(size_old,size_new);
         BUFFER_MALLOC(ret,replace_size,replaced);
@@ -216,9 +287,9 @@ namespace util
             memcpy(replaced + inserter, original + size_old + origin_found, size_new);
         }
 
-        BUFFER_CLASS->unref(original);
-        BUFFER_CLASS->unref(_new);
-        BUFFER_CLASS->unref(old);
+        BUFFER_UNREF(original);
+        BUFFER_UNREF(_new);
+        BUFFER_UNREF(old);
         return ret;
     }
 

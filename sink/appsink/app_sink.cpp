@@ -99,7 +99,7 @@ GoHandleAVPacket(void** data,
 int 
 GoDestroyAVPacket(void* buf){
     util::Buffer* buffer = (util::Buffer*)buf;
-    BUFFER_CLASS->unref(buffer);
+    BUFFER_UNREF(buffer);
 }
 
 int go_shared_bitrate = DEFAULT_BITRATE;

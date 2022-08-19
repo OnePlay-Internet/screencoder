@@ -84,7 +84,7 @@ namespace util {
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
-        BUFFER_CLASS->ref(obj,NULL);
+        BUFFER_REF(obj,NULL);
         last->obj  = obj;
         last->next = NULL;
 
@@ -122,8 +122,8 @@ namespace util {
         queue->first = container->next;
         free(container);
         *buf = ret;
-        pointer data = BUFFER_CLASS->ref(ret,size);
-        BUFFER_CLASS->unref(ret);
+        pointer data = BUFFER_REF(ret,size);
+        BUFFER_UNREF(ret);
         return data;
     }
 

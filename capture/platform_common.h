@@ -50,7 +50,6 @@ namespace platf {
 
     typedef enum _Capture{
         ok,
-        reinit,
         timeout,
         error
     }Capture;
@@ -69,7 +68,7 @@ namespace platf {
 
     typedef struct _HWDevice {
         DeviceClass* klass;
-        libav::Frame* frame;
+        util::Buffer* frame;
         void *data;
     }Device;
 
@@ -79,7 +78,7 @@ namespace platf {
                                  d3d11::DeviceContext device_ctx_p,
                                  platf::PixelFormat pix_fmt);
 
-        int (*convert)          (Device* self,
+        error::Error (*convert) (Device* self,
                                  Image* img);
 
         /**
@@ -123,22 +122,19 @@ namespace platf {
     };
 
     struct _DisplayClass {
-        Display*    (*init)             (char* display_name);
+        Display*               (*init)             (char* display_name);
 
-        int         (*dummy_img)        (Display* self,
-                                         Image* img);
+        error::Error           (*dummy_img)        (Display* self,
+                                                     Image* img);
 
-        Image*      (*alloc_img)        (Display* self);
+        util::Buffer*          (*alloc_img)        (Display* self);
 
-        Device*     (*make_hwdevice)    (Display* self,
-                                         PixelFormat pix_fmt);
+        Device*                (*make_hwdevice)    (Display* self,
+                                                    PixelFormat pix_fmt);
         
-        Capture     (*capture)          (Display* self,
-                                         Image* img, 
-                                         SnapshootCallback snapshot_cb, 
-                                         util::Buffer* data,
-                                         encoder::EncodeThreadContext* thread_ctx,
-                                         bool cursor);
+        Capture                (*capture)          (Display* self,
+                                                    Image* img, 
+                                                    bool cursor);
     };
 
 

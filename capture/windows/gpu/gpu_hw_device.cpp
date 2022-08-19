@@ -25,19 +25,18 @@ namespace gpu
                                      float width, 
                                      float height);
                                     
+
+    void
+    libav_frame_free(pointer data) {
+        av_frame_free((AVFrame**)&data);
+    }
+
     int 
     hw_device_set_frame(platf::Device* self,
                         libav::Frame* frame) 
     {
         GpuDevice* hw = (GpuDevice*)self;
         platf::Display* disp = (platf::Display*)hw->img.display;
-
-        if(hw->hwframe)
-            av_frame_free(&hw->hwframe);
-
-        hw->hwframe    = frame;
-        self->frame = frame;
-
         d3d11::Device device = (d3d11::Device)self->data;
 
         // calculate convert
@@ -77,7 +76,7 @@ namespace gpu
 
         int inf_size = 16 / sizeof(float);
         float info_in[inf_size] { 1.0f / (float)disp->width }; //aligned to 16-byte
-        util::Buffer* buf = BUFFER_CLASS->init(info_in,16,DO_NOTHING);
+        util::Buffer* buf = BUFFER_INIT((float*)info_in,16,DO_NOTHING);
         hw->info_scene = helper::convert_to_d3d11_buffer(device, buf);
 
         if(!info_in) {
@@ -104,11 +103,10 @@ namespace gpu
         }
 
         // Need to have something refcounted
-        if(!frame->buf[0]) {
+        if(!frame->buf[0]) 
             frame->buf[0] = av_buffer_allocz(sizeof(AVD3D11FrameDescriptor));
-        }
 
-        auto desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
+        AVD3D11FrameDescriptor* desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
         desc->texture = (d3d11::Texture2D)hw->img.base.data;
         desc->index   = 0;
 
@@ -120,6 +118,7 @@ namespace gpu
         frame->height = disp->height;
         frame->width  = disp->width;
 
+        self->frame = BUFFER_INIT(frame,sizeof(libav::Frame),libav_frame_free);
         return 0;
     }
 
@@ -183,7 +182,7 @@ namespace gpu
 
 
         platf::Color* color = platf::get_color();
-        util::Buffer* buf = BUFFER_CLASS->init(color,sizeof(platf::Color[4]),DO_NOTHING);
+        util::Buffer* buf = BUFFER_INIT(color,sizeof(platf::Color[4]),DO_NOTHING);
         self->color_matrix = helper::convert_to_d3d11_buffer(device_p, buf);
         if(!self->color_matrix) {
             LOG_ERROR("Failed to create color matrix buffer");
@@ -203,7 +202,8 @@ namespace gpu
         self->img.display = display;
 
         // Color the background black, so that the padding for keeping the aspect ratio
-        if(self->img.display->klass->dummy_img(self->img.display,&self->back_img.base)) {
+        error::Error err = display->klass->dummy_img(display,&self->back_img.base);
+        if(FILTER_ERROR(err)) {
             LOG_WARNING("Couldn't create an image to set background color to black");
             return NULL;
         }
@@ -253,7 +253,7 @@ namespace gpu
         }
 
 
-        util::Buffer* buf = BUFFER_CLASS->init(colors,sizeof(platf::Color[4]),DO_NOTHING);
+        util::Buffer* buf = BUFFER_INIT(colors,sizeof(platf::Color[4]),DO_NOTHING);
         d3d11::Buffer color_matrix = (d3d11::Buffer)helper::convert_to_d3d11_buffer((d3d11::Device)dev->data, buf);
         if(!color_matrix) {
             LOG_WARNING("Failed to create color matrix");
@@ -270,7 +270,7 @@ namespace gpu
      * @param img_base 
      * @return int 
      */
-    int 
+    error::Error
     hw_device_convert(platf::Device* dev,
                     platf::Image* img_base) 
     {
@@ -306,7 +306,7 @@ namespace gpu
         self->device_ctx->Draw(3, 0);
         self->device_ctx->Flush();
 
-        return 0;
+        return error::ERROR_NONE;
     }
 
     void 

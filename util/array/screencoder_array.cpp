@@ -43,7 +43,7 @@ namespace util
         BufferLL* container = arr->first;
         while (!container->next) 
         { 
-            BUFFER_CLASS->unref(container->obj);
+            BUFFER_UNREF(container->obj);
             container = container->next; 
         }
         free(arr);

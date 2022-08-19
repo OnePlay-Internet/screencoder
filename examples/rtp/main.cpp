@@ -9,7 +9,6 @@
  * 
  */
 #include <screencoder_util.h>
-#include <typeinfo>
 #include <iostream>
 
 #include <screencoder_session.h>

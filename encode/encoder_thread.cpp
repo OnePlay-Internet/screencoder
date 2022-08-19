@@ -66,102 +66,40 @@ namespace encoder {
      * @param packets 
      * @return int 
      */
-    bool
+    util::Buffer* 
     encode(int frame_nr, 
-           util::Buffer* session_buf, 
-           libav::Frame* frame, 
-           util::QueueArray* packets) 
+           Session* session, 
+           libav::Frame* frame) 
     {
-        int ret;
-        util::Buffer* pkt = NULL;
-        Session* session      = (Session*)BUFFER_CLASS->ref(session_buf,NULL);
         libav::CodecContext* libav_ctx = session->encode->context;
         frame->pts = (int64_t)frame_nr;
 
         /* send the frame to the encoder */
-        ret = avcodec_send_frame(libav_ctx, frame);
+        int ret = avcodec_send_frame(libav_ctx, frame);
         if(ret < 0) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, ret));
-            BUFFER_CLASS->unref(session_buf);
-            return FALSE;
+            NEW_ERROR(error::Error::ENCODER_UNKNOWN);
         }
 
 
-        libav::Packet* packet = av_packet_alloc();
-        ret = avcodec_receive_packet(libav_ctx, packet);
-        if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            BUFFER_CLASS->unref(session_buf);
-            return TRUE;
-        } else if(ret < 0) {
-            BUFFER_CLASS->unref(session_buf);
-            return FALSE;
-        }
+        {
+            libav::Packet* packet = av_packet_alloc();
+            ret = avcodec_receive_packet(libav_ctx, packet);
+            if(ret == AVERROR(EAGAIN)) {
+                NEW_ERROR(error::Error::ENCODER_NEED_MORE_FRAME);
+            } else if(ret == AVERROR_EOF) {
+                NEW_ERROR(error::Error::ENCODER_END_OF_STREAM);
+            } else if(ret < 0) {
+                NEW_ERROR(error::Error::ENCODER_UNKNOWN);
+            }
 
-        // we pass the reference of session to packet
-        pkt = BUFFER_CLASS->init(packet,sizeof(libav::Packet),free_av_packet);
-        QUEUE_ARRAY_CLASS->push(packets,pkt);
-        BUFFER_CLASS->unref(session_buf);
-        BUFFER_CLASS->unref(pkt);
-        return TRUE;
+            return BUFFER_INIT(packet,sizeof(libav::Packet),free_av_packet);
+        }
     }
 
 
 
-
-
-    /**
-     * @brief 
-     * 
-     * @param img 
-     * @param syncsession 
-     * @return platf::Capture 
-     */
-    platf::Capture
-    on_image_snapshoot (platf::Image** img,
-                        util::Buffer* buffer,
-                        EncodeThreadContext* thread_ctx)
-    {
-        Session* session = (Session*)BUFFER_CLASS->ref(buffer,NULL);
-        platf::Device* device = session->encode->device;
-
-        // get frame from device
-        libav::Frame* frame = device->frame;
-
-        // shutdown while loop whenever shutdown event happen
-        if(IS_INVOKED(thread_ctx->shutdown_event)) {
-            // Let waiting thread know it can delete shutdown_event
-            RAISE_EVENT(thread_ctx->join_event);
-            BUFFER_CLASS->unref(buffer);
-            return platf::Capture::error;
-        }
-
-        // convert image
-        if(device->klass->convert(device,*img)) {
-            LOG_ERROR("Could not convert image");
-            RAISE_EVENT(thread_ctx->shutdown_event);
-            BUFFER_CLASS->unref(buffer);
-            return platf::Capture::error;
-        }
-
-        // encode
-        if(!encode(thread_ctx->frame_nr++, 
-                buffer, 
-                frame, 
-                thread_ctx->packet_queue)) {
-            LOG_ERROR("Could not encode video packet");
-            RAISE_EVENT(thread_ctx->shutdown_event);
-            BUFFER_CLASS->unref(buffer);
-            return platf::Capture::error;
-        }
-
-        // reset keyframe attribute
-        // frame->pict_type = AV_PICTURE_TYPE_NONE;
-        // frame->key_frame = 0;
-
-        BUFFER_CLASS->unref(buffer);
-        return platf::Capture::ok;
-    }
 
 
 
@@ -176,28 +114,91 @@ namespace encoder {
     captureThread(EncodeThreadContext* ctx) 
     {
         // allocate display image and intialize with dummy data
-        platf::Image* img = ctx->display->klass->alloc_img(ctx->display);
-        if(!img || ctx->display->klass->dummy_img(ctx->display,img)) 
-            return;
+        util::Buffer* imgBuf = ctx->display->klass->alloc_img(ctx->display);
 
-        util::Buffer* buf = make_session_buffer(img, 
-                                                ctx->encoder,
+        platf::Image* img1 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
+        error::Error err = ctx->display->klass->dummy_img(ctx->display,img1);
+        BUFFER_UNREF(imgBuf);
+
+        if(FILTER_ERROR(err)) 
+            RAISE_EVENT(ctx->shutdown_event);
+
+        
+
+        util::Buffer* buf = make_session_buffer(ctx->encoder,
                                                 ctx->display,
                                                 ctx->sink);
-        if(!buf)
-            return;
+
+        if(FILTER_ERROR(buf)) 
+            RAISE_EVENT(ctx->shutdown_event);
 
         // run image capture in while loop, 
-        platf::Capture ret = ctx->display->klass->capture(ctx->display, 
-                                                    img,
-                                                    (platf::SnapshootCallback)on_image_snapshoot, 
-                                                    buf, 
-                                                    ctx,
-                                                    FALSE);
+        while (!IS_INVOKED(ctx->shutdown_event))
+        {
+            platf::Capture ret;
+
+            platf::Image* img2 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
+            ret = ctx->display->klass->capture(ctx->display, img2, FALSE);
+            BUFFER_UNREF(imgBuf);
+
+            if (ret == platf::Capture::timeout){
+                LOG_ERROR("Capture timeout");
+                continue;
+            } else if (ret == platf::Capture::error) {
+                LOG_ERROR("Could not encode video packet");
+                break;
+            }
+
+            {
+                Session* session1 = (Session*)BUFFER_REF(buf,NULL);
+                platf::Device* device = session1->encode->device;
+                BUFFER_UNREF(buf);
+
+                // convert image
+                platf::Image* img3 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
+                err = device->klass->convert(device,img3);
+                BUFFER_UNREF(imgBuf);
+
+                if(FILTER_ERROR(err)) {
+                    LOG_ERROR("Could not convert video packet");
+                    RAISE_EVENT(ctx->shutdown_event);
+                    continue;
+                }
+
+                // encode
+                util::Buffer* avbuf = NULL;
+                libav::Frame* frame = (libav::Frame*)BUFFER_REF(device->frame,NULL);
+
+                Session* session2     = (Session*)BUFFER_REF(buf,NULL);
+                avbuf = encode(ctx->frame_nr++, session2, frame);
+                BUFFER_UNREF(buf);
+
+                // reset keyframe attribute
+                frame->pict_type = AV_PICTURE_TYPE_NONE;
+                frame->key_frame = 0;
+                BUFFER_UNREF(device->frame);
+
+
+                if(FILTER_ERROR(avbuf)) {
+                    error::Error err = FILTER_ERROR(avbuf);
+                    if (err == error::Error::ENCODER_END_OF_STREAM ||
+                        err == error::Error::ENCODER_NEED_MORE_FRAME){
+                        continue;
+                    }
+                    
+                    LOG_ERROR("Could not encode video packet");
+                    RAISE_EVENT(ctx->shutdown_event);
+                    break;
+                } 
+
+
+                QUEUE_ARRAY_CLASS->push(ctx->packet_queue, avbuf);
+                BUFFER_UNREF(avbuf);
+            }
+        }
         
-        BUFFER_CLASS->unref(buf);
-        
-        RAISE_EVENT(ctx->shutdown_event);
+        BUFFER_UNREF(buf);
+        BUFFER_UNREF(imgBuf);
         RAISE_EVENT(ctx->join_event);
     }
 

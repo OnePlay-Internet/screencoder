@@ -124,154 +124,136 @@ namespace encoder
             return NULL;
         }
 
+        int sws_color_space;
         EncodeContext* encode_ctx = make_encode_context(device,video_format->name);
         libav::CodecContext* ctx = encode_ctx->context;
-        ctx->width     = width;
-        ctx->height    = height;
-        ctx->time_base = AVRational { 1, framerate };
-        ctx->framerate = AVRational { framerate, 1 };
+        {
+            ctx->width     = width;
+            ctx->height    = height;
+            ctx->time_base = AVRational { 1, framerate };
+            ctx->framerate = AVRational { framerate, 1 };
 
-        if(encoder->conf.videoFormat == 0) {
-            ctx->profile = encoder->profile.h264_high;
+            if(encoder->conf.videoFormat == 0) {
+                ctx->profile = encoder->profile.h264_high;
+            } else if(encoder->conf.dynamicRange == 0) {
+                ctx->profile = encoder->profile.hevc_main;
+            } else {
+                ctx->profile = encoder->profile.hevc_main_10;
+            }
+
+            // B-frames delay decoder output, so never use them
+            ctx->max_b_frames = 0;
+
+            // if gop_size are set then 
+            ctx->gop_size = SCREENCODER_CONSTANT->gop_size;
+            ctx->keyint_min = SCREENCODER_CONSTANT->gop_size_min;
+
+            if(encoder->conf.numRefFrames == 0) {
+                ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
+            } else { // Some client decoders have limits on the number of reference frames
+                ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? encoder->conf.numRefFrames : 0;
+            }
+
+            ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
+            ctx->flags2 |= AV_CODEC_FLAG2_FAST;
+
+            ctx->color_range = (encoder->conf.encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+
+            switch(encoder->conf.encoderCscMode >> 1) {
+            case 0:
+            default:
+                // Rec. 601
+                LOG_INFO("Color coding [Rec. 601]");
+                ctx->color_primaries = AVCOL_PRI_SMPTE170M;
+                ctx->color_trc       = AVCOL_TRC_SMPTE170M;
+                ctx->colorspace      = AVCOL_SPC_SMPTE170M;
+                sws_color_space      = SWS_CS_SMPTE170M;
+                break;
+
+            case 1:
+                // Rec. 709
+                LOG_INFO("Color coding [Rec. 709]");
+                ctx->color_primaries = AVCOL_PRI_BT709;
+                ctx->color_trc       = AVCOL_TRC_BT709;
+                ctx->colorspace      = AVCOL_SPC_BT709;
+                sws_color_space      = SWS_CS_ITU709;
+                break;
+
+            case 2:
+                // Rec. 2020
+                LOG_INFO("Color coding [Rec. 2020]");
+                ctx->color_primaries = AVCOL_PRI_BT2020;
+                ctx->color_trc       = AVCOL_TRC_BT2020_10;
+                ctx->colorspace      = AVCOL_SPC_BT2020_NCL;
+                sws_color_space      = SWS_CS_BT2020;
+                break;
+            }
+
+            libav::PixelFormat sw_fmt = (encoder->conf.dynamicRange == 0) ?  encoder->static_pix_fmt : encoder->dynamic_pix_fmt; 
+            if(hardware) {
+                ctx->pix_fmt = encoder->dev_pix_fmt;
+
+                libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(device);
+                if(!buf_or_error)
+                    return NULL;
+
+                libav::BufferRef* hwdevice_ctx = buf_or_error;
+                if(hwframe_ctx(ctx, hwdevice_ctx, sw_fmt) != 0) 
+                    return NULL;
+                
+                ctx->slices = encoder->conf.slicesPerFrame;
+            } else {
+                // TODO software 
+                // ctx->pix_fmt = sw_fmt;
+
+                // // Clients will request for the fewest slices per frame to get the
+                // // most efficient encode, but we may want to provide more slices than
+                // // requested to ensure we have enough parallelism for good performance.
+                // ctx->slices = MAX(config->slicesPerFrame, SCREENCODER_CONSTANT->min_threads);
+            }
+
+            if(!video_format->capabilities[FrameFlags::SLICE]) {
+                ctx->slices = 1;
+            }
+
+            ctx->thread_type  = FF_THREAD_SLICE;
+            ctx->thread_count = ctx->slices;
         }
-        else if(encoder->conf.dynamicRange == 0) {
-            ctx->profile = encoder->profile.hevc_main;
-        }
-        else {
-            ctx->profile = encoder->profile.hevc_main_10;
-        }
-
-        // B-frames delay decoder output, so never use them
-        ctx->max_b_frames = 0;
-
-        // if gop_size are set then 
-        ctx->gop_size = SCREENCODER_CONSTANT->gop_size;
-        ctx->keyint_min = SCREENCODER_CONSTANT->gop_size_min;
-
-        if(encoder->conf.numRefFrames == 0) {
-            ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
-        } else {
-            // Some client decoders have limits on the number of reference frames
-            ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? encoder->conf.numRefFrames : 0;
-        }
-
-        ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
-        ctx->flags2 |= AV_CODEC_FLAG2_FAST;
-
-        ctx->color_range = (encoder->conf.encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
-
-        int sws_color_space;
-        switch(encoder->conf.encoderCscMode >> 1) {
-        case 0:
-        default:
-            // Rec. 601
-            LOG_INFO("Color coding [Rec. 601]");
-            ctx->color_primaries = AVCOL_PRI_SMPTE170M;
-            ctx->color_trc       = AVCOL_TRC_SMPTE170M;
-            ctx->colorspace      = AVCOL_SPC_SMPTE170M;
-            sws_color_space      = SWS_CS_SMPTE170M;
-            break;
-
-        case 1:
-            // Rec. 709
-            LOG_INFO("Color coding [Rec. 709]");
-            ctx->color_primaries = AVCOL_PRI_BT709;
-            ctx->color_trc       = AVCOL_TRC_BT709;
-            ctx->colorspace      = AVCOL_SPC_BT709;
-            sws_color_space      = SWS_CS_ITU709;
-            break;
-
-        case 2:
-            // Rec. 2020
-            LOG_INFO("Color coding [Rec. 2020]");
-            ctx->color_primaries = AVCOL_PRI_BT2020;
-            ctx->color_trc       = AVCOL_TRC_BT2020_10;
-            ctx->colorspace      = AVCOL_SPC_BT2020_NCL;
-            sws_color_space      = SWS_CS_BT2020;
-            break;
-        }
-
-        libav::PixelFormat sw_fmt;
-        if(encoder->conf.dynamicRange == 0) {
-            sw_fmt = encoder->static_pix_fmt;
-        } else {
-            sw_fmt = encoder->dynamic_pix_fmt;
-        }
-
-        // Used by cbs::make_sps_hevc
-        ctx->sw_pix_fmt = sw_fmt;
-
-        libav::BufferRef* hwdevice_ctx;
-        if(hardware) {
-            ctx->pix_fmt = encoder->dev_pix_fmt;
-
-            libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(device);
-            if(!buf_or_error)
-                return NULL;
-
-            hwdevice_ctx = buf_or_error;
-            if(hwframe_ctx(ctx, hwdevice_ctx, sw_fmt) != 0) 
-                return NULL;
-            
-            ctx->slices = encoder->conf.slicesPerFrame;
-        } else {
-            // TODO software 
-            // ctx->pix_fmt = sw_fmt;
-
-            // // Clients will request for the fewest slices per frame to get the
-            // // most efficient encode, but we may want to provide more slices than
-            // // requested to ensure we have enough parallelism for good performance.
-            // ctx->slices = MAX(config->slicesPerFrame, SCREENCODER_CONSTANT->min_threads);
-        }
-
-        if(!video_format->capabilities[FrameFlags::SLICE]) {
-            ctx->slices = 1;
-        }
-
-        ctx->thread_type  = FF_THREAD_SLICE;
-        ctx->thread_count = ctx->slices;
 
         /**
          * @brief 
          * map from config to option here
          */
-        AVDictionary *options = NULL;
-        handle_options(options,video_format->options);
-        if(video_format->capabilities[FrameFlags::CBR]) {
-            ctx->rc_max_rate    = encoder->conf.bitrate;
-            ctx->rc_buffer_size = encoder->conf.bitrate / 10;
-            ctx->bit_rate       = encoder->conf.bitrate;
-            ctx->rc_min_rate    = encoder->conf.bitrate / 2;
-        } else if(video_format->qp) {
-            handle_options(options,video_format->qp);
-        } else {
-            LOG_ERROR("Couldn't set video quality");
-            return NULL;
-        }
+        {
+            AVDictionary *options = NULL;
+            handle_options(options,video_format->options);
+            if(video_format->capabilities[FrameFlags::CBR]) {
+                ctx->rc_max_rate    = encoder->conf.bitrate;
+                ctx->rc_buffer_size = encoder->conf.bitrate / 10;
+                ctx->bit_rate       = encoder->conf.bitrate;
+                ctx->rc_min_rate    = encoder->conf.bitrate / 2;
+            } else if(video_format->qp) {
+                handle_options(options,video_format->qp);
+            } else {
+                LOG_ERROR("Couldn't set video quality");
+                return NULL;
+            }
 
-        if(int status = avcodec_open2(ctx, encode_ctx->codec, &options)) {
-            char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
-            LOG_ERROR("Could not open codec");
-            LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status));
-            return NULL;
+            if(int status = avcodec_open2(ctx, encode_ctx->codec, &options)) {
+                char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
+                LOG_ERROR("Could not open codec");
+                LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, status));
+                return NULL;
+            }
         }
 
         libav::Frame* frame = av_frame_alloc();
         frame->format = ctx->pix_fmt;
         frame->width  = width;
         frame->height = height;
-
-
-        if(hardware) 
-            frame->hw_frames_ctx = av_buffer_ref(ctx->hw_frames_ctx);
-        
-
-        if(device->klass->set_frame(device,frame)) 
-            return NULL;
-
-        device->klass->set_colorspace(device,
-                                        sws_color_space, 
-                                        ctx->color_range);
+        frame->hw_frames_ctx = hardware ? av_buffer_ref(ctx->hw_frames_ctx) : frame->hw_frames_ctx;
+        device->klass->set_frame(device,frame);
+        device->klass->set_colorspace(device, sws_color_space, ctx->color_range);
 
         Session* session = (Session*)malloc(sizeof(Session));
         memset(session,0,sizeof(Session));
@@ -299,8 +281,7 @@ namespace encoder
      * @param ctx 
      */
     util::Buffer*
-    make_session_buffer(platf::Image* img, 
-                        Encoder* encoder,
+    make_session_buffer(Encoder* encoder,
                         platf::Display* display,
                         sink::GenericSink* sink) 
     {
@@ -309,18 +290,20 @@ namespace encoder
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
         platf::Device* device = display->klass->make_hwdevice(display,pix_fmt);
-        if(!device) 
-            return NULL;
+        if(!device) {
+            NEW_ERROR(error::Error::CREATE_HW_DEVICE_FAILED);
+        }
 
         Session* ses = make_session(encoder,
                                     display->width, 
                                     display->height, 
                                     display->framerate,
                                     device);
-        if(!ses)
-            return NULL;
+        if(!ses) {
+            NEW_ERROR(error::Error::CREATE_SESSION_FAILED);
+        }
 
         sink->preset(sink,ses->encode);
-        return BUFFER_CLASS->init((pointer)ses,sizeof(Session),session_finalize);
+        return BUFFER_INIT((pointer)ses,sizeof(Session),session_finalize);
     }
 } // namespace encoder

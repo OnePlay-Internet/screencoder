@@ -28,6 +28,8 @@ extern "C" {
 
 using namespace std::literals;
 
+#define CAPTURE_TIMEOUT 1000ms
+
 
 namespace gpu {
 
@@ -46,7 +48,6 @@ namespace gpu {
     platf::Capture 
     display_vram_snapshot(platf::Display* disp,
                           platf::Image *img_base, 
-                          std::chrono::milliseconds timeout, 
                           bool cursor_visible) 
     {
         DisplayVram* self = (DisplayVram*) disp; 
@@ -58,7 +59,7 @@ namespace gpu {
         DXGI_OUTDUPL_FRAME_INFO frame_info = {0};
 
         dxgi::Resource res;
-        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&base->dup,&frame_info, timeout, &res);
+        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&base->dup,&frame_info, CAPTURE_TIMEOUT, &res);
 
         if(capture_status != platf::Capture::ok) {
             return capture_status;
@@ -88,9 +89,9 @@ namespace gpu {
 
             int cursor_size;
             util::Buffer* cursor_buf = helper::make_cursor_image(img_object, shape_info);
-            BUFFER_CLASS->unref(img_object);
+            BUFFER_UNREF(img_object);
 
-            void* cursor_img = BUFFER_CLASS->ref(cursor_buf,&cursor_size);
+            void* cursor_img = BUFFER_REF(cursor_buf,&cursor_size);
             D3D11_SUBRESOURCE_DATA data {
                 cursor_img,
                 4 * shape_info.Width,
@@ -138,7 +139,7 @@ namespace gpu {
                                         t.Height, 
                                         texture);
             
-            BUFFER_CLASS->unref(cursor_buf);
+            BUFFER_UNREF(cursor_buf);
         }
 
         if(frame_info.LastMouseUpdateTime.QuadPart) {
@@ -181,38 +182,6 @@ namespace gpu {
         return platf::Capture::ok;
     }    
     
-    /**
-     * @brief 
-     * 
-     * @param snapshot_cb 
-     * @param img 
-     * @param cursor 
-     * @return platf::Capture 
-     */
-    platf::Capture 
-    display_vram_capture(platf::Display* disp,
-                        platf::Image* img, 
-                        platf::SnapshootCallback snapshot_cb, 
-                        util::Buffer* data,
-                        encoder::EncodeThreadContext* thread_ctx,
-                        bool cursor) 
-    {
-        platf::Capture status;
-        while(img) {
-            status = display_vram_snapshot(disp,img,1000ms,cursor);
-            if(status == platf::Capture::error) {
-                return status;
-            } else if(status == platf::Capture::timeout) {
-                std::this_thread::sleep_for(1ms);
-            }
-
-
-            status = snapshot_cb(&img,data,thread_ctx);
-            if(status != platf::Capture::ok) 
-                return status;
-        }
-        return platf::Capture::ok;
-    }
 
     platf::Display*
     display_vram_init(char* display_name) 
@@ -332,7 +301,17 @@ namespace gpu {
         return 0;
     }
 
-    platf::Image*
+    void
+    free_img_vram(pointer data)
+    {
+        gpu::ImageGpu* img = (gpu::ImageGpu*)data;
+        img->scene_rt->Release();
+        img->input_res->Release();
+        img->texture->Release();
+        free(data);
+    }
+
+    util::Buffer*
     display_vram_alloc_img(platf::Display* disp) 
     {
         gpu::ImageGpu* img = (gpu::ImageGpu*)malloc(sizeof(gpu::ImageGpu));
@@ -364,19 +343,19 @@ namespace gpu {
         auto status = display_base->device->CreateTexture2D(&t, &data, &img->texture);
         if(FAILED(status)) {
             LOG_ERROR("Failed to create img buf texture");
-            return nullptr;
+            NEW_ERROR(error::Error::CREATE_TEXTURE_FAILED);
         }
 
         if(init_render_target(display_base->device, img,
                                 disp->width, disp->height, 
                                 display_base->format,
-                                img->texture)) 
-        {
-            return nullptr;
+                                img->texture)) {
+            LOG_ERROR("Failed to init render target");
+            NEW_ERROR(error::Error::ALLOC_IMG_ERR);
         }
 
         img_base->data = (byte*)img->texture;
-        return (platf::Image*)img;
+        return BUFFER_INIT((pointer)img,sizeof(gpu::ImageGpu),free_img_vram);
     }
 
     /**
@@ -385,7 +364,7 @@ namespace gpu {
      * @param img_base 
      * @return int 
      */
-    int 
+    error::Error
     display_vram_dummy_img(platf::Display* disp,
                           platf::Image *img_base) 
     {
@@ -394,8 +373,8 @@ namespace gpu {
 
         gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
 
-        if(img->texture) 
-            return 0;
+        if(img->texture) // already have texture
+            return error::Error::ERROR_NONE;
         
         img_base->row_pitch  = disp->width * 4;
 
@@ -420,12 +399,12 @@ namespace gpu {
         auto status = base->device->CreateTexture2D(&t, &data, &tex);
         if(FAILED(status)) {
             LOG_ERROR("Failed to create dummy texture");
-            return -1;
+            return error::Error::CREATE_TEXTURE_FAILED;
         }
 
         img->texture      = tex;
         img_base->data    = (byte*)img->texture;
-        return 0;
+        return error::Error::ERROR_NONE;
     }
 
     platf::Device*
@@ -465,7 +444,7 @@ namespace gpu {
         klass.base.alloc_img     = display_vram_alloc_img;
         klass.base.dummy_img     = display_vram_dummy_img;
         klass.base.make_hwdevice = display_vram_make_hwdevice;
-        klass.base.capture       = display_vram_capture;
+        klass.base.capture       = display_vram_snapshot;
         return &klass;
     }
 } // namespace platf::dxgi

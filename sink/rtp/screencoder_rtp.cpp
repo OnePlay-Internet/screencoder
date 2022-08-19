@@ -81,7 +81,7 @@ namespace rtp
 
         // TODO
         int size;
-        libav::Packet* pkt = (libav::Packet*)BUFFER_CLASS->ref(buf,&size);
+        libav::Packet* pkt = (libav::Packet*)BUFFER_REF(buf,&size);
         if (size != sizeof(libav::Packet)) {
             LOG_ERROR("unknown datatype, dropped");
             return;

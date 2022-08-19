@@ -50,8 +50,7 @@ namespace encoder
      * @param sink 
      * @return util::Buffer* 
      */
-    util::Buffer*       make_session_buffer    (platf::Image* img, 
-                                                Encoder* encoder,
+    util::Buffer*       make_session_buffer    (Encoder* encoder,
                                                 platf::Display* display,
                                                 sink::GenericSink* sink);
 } // namespace encoder

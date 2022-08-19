@@ -49,7 +49,7 @@ namespace sink
             }
 
             ctx->sink->handle(ctx->sink,video_packet_buffer);          
-            BUFFER_CLASS->unref(video_packet_buffer);
+            BUFFER_UNREF(video_packet_buffer);
         }
 
         RAISE_EVENT(shutdown_event);

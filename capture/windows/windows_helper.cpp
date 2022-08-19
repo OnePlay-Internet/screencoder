@@ -41,7 +41,7 @@ namespace helper
                 util::Buffer* buffer) 
     {
       int size;
-      pointer ptr = BUFFER_CLASS->ref(buffer,&size);
+      pointer ptr = BUFFER_REF(buffer,&size);
       D3D11_BUFFER_DESC buffer_desc {
         size,
         D3D11_USAGE_IMMUTABLE,
@@ -56,11 +56,11 @@ namespace helper
       auto status = device->CreateBuffer(&buffer_desc, &init_data, &buf_p);
       if(status) {
         LOG_ERROR("Failed to create buffer");
-        BUFFER_CLASS->unref(buffer);
+        BUFFER_UNREF(buffer);
         return NULL;
       }
 
-      BUFFER_CLASS->unref(buffer);
+      BUFFER_UNREF(buffer);
       return buf_p;
     }
 
@@ -101,7 +101,7 @@ namespace helper
                       DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info) 
     {
       int size;
-      uint32* img_data = (uint32*)BUFFER_CLASS->ref(img_obj,&size);
+      uint32* img_data = (uint32*)BUFFER_REF(img_obj,&size);
       const uint32 black       = 0xFF000000;
       const uint32 white       = 0xFFFFFFFF;
       const uint32 transparent = 0;
@@ -116,7 +116,7 @@ namespace helper
             }
           }
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
-          BUFFER_CLASS->unref(img_obj);
+          BUFFER_UNREF(img_obj);
           return BUFFER_CLASS->duplicate(img_obj);
         default:
           break;
@@ -186,7 +186,7 @@ namespace helper
         ++xor_mask;
       }
 
-      BUFFER_CLASS->unref(img_obj);
+      BUFFER_UNREF(img_obj);
       return ret;
     }
 
@@ -315,8 +315,8 @@ namespace platf {
     char**
     display_names(MemoryType type) 
     {
-      char** display_names = (char**)malloc(sizeof(char*) * 10);
-      memset(display_names,0,sizeof(char*) * 10);
+      static char display_names[100][10] = {0};
+
       HRESULT status;
 
       LOG_INFO("Detecting monitors...");
@@ -337,16 +337,20 @@ namespace platf {
           DXGI_OUTPUT_DESC desc;
           output->GetDesc(&desc);
 
-          char* name = (char*)malloc(100);
-          memset(name,0,100);
-
+          char name[100] = {0};
           wcstombs(name, desc.DeviceName, 100);
           long width  = desc.DesktopCoordinates.right - desc.DesktopCoordinates.left;
           long height = desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top;
 
-          *(display_names + y) = name;
+          memcpy(display_names[x],name,strlen(name));
         }
       }
-      return display_names;
+      char* ret[10];
+      for (int i = 0; i < 10; i++)
+      {
+        ret[i] = display_names[i];
+      }
+      
+      return ret;
     }
 } // namespace platf

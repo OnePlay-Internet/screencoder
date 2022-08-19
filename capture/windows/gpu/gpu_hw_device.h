@@ -32,8 +32,6 @@ namespace gpu
     typedef struct _D3D11Device {
       platf::Device base;
 
-      libav::Frame* hwframe;
-
       platf::Color* color_p;
 
       d3d11::Buffer info_scene;
@@ -44,7 +42,6 @@ namespace gpu
       d3d11::RenderTargetView nv12_Y_rt;
       d3d11::RenderTargetView nv12_UV_rt;
 
-      // The image referenced by hwframe
       // The resulting image is stored here.
       ImageGpu img;
 
