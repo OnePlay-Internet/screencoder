@@ -61,7 +61,7 @@ namespace error
     typedef struct _BufferLog {
         BufferEvent events[100];
 
-        int buffer_size;
+        char dataType[50];
     }BufferLog;
 
 } // namespace error

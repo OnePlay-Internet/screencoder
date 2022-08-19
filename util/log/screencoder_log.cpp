@@ -14,6 +14,7 @@
 
 #include <thread>
 #include <fstream>
+#include <iostream>
 
 #define LOG_QUEUE error::get_log_queue()
 
@@ -57,7 +58,7 @@ namespace error
             count++;
         }
 
-        return true;
+        return false;
     }
 
     void
@@ -77,6 +78,11 @@ namespace error
 
             outfile << " LOG LEVEL: " << err->level << " || FILE : " << find_from_back(err->file,"/") << " : " << err->line << " || MESSAGE: "<< err->message << "\n"; 
 
+            if(find_substr(err->level,"buffer"))
+                goto done;
+
+            std::cout << " LOG LEVEL: " << err->level << " || FILE : " << find_from_back(err->file,"/") << " : " << err->line << " || MESSAGE: "<< err->message << std::endl; 
+        done:
             BUFFER_UNREF(buf);
         }
     }

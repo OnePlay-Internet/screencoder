@@ -117,13 +117,16 @@ namespace util
     {
         Buffer* object = (Buffer*)malloc(sizeof(Buffer));
         memset(object,0,sizeof(Buffer));
-
-        LOG_INFO("object created");
+        memcpy(object->log.dataType,type,strlen(type));
 
         object->data = data;
         object->free_func = free_func;
         object->size = size,
         object->ref_count = 1;
+
+        char str[100] = {0};
+        snprintf(str, 100, "%s : init",object->log.dataType);
+        error::log(file,line,"buffer trace",str);
         return object;
     }
     pointer 
@@ -135,6 +138,10 @@ namespace util
 
         if(FILTER_ERROR(obj))
             return NULL;
+
+        char str[100] = {0};
+        snprintf(str, 100, "%s : ref",obj->log.dataType);
+        error::log(file,line,"buffer trace",str);
 
         obj->ref_count++;
         if (size)
@@ -151,9 +158,17 @@ namespace util
         if(FILTER_ERROR(obj))
             return;
 
+        char str[100] = {0};
+        snprintf(str, 100, "%s : unref",obj->log.dataType);
+        error::log(file,line,"buffer trace",str);
+
         obj->ref_count--;
-        if (!obj->ref_count)
-        {
+        if (!obj->ref_count) {
+
+            char str1[100] = {0};
+            snprintf(str1, 100, "%s : free",obj->log.dataType);
+            error::log(file,line,"buffer trace",str1);
+
             obj->free_func(obj->data);
             free(obj);
         }

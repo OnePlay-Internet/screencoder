@@ -42,6 +42,8 @@ namespace display{
         while (*(display_names+count)) {
             platf::Display* display = NULL;
             char* name = *(display_names+count);
+            if(!strlen(name))
+              break;
 
             int y = 0;
             while (displays[y]) {
