@@ -118,6 +118,8 @@ namespace util
         Buffer* object = (Buffer*)malloc(sizeof(Buffer));
         memset(object,0,sizeof(Buffer));
 
+        LOG_INFO("object created");
+
         object->data = data;
         object->free_func = free_func;
         object->size = size,

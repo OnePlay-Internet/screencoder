@@ -33,6 +33,9 @@ namespace encoder
         platf::Display** disps = display::get_all_display(encoder);
         platf::Display* disp = *(disps);
 
+        if(!disp)
+            return FALSE;
+
         
 
         platf::PixelFormat pix_fmt  = config->dynamicRange == 0 ? 

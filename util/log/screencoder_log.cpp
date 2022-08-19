@@ -13,11 +13,14 @@
 #include <cstdio>
 
 #include <thread>
+#include <fstream>
 
 #define LOG_QUEUE error::get_log_queue()
 
 
 using namespace std::literals;
+
+
 
 namespace error
 {
@@ -28,9 +31,40 @@ namespace error
         char message[100];
     }Err;
 
+    static char*
+    find_from_back(char* str, char* word)
+    {
+        int count = strlen(str) - 1;
+        while (*(str+count) != *word) {
+            count--;
+        }
+        return str + count + 1;
+    }
+
+    static bool
+    find_substr(char* str, char* word)
+    {
+        int count = 0;
+        while (*(str+count)) {
+            
+            int y = 0;
+            while (y+count < strlen(str) && *(str+count + y) == *(word+y)) {
+                if (strlen(word) == y + 1) {
+                    return true;
+                }
+                y++;
+            }
+            count++;
+        }
+
+        return true;
+    }
+
     void
     render_log(util::QueueArray* array) 
     {
+        std::ofstream outfile;
+        outfile.open("./log.txt", std::ios_base::app); // append instead of overwrite
         while(true)
         {
             if(!QUEUE_ARRAY_CLASS->peek(array)) {
@@ -41,6 +75,7 @@ namespace error
             util::Buffer* buf;
             Err* err = (Err*)QUEUE_ARRAY_CLASS->pop(array,&buf,NULL);
 
+            outfile << " LOG LEVEL: " << err->level << " || FILE : " << find_from_back(err->file,"/") << " : " << err->line << " || MESSAGE: "<< err->message << "\n"; 
 
             BUFFER_UNREF(buf);
         }
@@ -64,6 +99,9 @@ namespace error
              char* level,
              char* message)
     {
+        if(find_substr(file,"/util/"))
+            return;
+
         BUFFER_MALLOC(buf,sizeof(Err),ptr);
         memcpy(((Err*)ptr)->message,message,strlen(message));
         memcpy(((Err*)ptr)->level,level,strlen(level));
