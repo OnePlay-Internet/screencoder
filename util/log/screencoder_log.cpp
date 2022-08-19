@@ -31,24 +31,30 @@ namespace error
     void
     render_log(util::QueueArray* array) 
     {
-        while (QUEUE_ARRAY_CLASS->peek(array))
+        while(true)
         {
+            if(!QUEUE_ARRAY_CLASS->peek(array)) {
+                std::this_thread::sleep_for(10ms);
+                continue;
+            }
+
             util::Buffer* buf;
             Err* err = (Err*)QUEUE_ARRAY_CLASS->pop(array,&buf,NULL);
 
 
             BUFFER_UNREF(buf);
-            std::this_thread::sleep_for(10ms);
         }
     }
 
     util::QueueArray*
     get_log_queue()
     {
-        util::QueueArray* ret;
+        static util::QueueArray* ret;
         RETURN_ONCE(ret);
         ret = QUEUE_ARRAY_CLASS->init();
-        std::thread{render_log,ret};
+        std::thread render {render_log,ret};
+        render.detach();
+        return ret;
     }
 
 

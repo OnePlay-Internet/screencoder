@@ -150,7 +150,7 @@ namespace encoder {
         encoder.flags[EncodingFlags::DEFAULT] = true;
         encoder.make_hw_ctx_func = dxgi_make_hwdevice_ctx;
 
-        encoder::validate_encoder(&encoder);
+        bool pass = encoder::validate_encoder(&encoder);
         return &encoder;
     }
 }

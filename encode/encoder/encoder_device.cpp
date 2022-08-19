@@ -49,10 +49,9 @@ namespace encoder
                                disp->height, 
                                disp->framerate,
                                device);
-        if(!session) {
-            session_finalize(session);
+        if(!session) 
             return FALSE;
-        }
+        
         
         util::Buffer* imgBuf = disp->klass->alloc_img(disp);
 
@@ -74,12 +73,18 @@ namespace encoder
             return FALSE;
         }
 
+
+        util::Buffer* pktBuf;
+    retry:
         libav::Frame* frame = (libav::Frame*)BUFFER_REF(device->frame,NULL);
         frame->pict_type = AV_PICTURE_TYPE_I;
-        util::Buffer* pktBuf = encode(1, session, frame);
+        pktBuf = encode(1, session, frame);
         BUFFER_UNREF(device->frame);
 
         if(FILTER_ERROR(pktBuf)) {
+            if(FILTER_ERROR(pktBuf) == error::Error::ENCODER_NEED_MORE_FRAME) {
+                goto retry;
+            }
             session_finalize(session);
             return FALSE;
         }
@@ -90,6 +95,7 @@ namespace encoder
             return FALSE;
         }
 
+        session_finalize(session);
         return TRUE;
     }
 
