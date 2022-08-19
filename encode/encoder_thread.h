@@ -38,7 +38,7 @@ namespace encoder
     
 
     util::Buffer*       encode           (int frame_nr, 
-                                          util::Buffer* sync_session, 
+                                          Session* session, 
                                           libav::Frame* frame);
 } // namespace error
 
