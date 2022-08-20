@@ -26,20 +26,14 @@ namespace encoder
      * @param height 
      * @param framerate 
      * @param hwdevice 
-     * @return Session* 
+     * @return EncodeContext* 
      */
-    Session*            make_session           (Encoder* encoder, 
+    EncodeContext*            make_encode_context           (Encoder* encoder, 
                                                int width, int height, int framerate,
                                                platf::Device* hwdevice); 
 
     
-    /**
-     * @brief 
-     * 
-     * @param session 
-     */
-    void                session_finalize       (pointer session);
-
+    void                free_encode_context     (pointer data);
  
     /**
      * @brief 
@@ -50,9 +44,17 @@ namespace encoder
      * @param sink 
      * @return util::Buffer* 
      */
-    util::Buffer*       make_session_buffer    (Encoder* encoder,
+    util::Buffer*       make_encode_context_buffer    (Encoder* encoder,
                                                 platf::Display* display,
                                                 sink::GenericSink* sink);
+
+    /**
+     * @brief 
+     * 
+     * @param context 
+     * @return util::Buffer* 
+     */
+    util::Buffer*       make_avframe_buffer     (EncodeContext* context);
 } // namespace encoder
 
 #endif

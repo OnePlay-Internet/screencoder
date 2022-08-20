@@ -79,11 +79,12 @@ namespace encoder
     {
         EncodeContext* ctx = (EncodeContext*)data;
         avcodec_free_context(&ctx->context);
+        ctx->device->klass->finalize(ctx->device);
         free(data);
     }
 
     EncodeContext*
-    make_encode_context(platf::Device* device,
+    alloc_encode_context(platf::Device* device,
                         char* encoder)
     {
         EncodeContext* ctx = (EncodeContext*)malloc(sizeof(EncodeContext));
@@ -106,12 +107,11 @@ namespace encoder
     }
 
 
-    Session*
-    make_session(Encoder* encoder, 
+    EncodeContext*
+    make_encode_context(Encoder* encoder, 
                  int width, int height, int framerate,
                  platf::Device* device) 
     {
-        bool hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
 
         CodecConfig* video_format = (encoder->conf.videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
@@ -124,8 +124,8 @@ namespace encoder
             return NULL;
         }
 
-        int sws_color_space;
-        EncodeContext* encode_ctx = make_encode_context(device,video_format->name);
+        EncodeContext* encode_ctx = alloc_encode_context(device,video_format->name);
+        encode_ctx->hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
         libav::CodecContext* ctx = encode_ctx->context;
         {
             ctx->width     = width;
@@ -167,7 +167,7 @@ namespace encoder
                 ctx->color_primaries = AVCOL_PRI_SMPTE170M;
                 ctx->color_trc       = AVCOL_TRC_SMPTE170M;
                 ctx->colorspace      = AVCOL_SPC_SMPTE170M;
-                sws_color_space      = SWS_CS_SMPTE170M;
+                encode_ctx->sws_color_space      = SWS_CS_SMPTE170M;
                 break;
 
             case 1:
@@ -176,7 +176,7 @@ namespace encoder
                 ctx->color_primaries = AVCOL_PRI_BT709;
                 ctx->color_trc       = AVCOL_TRC_BT709;
                 ctx->colorspace      = AVCOL_SPC_BT709;
-                sws_color_space      = SWS_CS_ITU709;
+                encode_ctx->sws_color_space      = SWS_CS_ITU709;
                 break;
 
             case 2:
@@ -185,12 +185,12 @@ namespace encoder
                 ctx->color_primaries = AVCOL_PRI_BT2020;
                 ctx->color_trc       = AVCOL_TRC_BT2020_10;
                 ctx->colorspace      = AVCOL_SPC_BT2020_NCL;
-                sws_color_space      = SWS_CS_BT2020;
+                encode_ctx->sws_color_space      = SWS_CS_BT2020;
                 break;
             }
 
             libav::PixelFormat sw_fmt = (encoder->conf.dynamicRange == 0) ?  encoder->static_pix_fmt : encoder->dynamic_pix_fmt; 
-            if(hardware) {
+            if(encode_ctx->hardware) {
                 ctx->pix_fmt = encoder->dev_pix_fmt;
 
                 libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(device);
@@ -247,27 +247,24 @@ namespace encoder
             }
         }
 
-        libav::Frame* frame = av_frame_alloc();
-        frame->format = ctx->pix_fmt;
-        frame->width  = width;
-        frame->height = height;
-        frame->hw_frames_ctx = hardware ? av_buffer_ref(ctx->hw_frames_ctx) : frame->hw_frames_ctx;
-        device->klass->set_frame(device,frame);
-        device->klass->set_colorspace(device, sws_color_space, ctx->color_range);
 
-        Session* session = (Session*)malloc(sizeof(Session));
-        memset(session,0,sizeof(Session));
-        session->pts = frame->pts;
-        session->encode = encode_ctx;
-        return session;
+        return encode_ctx;
     }
 
-    void
-    session_finalize(pointer session)
+
+    util::Buffer*
+    make_avframe_buffer(EncodeContext* context)
     {
-        Session* self = (Session*) session;
-        free_encode_context(self->encode);
-        free(session);
+        libav::Frame* frame = av_frame_alloc();
+        frame->format = context->context->pix_fmt;
+        frame->width  = context->context->width;
+        frame->height = context->context->height;
+
+        frame->hw_frames_ctx = context->hardware ? 
+            av_buffer_ref(context->context->hw_frames_ctx) : 
+            frame->hw_frames_ctx;
+
+        return BUFFER_INIT(frame,sizeof(libav::Frame),libav::frame_free_func);
     }
 
 
@@ -281,7 +278,7 @@ namespace encoder
      * @param ctx 
      */
     util::Buffer*
-    make_session_buffer(Encoder* encoder,
+    make_encode_context_buffer(Encoder* encoder,
                         platf::Display* display,
                         sink::GenericSink* sink) 
     {
@@ -294,16 +291,18 @@ namespace encoder
             NEW_ERROR(error::Error::CREATE_HW_DEVICE_FAILED);
         }
 
-        Session* ses = make_session(encoder,
+        EncodeContext* context = make_encode_context(encoder,
                                     display->width, 
                                     display->height, 
                                     display->framerate,
                                     device);
-        if(!ses) {
+        if(!context) {
             NEW_ERROR(error::Error::CREATE_SESSION_FAILED);
         }
 
-        sink->preset(sink,ses->encode);
-        return BUFFER_INIT(ses,sizeof(Session),session_finalize);
+        device->klass->set_colorspace(device, context->sws_color_space, context->context->color_range);
+
+        sink->preset(sink,context);
+        return BUFFER_INIT(context,sizeof(EncodeContext),free_encode_context);
     }
 } // namespace encoder

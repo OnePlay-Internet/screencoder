@@ -38,7 +38,7 @@ namespace helper
 {
     d3d11::Buffer
     convert_to_d3d11_buffer(d3d11::Device device, 
-                util::Buffer* buffer) 
+                            util::Buffer* buffer) 
     {
       int size;
       pointer ptr = BUFFER_REF(buffer,&size);
@@ -339,9 +339,6 @@ namespace platf {
 
           char name[100] = {0};
           wcstombs(name, desc.DeviceName, 100);
-          long width  = desc.DesktopCoordinates.right - desc.DesktopCoordinates.left;
-          long height = desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top;
-
           memcpy(display_names[x],name,strlen(name));
         }
       }

@@ -68,8 +68,6 @@ namespace platf {
 
     typedef struct _HWDevice {
         DeviceClass* klass;
-        util::Buffer* frame;
-        void *data;
     }Device;
 
     struct _HWDeviceClass {
@@ -79,15 +77,15 @@ namespace platf {
                                  platf::PixelFormat pix_fmt);
 
         error::Error (*convert) (Device* self,
-                                 Image* img);
+                                 Image* img,
+                                 libav::Frame* frame);
 
         /**
          * @brief 
          * allocate avcodec and d3d11 texture resources
-         * call once during make_session_buffer
+         * call once during make_encode_context_buffer
          */
-        int (*set_frame)        (Device* self,
-                                 libav::Frame* frame);
+        void  (*finalize)        (Device* self);
 
         void (*set_colorspace)  (Device* self,
                                  uint32 colorspace, 

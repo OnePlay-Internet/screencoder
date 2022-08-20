@@ -21,6 +21,13 @@ namespace libav
         av_packet_unref((Packet*)pk);
     }
 
+    void    
+    frame_free_func(void* pk)
+    {
+        Frame* frame = (Frame*)pk;
+        av_frame_free(&frame);
+    }
+
 } // namespace libav
 
 

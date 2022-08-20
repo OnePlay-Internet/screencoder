@@ -419,16 +419,12 @@ namespace gpu {
         }
 
 
-        if(base->dev)
-            return base->dev;
-
-        base->dev = ((platf::DeviceClass*)D3D11DEVICE_CLASS)->init((platf::Display*)self,
+        return ((platf::DeviceClass*)D3D11DEVICE_CLASS)->init((platf::Display*)self,
             base->device,
             base->device_ctx,
             pix_fmt);
 
 
-        return base->dev;
     }
 
 

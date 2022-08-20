@@ -50,12 +50,6 @@ namespace encoder {
         sink::GenericSink* sink;
     };
 
-    void
-    free_av_packet(void* pkt)
-    {
-        av_free_packet((libav::Packet*)pkt);
-    }
-
 
     /**
      * @brief 
@@ -68,10 +62,10 @@ namespace encoder {
      */
     util::Buffer* 
     encode(int frame_nr, 
-           Session* session, 
+           EncodeContext* session, 
            libav::Frame* frame) 
     {
-        libav::CodecContext* libav_ctx = session->encode->context;
+        libav::CodecContext* libav_ctx = session->context;
         frame->pts = (int64_t)frame_nr;
 
         /* send the frame to the encoder */
@@ -94,7 +88,7 @@ namespace encoder {
                 NEW_ERROR(error::Error::ENCODER_UNKNOWN);
             }
 
-            return BUFFER_INIT(packet,sizeof(libav::Packet),free_av_packet);
+            return BUFFER_INIT(packet,sizeof(libav::Packet),libav::packet_free_func);
         }
     }
 
@@ -125,12 +119,16 @@ namespace encoder {
 
         
 
-        util::Buffer* buf = make_session_buffer(ctx->encoder,
+        util::Buffer* ctxBuf = make_encode_context_buffer(ctx->encoder,
                                                 ctx->display,
                                                 ctx->sink);
 
-        if(FILTER_ERROR(buf)) 
+        if(FILTER_ERROR(ctxBuf)) 
             RAISE_EVENT(ctx->shutdown_event);
+        
+        EncodeContext* session0 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
+        util::Buffer* frameBuf = make_avframe_buffer(session0);
+        BUFFER_UNREF(ctxBuf);
 
         // run image capture in while loop, 
         while (!IS_INVOKED(ctx->shutdown_event))
@@ -150,13 +148,13 @@ namespace encoder {
             }
 
             {
-                Session* session1 = (Session*)BUFFER_REF(buf,NULL);
-                platf::Device* device = session1->encode->device;
-                BUFFER_UNREF(buf);
-
                 // convert image
                 platf::Image* img3 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
-                err = device->klass->convert(device,img3);
+                libav::Frame* frame0 = (libav::Frame*)BUFFER_REF(frameBuf,NULL);
+                EncodeContext* session1 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
+                err = session1->device->klass->convert(session1->device,img3,frame0);
+                BUFFER_UNREF(ctxBuf);
+                BUFFER_UNREF(frameBuf);
                 BUFFER_UNREF(imgBuf);
 
                 if(FILTER_ERROR(err)) {
@@ -166,17 +164,12 @@ namespace encoder {
                 }
 
                 // encode
-                util::Buffer* avbuf = NULL;
-                libav::Frame* frame = (libav::Frame*)BUFFER_REF(device->frame,NULL);
+                EncodeContext* session2     = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
+                libav::Frame* frame1 = (libav::Frame*)BUFFER_REF(frameBuf,NULL);
+                util::Buffer* avbuf = encode(ctx->frame_nr++, session2, frame1);
+                BUFFER_UNREF(frameBuf);
+                BUFFER_UNREF(ctxBuf);
 
-                Session* session2     = (Session*)BUFFER_REF(buf,NULL);
-                avbuf = encode(ctx->frame_nr++, session2, frame);
-                BUFFER_UNREF(buf);
-
-                // reset keyframe attribute
-                frame->pict_type = AV_PICTURE_TYPE_NONE;
-                frame->key_frame = 0;
-                BUFFER_UNREF(device->frame);
 
 
                 if(FILTER_ERROR(avbuf)) {
@@ -197,8 +190,9 @@ namespace encoder {
             }
         }
         
-        BUFFER_UNREF(buf);
+        BUFFER_UNREF(ctxBuf);
         BUFFER_UNREF(imgBuf);
+        BUFFER_UNREF(frameBuf);
         RAISE_EVENT(ctx->join_event);
     }
 

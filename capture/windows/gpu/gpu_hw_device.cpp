@@ -26,18 +26,12 @@ namespace gpu
                                      float height);
                                     
 
-    void
-    libav_frame_free(pointer data) {
-        av_frame_free((AVFrame**)&data);
-    }
-
     int 
-    hw_device_set_frame(platf::Device* self,
-                        libav::Frame* frame) 
+    hw_device_set_frame(platf::Device* self) 
     {
         GpuDevice* hw = (GpuDevice*)self;
         platf::Display* disp = (platf::Display*)hw->img.display;
-        d3d11::Device device = (d3d11::Device)self->data;
+        d3d11::Device device = hw->device;
 
         // calculate convert
         hw->outY_view  = D3D11_VIEWPORT { 
@@ -102,39 +96,53 @@ namespace gpu
             return -1;
         }
 
-        // Need to have something refcounted
-        if(!frame->buf[0]) 
-            frame->buf[0] = av_buffer_allocz(sizeof(AVD3D11FrameDescriptor));
-
-        AVD3D11FrameDescriptor* desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
-        desc->texture = (d3d11::Texture2D)hw->img.base.data;
-        desc->index   = 0;
-
-        frame->data[0] = hw->img.base.data;
-        frame->data[1] = 0;
-
-        frame->linesize[0] = hw->img.base.row_pitch;
-
-        frame->height = disp->height;
-        frame->width  = disp->width;
-
-        self->frame = BUFFER_INIT(frame,sizeof(libav::Frame),libav_frame_free);
         return 0;
+    }
+    
+    void
+    hw_device_finalize( platf::Device* device)
+    {
+        GpuDevice* gpu = (GpuDevice*)device;
+        gpu->scene_ps->Release();
+        gpu->scene_vs->Release();
+
+        gpu->convert_UV_ps->Release();
+        gpu->convert_UV_vs->Release();
+        gpu->convert_Y_ps->Release();
+
+        gpu->info_scene->Release();
+        gpu->input_layout->Release();
+
+        gpu->color_matrix->Release();
+
+        gpu->nv12_UV_rt->Release();
+        gpu->nv12_Y_rt->Release();
+
+        gpu->img.texture->Release();
+        gpu->img.input_res->Release();
+        gpu->img.scene_rt->Release();
+
+        gpu->back_img.texture->Release();
+        gpu->back_img.input_res->Release();
+        gpu->back_img.scene_rt->Release();
+
+        gpu->device_ctx->Release();
+        free((pointer)device);
     }
 
     /**
      * @brief 
      * 
      * @param display 
-     * @param device_p 
-     * @param device_ctx_p 
+     * @param device 
+     * @param device_ctx 
      * @param pix_fmt 
      * @return int 
      */
     platf::Device*
     hw_device_init(platf::Display* display, 
-                   d3d11::Device device_p, 
-                   d3d11::DeviceContext device_ctx_p,
+                   d3d11::Device device, 
+                   d3d11::DeviceContext device_ctx,
                    platf::PixelFormat pix_fmt) 
     {
         GpuDevice* self = (GpuDevice*)malloc(sizeof(GpuDevice));
@@ -145,36 +153,36 @@ namespace gpu
         helper::HLSL* hlsl = helper::init_hlsl();
         HRESULT status;
 
-        device_p->AddRef();
-        dev->data = device_p;
-        self->device_ctx = device_ctx_p;
+        device->AddRef();
+        self->device_ctx = device_ctx;
+        self->device = device;
 
         self->format = (pix_fmt == platf::PixelFormat::nv12 ? DXGI_FORMAT_NV12 : DXGI_FORMAT_P010);
-        status = device_p->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
+        status = device->CreateVertexShader(hlsl->scene_vs_hlsl->GetBufferPointer(), hlsl->scene_vs_hlsl->GetBufferSize(), nullptr, &self->scene_vs);
         if(status) {
             LOG_ERROR("Failed to create scene vertex shader");
             return NULL;
         }
 
-        status = device_p->CreatePixelShader(hlsl->convert_Y_ps_hlsl->GetBufferPointer(), hlsl->convert_Y_ps_hlsl->GetBufferSize(), nullptr, &self->convert_Y_ps);
+        status = device->CreatePixelShader(hlsl->convert_Y_ps_hlsl->GetBufferPointer(), hlsl->convert_Y_ps_hlsl->GetBufferSize(), nullptr, &self->convert_Y_ps);
         if(status) {
             LOG_ERROR("Failed to create convertY pixel shader");
             return NULL;
         }
 
-        status = device_p->CreatePixelShader(hlsl->convert_UV_ps_hlsl->GetBufferPointer(), hlsl->convert_UV_ps_hlsl->GetBufferSize(), nullptr, &self->convert_UV_ps);
+        status = device->CreatePixelShader(hlsl->convert_UV_ps_hlsl->GetBufferPointer(), hlsl->convert_UV_ps_hlsl->GetBufferSize(), nullptr, &self->convert_UV_ps);
         if(status) {
             LOG_ERROR("Failed to create convertUV pixel shader");
             return NULL;
         }
 
-        status = device_p->CreateVertexShader(hlsl->convert_UV_vs_hlsl->GetBufferPointer(), hlsl->convert_UV_vs_hlsl->GetBufferSize(), nullptr, &self->convert_UV_vs);
+        status = device->CreateVertexShader(hlsl->convert_UV_vs_hlsl->GetBufferPointer(), hlsl->convert_UV_vs_hlsl->GetBufferSize(), nullptr, &self->convert_UV_vs);
         if(status) {
             LOG_ERROR("Failed to create convertUV vertex shader");
             return NULL;
         }
 
-        status = device_p->CreatePixelShader(hlsl->scene_ps_hlsl->GetBufferPointer(), hlsl->scene_ps_hlsl->GetBufferSize(), nullptr, &self->scene_ps);
+        status = device->CreatePixelShader(hlsl->scene_ps_hlsl->GetBufferPointer(), hlsl->scene_ps_hlsl->GetBufferSize(), nullptr, &self->scene_ps);
         if(status) {
             LOG_ERROR("Failed to create scene pixel shader");
             return NULL;
@@ -183,7 +191,7 @@ namespace gpu
 
         platf::Color* color = platf::get_color();
         util::Buffer* buf = BUFFER_INIT(color,sizeof(platf::Color[4]),DO_NOTHING);
-        self->color_matrix = helper::convert_to_d3d11_buffer(device_p, buf);
+        self->color_matrix = helper::convert_to_d3d11_buffer(device, buf);
         if(!self->color_matrix) {
             LOG_ERROR("Failed to create color matrix buffer");
             return NULL;
@@ -193,7 +201,7 @@ namespace gpu
             "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0
         };
 
-        status = device_p->CreateInputLayout(
+        status = device->CreateInputLayout(
             &layout_desc, 1,
             hlsl->convert_UV_vs_hlsl->GetBufferPointer(), 
             hlsl->convert_UV_vs_hlsl->GetBufferSize(),
@@ -214,7 +222,7 @@ namespace gpu
         };
         desc.Texture2D.MipLevels = 1;
 
-        status = device_p->CreateShaderResourceView(self->back_img.texture, &desc, &self->back_img.input_res);
+        status = device->CreateShaderResourceView(self->back_img.texture, &desc, &self->back_img.input_res);
         if(FAILED(status)) {
             LOG_ERROR("Failed to create input shader resource view");
             return NULL;
@@ -224,7 +232,8 @@ namespace gpu
         self->device_ctx->PSSetConstantBuffers(0, 1, &self->color_matrix);
         self->device_ctx->VSSetConstantBuffers(0, 1, &self->info_scene);
 
-        return (platf::Device*)self;
+        hw_device_set_frame(dev);
+        return dev;
     }
 
     void 
@@ -254,7 +263,7 @@ namespace gpu
 
 
         util::Buffer* buf = BUFFER_INIT(colors,sizeof(platf::Color[4]),DO_NOTHING);
-        d3d11::Buffer color_matrix = (d3d11::Buffer)helper::convert_to_d3d11_buffer((d3d11::Device)dev->data, buf);
+        d3d11::Buffer color_matrix = (d3d11::Buffer)helper::convert_to_d3d11_buffer(self->device, buf);
         if(!color_matrix) {
             LOG_WARNING("Failed to create color matrix");
             return;
@@ -272,7 +281,8 @@ namespace gpu
      */
     error::Error
     hw_device_convert(platf::Device* dev,
-                    platf::Image* img_base) 
+                      platf::Image* img_base,
+                      libav::Frame* frame) 
     {
         GpuDevice* self = (GpuDevice*)dev;
         ImageGpu* img = (ImageGpu*)img_base;
@@ -305,6 +315,23 @@ namespace gpu
         self->device_ctx->PSSetShaderResources(0, 1, &img->input_res);
         self->device_ctx->Draw(3, 0);
         self->device_ctx->Flush();
+
+        if(!frame->buf[0]) 
+            frame->buf[0] = av_buffer_allocz(sizeof(AVD3D11FrameDescriptor));
+
+        AVD3D11FrameDescriptor* desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
+        desc->texture = (d3d11::Texture2D)self->img.base.data;
+        desc->index   = 0;
+
+        frame->data[0] = self->img.base.data;
+        frame->data[1] = 0;
+
+        frame->linesize[0] = self->img.base.row_pitch;
+
+        frame->height = disp->height;
+        frame->width  = disp->width;
+        frame->pict_type = AV_PICTURE_TYPE_NONE;
+        frame->key_frame = 0;
 
         return error::ERROR_NONE;
     }
@@ -341,7 +368,7 @@ namespace gpu
         
         klass.base.convert            = hw_device_convert;
         klass.base.init               = hw_device_init;
-        klass.base.set_frame          = hw_device_set_frame;
+        klass.base.finalize           = hw_device_finalize;
         klass.base.set_colorspace     = hw_device_set_colorspace;
         klass.init_view_port          = d3d11_device_init_view_port;
         return &klass;

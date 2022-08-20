@@ -16,24 +16,16 @@
 
 namespace encoder
 {    
-    /**
-     * @brief 
-     * 
-     */
-    struct _EncodeContext{
+    struct _Session {
         libav::CodecContext* context;
 
         libav::Codec* codec;
 
         platf::Device* device;
-    };
 
-
-    struct _Session {
-        int64 pts;
-
-        // encoder::EncodeContext encode;
-        EncodeContext* encode;
+        bool hardware;
+        
+        int sws_color_space;
     };
     
     struct _Config{

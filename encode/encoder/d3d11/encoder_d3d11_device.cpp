@@ -22,6 +22,7 @@ extern "C" {
 }
 #endif
 
+#include <gpu_hw_device.h>
 
 namespace h264 {
     typedef enum _Profile{
@@ -56,7 +57,7 @@ namespace encoder {
         memset((pointer) ctx, 0, sizeof (AVD3D11VADeviceContext));
 
 
-        ID3D11Device *device = (ID3D11Device *)hwdevice_ctx->data;
+        d3d11::Device device = (d3d11::Device)((gpu::GpuDevice*)hwdevice_ctx)->device;
 
         device->AddRef();
         ctx->device = device;
@@ -69,7 +70,6 @@ namespace encoder {
         if(err) {
             char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
             LOG_ERROR(av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, err));
-
             return NULL;
         }
 

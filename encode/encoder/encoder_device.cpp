@@ -47,13 +47,15 @@ namespace encoder
             return FALSE;
         }
         
-        Session* session = make_session(encoder, 
+        EncodeContext* session = make_encode_context(encoder, 
                                disp->width, 
                                disp->height, 
                                disp->framerate,
                                device);
         if(!session) 
             return FALSE;
+
+        util::Buffer* frameBuf = make_avframe_buffer(session);
         
         
         util::Buffer* imgBuf = disp->klass->alloc_img(disp);
@@ -63,42 +65,44 @@ namespace encoder
         BUFFER_UNREF(imgBuf);
 
         if(FILTER_ERROR(err)) {
-            session_finalize(session);
+            free_encode_context(session);
             return FALSE;
         }
 
         platf::Image* img2 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
-        err = device->klass->convert(device,img2);
+        libav::Frame* frame0 = (libav::Frame*)BUFFER_REF(frameBuf,NULL);
+        err = device->klass->convert(device,img2,frame0);
+        BUFFER_UNREF(frameBuf);
         BUFFER_UNREF(imgBuf);
 
         if(FILTER_ERROR(err)) {
-            session_finalize(session);
+            free_encode_context(session);
             return FALSE;
         }
 
 
         util::Buffer* pktBuf;
     retry:
-        libav::Frame* frame = (libav::Frame*)BUFFER_REF(device->frame,NULL);
+        libav::Frame* frame = (libav::Frame*)BUFFER_REF(frameBuf,NULL);
         frame->pict_type = AV_PICTURE_TYPE_I;
         pktBuf = encode(1, session, frame);
-        BUFFER_UNREF(device->frame);
+        BUFFER_UNREF(frameBuf);
 
         if(FILTER_ERROR(pktBuf)) {
             if(FILTER_ERROR(pktBuf) == error::Error::ENCODER_NEED_MORE_FRAME) {
                 goto retry;
             }
-            session_finalize(session);
+            free_encode_context(session);
             return FALSE;
         }
 
         libav::Packet* av_packet = (libav::Packet*)BUFFER_REF(pktBuf,NULL);
         if(!(av_packet->flags & AV_PKT_FLAG_KEY)) {
-            session_finalize(session);
+            free_encode_context(session);
             return FALSE;
         }
 
-        session_finalize(session);
+        free_encode_context(session);
         return TRUE;
     }
 

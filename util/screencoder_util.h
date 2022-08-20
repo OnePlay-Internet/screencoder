@@ -30,9 +30,7 @@ namespace sink {
 }
 
 namespace encoder {
-typedef struct _EncodeContext EncodeContext;
-
-typedef struct _Session Session;
+typedef struct _Session EncodeContext;
 
 typedef struct _EncodeThreadContext EncodeThreadContext;
 

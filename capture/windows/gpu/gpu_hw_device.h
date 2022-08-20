@@ -61,6 +61,7 @@ namespace gpu
       DXGI_FORMAT format;
 
       d3d11::DeviceContext device_ctx;
+      d3d11::Device device;
     }GpuDevice;
 
 

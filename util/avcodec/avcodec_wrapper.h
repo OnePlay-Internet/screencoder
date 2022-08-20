@@ -27,6 +27,7 @@ namespace libav
     void    packet_free_func    (void* pk);
 
     typedef AVFrame             Frame;
+    void    frame_free_func     (void* pk);
 
     typedef AVStream            Stream;
 
