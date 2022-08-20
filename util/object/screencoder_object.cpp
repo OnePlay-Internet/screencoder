@@ -118,6 +118,7 @@ namespace util
         Buffer* object = (Buffer*)malloc(sizeof(Buffer));
         memset(object,0,sizeof(Buffer));
         memcpy(object->log.dataType,type,strlen(type));
+        object->log.created = std::chrono::high_resolution_clock::now();
 
         object->data = data;
         object->free_func = free_func;

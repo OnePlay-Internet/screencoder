@@ -90,6 +90,8 @@ namespace rtp
         if(av_write_frame(rtp->format, pkt) != 0) {
             LOG_ERROR("write failed");
         }
+
+        BUFFER_UNREF(buf);
     }
 
     void
