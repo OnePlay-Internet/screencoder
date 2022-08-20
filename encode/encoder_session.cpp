@@ -304,6 +304,6 @@ namespace encoder
         }
 
         sink->preset(sink,ses->encode);
-        return BUFFER_INIT((pointer)ses,sizeof(Session),session_finalize);
+        return BUFFER_INIT(ses,sizeof(Session),session_finalize);
     }
 } // namespace encoder

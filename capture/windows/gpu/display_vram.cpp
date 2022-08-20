@@ -355,7 +355,7 @@ namespace gpu {
         }
 
         img_base->data = (byte*)img->texture;
-        return BUFFER_INIT((pointer)img,sizeof(gpu::ImageGpu),free_img_vram);
+        return BUFFER_INIT(img,sizeof(gpu::ImageGpu),free_img_vram);
     }
 
     /**
