@@ -103,30 +103,30 @@ namespace gpu
     hw_device_finalize( platf::Device* device)
     {
         GpuDevice* gpu = (GpuDevice*)device;
-        gpu->scene_ps->Release();
-        gpu->scene_vs->Release();
+        ULONG i;
+        i = gpu->scene_ps ? gpu->scene_ps->Release() : 0;
+        i = gpu->scene_vs ? gpu->scene_vs->Release() : 0;
 
-        gpu->convert_UV_ps->Release();
-        gpu->convert_UV_vs->Release();
-        gpu->convert_Y_ps->Release();
+        i = gpu->convert_UV_ps ? gpu->convert_UV_ps->Release() : 0;
+        i = gpu->convert_UV_vs ? gpu->convert_UV_vs->Release() : 0;
+        i = gpu->convert_Y_ps ? gpu->convert_Y_ps->Release() : 0;
 
-        gpu->info_scene->Release();
-        gpu->input_layout->Release();
+        i = gpu->info_scene ? gpu->info_scene->Release() : 0;
+        i = gpu->input_layout ? gpu->input_layout->Release() : 0;
 
-        gpu->color_matrix->Release();
+        i = gpu->color_matrix ? gpu->color_matrix->Release() : 0;
 
-        gpu->nv12_UV_rt->Release();
-        gpu->nv12_Y_rt->Release();
+        i = gpu->nv12_UV_rt ? gpu->nv12_UV_rt->Release() : 0;
+        i = gpu->nv12_Y_rt ? gpu->nv12_Y_rt->Release() : 0;
 
-        gpu->img.texture->Release();
-        gpu->img.input_res->Release();
-        gpu->img.scene_rt->Release();
+        i = gpu->img.texture ? gpu->img.texture->Release() : 0;
+        i = gpu->img.input_res ? gpu->img.input_res->Release() : 0;
+        i = gpu->img.scene_rt ? gpu->img.scene_rt->Release() : 0;
 
-        gpu->back_img.texture->Release();
-        gpu->back_img.input_res->Release();
-        gpu->back_img.scene_rt->Release();
-
-        gpu->device_ctx->Release();
+        i = gpu->back_img.texture ? gpu->back_img.texture->Release() : 0;
+        i = gpu->back_img.input_res ? gpu->back_img.input_res->Release() : 0;
+        i = gpu->back_img.scene_rt ? gpu->back_img.scene_rt->Release() : 0;
+        i = gpu->device_ctx ? gpu->device_ctx->Release() : 0;
         free((pointer)device);
     }
 
