@@ -116,6 +116,42 @@ namespace error
         QUEUE_ARRAY_CLASS->push(LOG_QUEUE,buf);
         return;
     }
-    
-        // snprintf((char*)ptr, 1000, "%s : %d : %s : %s\n",file,line,level,message);
+
+    char*
+    map_event(BufferEventType type)
+    {
+        switch (type)
+        {
+        case BufferEventType::INIT :
+            return "init";
+        case BufferEventType::REF :
+            return "ref";
+        case BufferEventType::UNREF :
+            return "unref";
+        case BufferEventType::FREE:
+            return "free";
+        default:
+            return "unknown";
+        }
+    }
+
+    void log_buffer(BufferLog* log,
+                    int line,
+                    char* file,
+                    BufferEventType type)
+    {
+
+        auto timestamp = std::chrono::high_resolution_clock::now() - log->created;
+        auto timestampnano = std::chrono::duration_cast<std::chrono::nanoseconds>(timestamp);
+        char* timestampStr = std::to_string(timestampnano.count()).data();
+
+        auto createTime = std::chrono::duration_cast<std::chrono::milliseconds>(log->created.time_since_epoch());
+        auto strTemp = std::to_string(createTime.count());
+        char* createTimeStr = strTemp.substr(strTemp.length()-3,3).data();
+        
+
+        char str[100] = {0};
+        snprintf(str, 100, "buffer id %s contain %s : %s at %s",createTimeStr,log->dataType,map_event(type),timestampStr);
+        error::log(file,line,"trace",str);
+    }
 } // namespace error

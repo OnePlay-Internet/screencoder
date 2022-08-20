@@ -124,9 +124,9 @@ namespace util
         object->size = size,
         object->ref_count = 1;
 
-        char str[100] = {0};
-        snprintf(str, 100, "%s : init",object->log.dataType);
-        error::log(file,line,"buffer trace",str);
+
+        error::log_buffer(&object->log,line,file,error::BufferEventType::INIT);
+
         return object;
     }
     pointer 
@@ -139,9 +139,7 @@ namespace util
         if(FILTER_ERROR(obj))
             return NULL;
 
-        char str[100] = {0};
-        snprintf(str, 100, "%s : ref",obj->log.dataType);
-        error::log(file,line,"buffer trace",str);
+        error::log_buffer(&obj->log,line,file,error::BufferEventType::REF);
 
         obj->ref_count++;
         if (size)
@@ -158,16 +156,12 @@ namespace util
         if(FILTER_ERROR(obj))
             return;
 
-        char str[100] = {0};
-        snprintf(str, 100, "%s : unref",obj->log.dataType);
-        error::log(file,line,"buffer trace",str);
+        error::log_buffer(&obj->log,line,file,error::BufferEventType::UNREF);
 
         obj->ref_count--;
         if (!obj->ref_count) {
 
-            char str1[100] = {0};
-            snprintf(str1, 100, "%s : free",obj->log.dataType);
-            error::log(file,line,"buffer trace",str1);
+            error::log_buffer(&obj->log,line,file,error::BufferEventType::FREE);
 
             obj->free_func(obj->data);
             free(obj);
