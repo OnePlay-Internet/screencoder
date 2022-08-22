@@ -38,7 +38,7 @@ namespace encoder
 
         
 
-        platf::PixelFormat pix_fmt  = config->dynamicRange == 0 ? 
+        platf::PixelFormat pix_fmt  = !config->enableDynamicRange ? 
                                         platf::map_pix_fmt(encoder->static_pix_fmt) : 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
@@ -114,8 +114,8 @@ namespace encoder
 
         // First, test encoder viability
         {
-            Config config_max_ref_frames { 1000, 1, 1, 1, 0, 0 };
-            Config config_autoselect { 1000, 1, 0, 1, 0, 0 };
+            Config config_max_ref_frames { 1000, 1, 1, 1, VideoFormat::H264, 0 };
+            Config config_autoselect     { 1000, 1, 0, 1, VideoFormat::H264, 0 };
 
             retry:
             auto max_ref_frames_h264 = validate_config(encoder, &config_max_ref_frames);
@@ -139,11 +139,8 @@ namespace encoder
         }
         
         {
-            Config config_max_ref_frames { 1000, 1, 1, 1, 0, 0 };
-            Config config_autoselect { 1000, 1, 0, 1, 0, 0 };
-
-            config_max_ref_frames.videoFormat = 1;
-            config_autoselect.videoFormat     = 1;
+            Config config_max_ref_frames { 1000, 1, 1, 1, VideoFormat::H265, 0 };
+            Config config_autoselect     { 1000, 1, 0, 1, VideoFormat::H265, 0 };
 
             retry_hevc:
             auto max_ref_frames_hevc = validate_config(encoder, &config_max_ref_frames);
@@ -167,26 +164,24 @@ namespace encoder
 
         // test DYNAMIC_RANGE and SLICE
         {
-            std::vector<std::pair<FrameFlags, Config>> configs {
-                { FrameFlags::DYNAMIC_RANGE, { 1000, 1, 0, 3, 1, 1 } },
+            Config configs[2] = { 
+                { 1000, 1, 0, 3, VideoFormat::UNKNOWN, 1 }, 
+                { 1000, 2, 1, 1, VideoFormat::UNKNOWN, 0 }
+            };
+            FrameFlags flags[2] = {
+                FrameFlags::DYNAMIC_RANGE,
+                FrameFlags::SLICE
             };
 
-            if (encoder->flags[SINGLE_SLICE_ONLY]) {
-                encoder->h264.capabilities[FrameFlags::SLICE] = false;
-                encoder->hevc.capabilities[FrameFlags::SLICE] = false;
-            } else {
-                configs.emplace_back( std::pair<FrameFlags, Config> { 
-                    FrameFlags::SLICE, { 1000, 2, 1, 1, 0, 0 } 
-                });
-            }
-
-
-            for(auto &[flag, config] : configs) {
+            for (int i = 0; i < 2; i++)
+            {
+                FrameFlags flag = flags[i];
+                Config config = configs[i];
                 auto h264 = config;
                 auto hevc = config;
 
-                h264.videoFormat = 0;
-                hevc.videoFormat = 1;
+                h264.videoFormat = VideoFormat::H264;
+                hevc.videoFormat = VideoFormat::H265;
 
                 encoder->h264.capabilities[flag] = validate_config(encoder, &h264);
                 if(encoder->hevc.capabilities[FrameFlags::PASSED]) {

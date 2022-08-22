@@ -23,21 +23,39 @@ namespace encoder
 
         platf::Device* device;
 
-        bool hardware;
-        
         int sws_color_space;
+
+        int dev_type;
     };
-    
+
+    enum LibavColor{
+        MPEG = AVCOL_RANGE_MPEG,
+        JPEG = AVCOL_RANGE_JPEG,
+    };
+    enum LibscaleColor{
+        REC_601,
+        REC_709,
+        REC_2020,
+    };
+
+    enum VideoFormat {
+        UNKNOWN,
+        H264,
+        H265,
+    };
+
     struct _Config{
         int bitrate;
 
         int slicesPerFrame;
         int numRefFrames;
 
-        int encoderCscMode;
+        AVColorRange avcolor;
+        LibscaleColor scalecolor;
 
-        int videoFormat;
-        int dynamicRange;
+
+        VideoFormat videoFormat;
+        bool enableDynamicRange;
     };
 
 } // namespace encoder

@@ -112,20 +112,20 @@ namespace encoder
                  int width, int height, int framerate,
                  platf::Device* device) 
     {
-
-        CodecConfig* video_format = (encoder->conf.videoFormat == 0) ? &encoder->h264 : &encoder->hevc;
+        CodecConfig* video_format = (encoder->conf.videoFormat == VideoFormat::H264) ? &encoder->h264 : &encoder->hevc;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
             LOG_ERROR("encoder not supported");
             return NULL;
         }
 
-        if(encoder->conf.dynamicRange && !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
+        if(encoder->conf.enableDynamicRange || !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
             LOG_ERROR("dynamic range not supported");
             return NULL;
         }
 
         EncodeContext* encode_ctx = alloc_encode_context(device,video_format->name);
-        encode_ctx->hardware = encoder->dev_type != AV_HWDEVICE_TYPE_NONE;
+        encode_ctx->dev_type = encoder->dev_type;
+
         libav::CodecContext* ctx = encode_ctx->context;
         {
             ctx->width     = width;
@@ -133,9 +133,9 @@ namespace encoder
             ctx->time_base = AVRational { 1, framerate };
             ctx->framerate = AVRational { framerate, 1 };
 
-            if(encoder->conf.videoFormat == 0) {
+            if(encoder->conf.videoFormat == VideoFormat::H264) {
                 ctx->profile = encoder->profile.h264_high;
-            } else if(encoder->conf.dynamicRange == 0) {
+            } else if(!encoder->conf.enableDynamicRange) {
                 ctx->profile = encoder->profile.hevc_main;
             } else {
                 ctx->profile = encoder->profile.hevc_main_10;
@@ -157,10 +157,9 @@ namespace encoder
             ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
             ctx->flags2 |= AV_CODEC_FLAG2_FAST;
 
-            ctx->color_range = (encoder->conf.encoderCscMode & 0x1) ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
-
-            switch(encoder->conf.encoderCscMode >> 1) {
-            case 0:
+            ctx->color_range = encoder->conf.avcolor;
+            switch(encoder->conf.scalecolor) {
+            case LibscaleColor::REC_601:
             default:
                 // Rec. 601
                 LOG_INFO("Color coding [Rec. 601]");
@@ -169,8 +168,7 @@ namespace encoder
                 ctx->colorspace      = AVCOL_SPC_SMPTE170M;
                 encode_ctx->sws_color_space      = SWS_CS_SMPTE170M;
                 break;
-
-            case 1:
+            case LibscaleColor::REC_709:
                 // Rec. 709
                 LOG_INFO("Color coding [Rec. 709]");
                 ctx->color_primaries = AVCOL_PRI_BT709;
@@ -178,8 +176,7 @@ namespace encoder
                 ctx->colorspace      = AVCOL_SPC_BT709;
                 encode_ctx->sws_color_space      = SWS_CS_ITU709;
                 break;
-
-            case 2:
+            case LibscaleColor::REC_2020:
                 // Rec. 2020
                 LOG_INFO("Color coding [Rec. 2020]");
                 ctx->color_primaries = AVCOL_PRI_BT2020;
@@ -189,8 +186,8 @@ namespace encoder
                 break;
             }
 
-            libav::PixelFormat sw_fmt = (encoder->conf.dynamicRange == 0) ?  encoder->static_pix_fmt : encoder->dynamic_pix_fmt; 
-            if(encode_ctx->hardware) {
+            libav::PixelFormat sw_fmt = (!encoder->conf.enableDynamicRange) ?  encoder->static_pix_fmt : encoder->dynamic_pix_fmt; 
+            if(encoder->dev_type == AV_HWDEVICE_TYPE_NONE) {
                 ctx->pix_fmt = encoder->dev_pix_fmt;
 
                 libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(device);
@@ -260,7 +257,7 @@ namespace encoder
         frame->width  = context->context->width;
         frame->height = context->context->height;
 
-        frame->hw_frames_ctx = context->hardware ? 
+        frame->hw_frames_ctx = (context->dev_type != AV_HWDEVICE_TYPE_NONE) ? 
             av_buffer_ref(context->context->hw_frames_ctx) : 
             frame->hw_frames_ctx;
 
@@ -282,7 +279,7 @@ namespace encoder
                         platf::Display* display,
                         sink::GenericSink* sink) 
     {
-        platf::PixelFormat pix_fmt = encoder->conf.dynamicRange == 0 ? 
+        platf::PixelFormat pix_fmt = !encoder->conf.enableDynamicRange ? 
                                         platf::map_pix_fmt(encoder->static_pix_fmt) : 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 

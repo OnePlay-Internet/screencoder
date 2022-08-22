@@ -78,7 +78,7 @@ namespace encoder {
 
 
     Encoder*
-    make_d3d11_encoder(int bitrate)
+    make_d3d11_encoder(int bitrate, char* codec)
     {
         static Encoder encoder = {0};
         encoder.conf.bitrate = bitrate;
@@ -93,9 +93,9 @@ namespace encoder {
         };
 
 
-        encoder.conf.encoderCscMode = 0;
-        encoder.conf.videoFormat = 0;
-        encoder.conf.dynamicRange = 0;
+        encoder.conf.videoFormat = string_compare(codec,"h264") ? VideoFormat::H264 : VideoFormat::UNKNOWN;
+        encoder.conf.videoFormat = string_compare(codec,"h265") ? VideoFormat::H265 : VideoFormat::UNKNOWN;
+        encoder.conf.enableDynamicRange = FALSE;
         encoder.conf.numRefFrames = 0;
         encoder.conf.slicesPerFrame = 1;
 
