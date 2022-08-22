@@ -226,9 +226,9 @@ namespace encoder
             handle_options(options,video_format->options);
             if(video_format->capabilities[FrameFlags::CBR]) {
                 ctx->rc_max_rate    = encoder->conf.bitrate;
-                ctx->rc_buffer_size = encoder->conf.bitrate / 10;
+                ctx->rc_buffer_size = encoder->conf.bitrate / 60;
                 ctx->bit_rate       = encoder->conf.bitrate;
-                ctx->rc_min_rate    = encoder->conf.bitrate / 2;
+                ctx->rc_min_rate    = encoder->conf.bitrate;
             } else if(video_format->qp) {
                 handle_options(options,video_format->qp);
             } else {

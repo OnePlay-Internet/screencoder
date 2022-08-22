@@ -97,7 +97,7 @@ namespace encoder {
         encoder.conf.videoFormat = string_compare(codec,"h265") ? VideoFormat::H265 : VideoFormat::UNKNOWN;
         encoder.conf.enableDynamicRange = FALSE;
         encoder.conf.numRefFrames = 0;
-        encoder.conf.slicesPerFrame = 1;
+        encoder.conf.slicesPerFrame = 60;
 
         util::KeyValue* hevcqp = util::new_keyvalue_pairs(1);
         util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);

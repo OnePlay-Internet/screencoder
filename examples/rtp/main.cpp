@@ -30,7 +30,7 @@ select_monitor (char* name)
 int
 set_bitrate ()
 {
-    return 1000;
+    return 10*1000*1000*1000; // mbps
 }
 
 int 
