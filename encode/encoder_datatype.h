@@ -48,7 +48,6 @@ namespace encoder
         int bitrate;
 
         int slicesPerFrame;
-        int numRefFrames;
 
         AVColorRange avcolor;
         LibscaleColor scalecolor;

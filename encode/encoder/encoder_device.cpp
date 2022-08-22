@@ -114,8 +114,8 @@ namespace encoder
 
         // First, test encoder viability
         {
-            Config config_max_ref_frames { 1000, 1, 1, 1, VideoFormat::H264, 0 };
-            Config config_autoselect     { 1000, 1, 0, 1, VideoFormat::H264, 0 };
+            Config config_max_ref_frames { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
+            Config config_autoselect     { 1000, 1,  AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
 
             retry:
             auto max_ref_frames_h264 = validate_config(encoder, &config_max_ref_frames);
@@ -138,8 +138,8 @@ namespace encoder
         }
         
         {
-            Config config_max_ref_frames { 1000, 1, 1, 1, VideoFormat::H265, 0 };
-            Config config_autoselect     { 1000, 1, 0, 1, VideoFormat::H265, 0 };
+            Config config_max_ref_frames { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
+            Config config_autoselect     { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
 
             retry_hevc:
             auto max_ref_frames_hevc = validate_config(encoder, &config_max_ref_frames);
@@ -164,18 +164,17 @@ namespace encoder
         // test DYNAMIC_RANGE and SLICE
         {
             Config configs[2] = { 
-                { 1000, 1, 0, 3, VideoFormat::UNKNOWN, 1 }, 
-                { 1000, 2, 1, 1, VideoFormat::UNKNOWN, 0 }
+                { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false },
             };
             FrameFlags flags[2] = {
                 FrameFlags::DYNAMIC_RANGE,
-                FrameFlags::SLICE
             };
 
             for (int i = 0; i < 2; i++)
             {
                 FrameFlags flag = flags[i];
                 Config config = configs[i];
+
                 auto h264 = config;
                 auto hevc = config;
 
