@@ -97,7 +97,7 @@ namespace encoder {
         encoder.conf.videoFormat = 0;
         encoder.conf.dynamicRange = 0;
         encoder.conf.numRefFrames = 0;
-        encoder.conf.slicesPerFrame = 1;
+        encoder.conf.slicesPerFrame = 60;
 
         util::KeyValue* hevcqp = util::new_keyvalue_pairs(1);
         util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);

@@ -33,7 +33,7 @@ namespace sink
 
         while(true) {
             if(!QUEUE_ARRAY_CLASS->peek(packets)) {
-                std::this_thread::sleep_for(1ms); // decrease sleep interval cause cpu consumption ramp up
+                std::this_thread::sleep_for(100us); // decrease sleep interval cause cpu consumption ramp up
                 continue;
             }
 
