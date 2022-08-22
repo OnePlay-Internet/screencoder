@@ -57,7 +57,7 @@ namespace session {
                   SelectMonitor select,
                   sink::GenericSink* sink)
     {
-        encoder::Encoder* encoder = NVENC(bitrate_ctrl());
+        encoder::Encoder* encoder = NVENC(bitrate_ctrl(),"h265");
         platf::Display** displays = display::get_all_display(encoder);
 
         int i =0;

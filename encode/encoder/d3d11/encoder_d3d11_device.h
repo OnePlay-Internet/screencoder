@@ -14,11 +14,11 @@
 #include <encoder_device.h>
 
 
-#define NVENC(x) encoder::make_d3d11_encoder(x)
+#define NVENC(x,y) encoder::make_d3d11_encoder(x,y)
 
 namespace encoder
 {
-    Encoder* make_d3d11_encoder(int bitrate);
+    Encoder* make_d3d11_encoder(int bitrate,char* codec);
 }
 
 
