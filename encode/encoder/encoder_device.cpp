@@ -122,8 +122,7 @@ namespace encoder
             auto autoselect_h264     = validate_config(encoder, &config_autoselect);
 
             if(!max_ref_frames_h264 && !autoselect_h264 ) {
-                if(encoder->h264.qp && encoder->h264.capabilities[FrameFlags::CBR]) 
-                {
+                if(encoder->h264.qp && encoder->h264.capabilities[FrameFlags::CBR]) {
                     // It's possible the encoder isn't accepting Constant Bit Rate. Turn off CBR and make another attempt
                     encoder->h264.capabilities.set();
                     encoder->h264.capabilities[FrameFlags::CBR] = FALSE;

@@ -50,9 +50,12 @@ namespace config
         static Constant encoder;
         RETURN_PTR_ONCE(encoder);
             
-        encoder.qp = 28;
-        encoder.gop_size = 10;
-        encoder.gop_size_min = 3;
+        encoder.qp = 50;
+
+        encoder.gop_size = 1;
+        encoder.gop_size_min = 0;
+        encoder.ref_frame_num = 1;
+
         encoder.dwmflush = true;
         encoder.nv.rc = rc_e::cbr;
         encoder.nv.coder = coder_e::_auto;

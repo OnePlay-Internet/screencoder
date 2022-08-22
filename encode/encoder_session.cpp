@@ -145,14 +145,9 @@ namespace encoder
             ctx->max_b_frames = 0;
 
             // if gop_size are set then 
-            ctx->gop_size = SCREENCODER_CONSTANT->gop_size;
-            ctx->keyint_min = SCREENCODER_CONSTANT->gop_size_min;
-
-            if(encoder->conf.numRefFrames == 0) {
-                ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] ? 0 : 16;
-            } else { // Some client decoders have limits on the number of reference frames
-                ctx->refs = video_format->capabilities[FrameFlags::REF_FRAMES_RESTRICT] ? encoder->conf.numRefFrames : 0;
-            }
+            ctx->gop_size =    SCREENCODER_CONSTANT->gop_size;
+            ctx->keyint_min =  SCREENCODER_CONSTANT->gop_size_min;
+            ctx->refs =        SCREENCODER_CONSTANT->ref_frame_num;
 
             ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
             ctx->flags2 |= AV_CODEC_FLAG2_FAST;
@@ -226,7 +221,7 @@ namespace encoder
             handle_options(options,video_format->options);
             if(video_format->capabilities[FrameFlags::CBR]) {
                 ctx->rc_max_rate    = encoder->conf.bitrate;
-                ctx->rc_buffer_size = encoder->conf.bitrate / 60;
+                ctx->rc_buffer_size = encoder->conf.bitrate / framerate;
                 ctx->bit_rate       = encoder->conf.bitrate;
                 ctx->rc_min_rate    = encoder->conf.bitrate;
             } else if(video_format->qp) {

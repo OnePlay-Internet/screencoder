@@ -41,6 +41,7 @@ namespace config
         int qp; // higher == more compression and less quality
         int gop_size;
         int gop_size_min;
+        int ref_frame_num;
         bool dwmflush;
     }Constant;
 
