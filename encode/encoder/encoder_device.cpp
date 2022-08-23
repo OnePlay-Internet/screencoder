@@ -38,9 +38,9 @@ namespace encoder
 
         
 
-        platf::PixelFormat pix_fmt  = !config->enableDynamicRange ? 
-                                        platf::map_pix_fmt(encoder->static_pix_fmt) : 
-                                        platf::map_pix_fmt(encoder->dynamic_pix_fmt);
+        platf::PixelFormat pix_fmt  = config->enableDynamicRange ? 
+                                        platf::map_pix_fmt(encoder->dynamic_pix_fmt):
+                                        platf::map_pix_fmt(encoder->static_pix_fmt);
 
         platf::Device* device = disp->klass->make_hwdevice(disp,pix_fmt);
         if(!device) {
@@ -109,86 +109,26 @@ namespace encoder
     bool 
     validate_encoder(Encoder* encoder) 
     {
-        encoder->h264.capabilities.set();
-        encoder->hevc.capabilities.set();
+        encoder::Config test_case = encoder->conf;
+        test_case.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
+        test_case.scalecolor = encoder::LibscaleColor::REC_601;
 
-        // First, test encoder viability
+
         {
-            Config config_max_ref_frames { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
-            Config config_autoselect     { 1000, 1,  AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
-
             retry:
-            auto max_ref_frames_h264 = validate_config(encoder, &config_max_ref_frames);
-            auto autoselect_h264     = validate_config(encoder, &config_autoselect);
-
-            if(!max_ref_frames_h264 && !autoselect_h264 ) {
-                if(encoder->h264.qp && encoder->h264.capabilities[FrameFlags::CBR]) {
+            encoder->codec_config.capabilities.set();
+            bool result = validate_config(encoder, &test_case);
+            if(!result) {
+                if(encoder->codec_config.qp && encoder->codec_config.capabilities[FrameFlags::CBR]) {
                     // It's possible the encoder isn't accepting Constant Bit Rate. Turn off CBR and make another attempt
-                    encoder->h264.capabilities.set();
-                    encoder->h264.capabilities[FrameFlags::CBR] = FALSE;
+                    encoder->codec_config.capabilities[FrameFlags::CBR] = FALSE;
                     goto retry;
                 }
                 return false;
             }
-
-
-            encoder->h264.capabilities[FrameFlags::REF_FRAMES_RESTRICT]   = max_ref_frames_h264;
-            encoder->h264.capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] = autoselect_h264;
-            encoder->h264.capabilities[FrameFlags::PASSED]                = true;
         }
-        
-        {
-            Config config_max_ref_frames { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
-            Config config_autoselect     { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false };
-
-            retry_hevc:
-            auto max_ref_frames_hevc = validate_config(encoder, &config_max_ref_frames);
-            auto autoselect_hevc     = validate_config(encoder, &config_autoselect);
-
-            // If HEVC must be supported, but it is not supported
-            if(!max_ref_frames_hevc && !autoselect_hevc) {
-                if(encoder->hevc.qp && encoder->hevc.capabilities[FrameFlags::CBR]) {
-                    // It's possible the encoder isn't accepting Constant Bit Rate. 
-                    // Turn off CBR and make another attempt
-                    encoder->hevc.capabilities.set();
-                    encoder->hevc.capabilities[FrameFlags::CBR] = false;
-                    goto retry_hevc;
-                }
-            }
-
-            encoder->hevc.capabilities[FrameFlags::REF_FRAMES_RESTRICT]   = max_ref_frames_hevc ;
-            encoder->hevc.capabilities[FrameFlags::REF_FRAMES_AUTOSELECT] = autoselect_hevc;
-            encoder->hevc.capabilities[FrameFlags::PASSED] = max_ref_frames_hevc || autoselect_hevc;
-        }
-
-        // test DYNAMIC_RANGE and SLICE
-        {
-            Config configs[2] = { 
-                { 1000, 60, AVCOL_RANGE_MPEG, LibscaleColor::REC_709, VideoFormat::H265, false },
-            };
-            FrameFlags flags[2] = {
-                FrameFlags::DYNAMIC_RANGE,
-            };
-
-            for (int i = 0; i < 2; i++)
-            {
-                FrameFlags flag = flags[i];
-                Config config = configs[i];
-
-                auto h264 = config;
-                auto hevc = config;
-
-                h264.videoFormat = VideoFormat::H264;
-                hevc.videoFormat = VideoFormat::H265;
-
-                encoder->h264.capabilities[flag] = validate_config(encoder, &h264);
-                if(encoder->hevc.capabilities[FrameFlags::PASSED]) {
-                    encoder->hevc.capabilities[flag] = validate_config(encoder, &hevc);
-                }
-            }
-        }
-
+        encoder->conf.avcolor = test_case.avcolor;
+        encoder->conf.scalecolor = test_case.scalecolor;
         return true;
     }
-
 }

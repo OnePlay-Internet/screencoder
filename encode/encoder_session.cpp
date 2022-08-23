@@ -58,16 +58,16 @@ namespace encoder
     }
 
     void
-    handle_options(AVDictionary* options, 
+    handle_options(AVDictionary** options, 
                    util::KeyValue* keyvalue)
     {
         util::KeyValue* option = keyvalue;
         while(option->type) {
             if(option->type == util::Type::STRING)
-                av_dict_set(&options,option->key,option->string_value,0);
+                av_dict_set(options,option->key,option->string_value,0);
 
             if(option->type == util::Type::INT)
-                av_dict_set_int(&options,option->key,option->int_value,0);
+                av_dict_set_int(options,option->key,option->int_value,0);
 
             option++;
         }
@@ -112,7 +112,7 @@ namespace encoder
                  int width, int height, int framerate,
                  platf::Device* device) 
     {
-        CodecConfig* video_format = (encoder->conf.videoFormat == VideoFormat::H264) ? &encoder->h264 : &encoder->hevc;
+        CodecConfig* video_format = &encoder->codec_config;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
             LOG_ERROR("encoder not supported");
             return NULL;
@@ -135,10 +135,10 @@ namespace encoder
 
             if(encoder->conf.videoFormat == VideoFormat::H264) {
                 ctx->profile = encoder->profile.h264_high;
-            } else if(!encoder->conf.enableDynamicRange) {
-                ctx->profile = encoder->profile.hevc_main;
-            } else {
+            } else if(encoder->conf.enableDynamicRange) {
                 ctx->profile = encoder->profile.hevc_main_10;
+            } else {
+                ctx->profile = encoder->profile.hevc_main;
             }
 
             // B-frames delay decoder output, so never use them
@@ -181,8 +181,11 @@ namespace encoder
                 break;
             }
 
-            libav::PixelFormat sw_fmt = (!encoder->conf.enableDynamicRange) ?  encoder->static_pix_fmt : encoder->dynamic_pix_fmt; 
-            if(encoder->dev_type == AV_HWDEVICE_TYPE_NONE) {
+            libav::PixelFormat sw_fmt = encoder->conf.enableDynamicRange ?  
+                encoder->dynamic_pix_fmt:
+                encoder->static_pix_fmt; 
+
+            if(encoder->dev_type != AV_HWDEVICE_TYPE_NONE) {
                 ctx->pix_fmt = encoder->dev_pix_fmt;
 
                 libav::BufferRef* buf_or_error = encoder->make_hw_ctx_func(device);
@@ -218,14 +221,14 @@ namespace encoder
          */
         {
             AVDictionary *options = NULL;
-            handle_options(options,video_format->options);
+            handle_options(&options,video_format->options);
             if(video_format->capabilities[FrameFlags::CBR]) {
                 ctx->rc_max_rate    = encoder->conf.bitrate;
                 ctx->rc_buffer_size = encoder->conf.bitrate / framerate;
                 ctx->bit_rate       = encoder->conf.bitrate;
                 ctx->rc_min_rate    = encoder->conf.bitrate;
             } else if(video_format->qp) {
-                handle_options(options,video_format->qp);
+                handle_options(&options,video_format->qp);
             } else {
                 LOG_ERROR("Couldn't set video quality");
                 return NULL;

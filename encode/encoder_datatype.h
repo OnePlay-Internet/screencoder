@@ -36,12 +36,14 @@ namespace encoder
         REC_601,
         REC_709,
         REC_2020,
+        LIBSCALE_COLOR_MAX,
     };
 
     enum VideoFormat {
         UNKNOWN,
         H264,
         H265,
+        VIDEO_FORMAT_MAX,
     };
 
     struct _Config{
@@ -51,10 +53,10 @@ namespace encoder
 
         AVColorRange avcolor;
         LibscaleColor scalecolor;
+        bool enableDynamicRange;
 
 
         VideoFormat videoFormat;
-        bool enableDynamicRange;
     };
 
 } // namespace encoder

@@ -58,6 +58,11 @@ namespace session {
                   sink::GenericSink* sink)
     {
         encoder::Encoder* encoder = NVENC(bitrate_ctrl(),"h265");
+        if(!encoder) {
+            LOG_ERROR("NVENC encoder is not ready");
+            return;
+        }
+
         platf::Display** displays = display::get_all_display(encoder);
 
         int i =0;
