@@ -135,10 +135,10 @@ namespace encoder
 
             if(encoder->conf.videoFormat == VideoFormat::H264) {
                 ctx->profile = encoder->profile.h264_high;
-            } else if(!encoder->conf.enableDynamicRange) {
-                ctx->profile = encoder->profile.hevc_main;
-            } else {
+            } else if(encoder->conf.enableDynamicRange) {
                 ctx->profile = encoder->profile.hevc_main_10;
+            } else {
+                ctx->profile = encoder->profile.hevc_main;
             }
 
             // B-frames delay decoder output, so never use them
@@ -181,7 +181,10 @@ namespace encoder
                 break;
             }
 
-            libav::PixelFormat sw_fmt = (!encoder->conf.enableDynamicRange) ?  encoder->static_pix_fmt : encoder->dynamic_pix_fmt; 
+            libav::PixelFormat sw_fmt = encoder->conf.enableDynamicRange ?  
+                encoder->dynamic_pix_fmt:
+                encoder->static_pix_fmt; 
+
             if(encoder->dev_type == AV_HWDEVICE_TYPE_NONE) {
                 ctx->pix_fmt = encoder->dev_pix_fmt;
 

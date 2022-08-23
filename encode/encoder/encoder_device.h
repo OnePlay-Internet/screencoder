@@ -25,19 +25,9 @@ namespace encoder
     } Profile;
 
 
-    typedef enum _EncodingFlags{
-        DEFAULT,
-        PARALLEL_ENCODING,
-        H264_ONLY,              // When HEVC is to heavy
-        LIMITED_GOP_SIZE,       // Some encoders don't like it when you have an infinite GOP_SIZE. *cough* VAAPI *cough*
-        SINGLE_SLICE_ONLY,      // Never use multiple slices <-- Older intel iGPU's ruin it for everyone else :P
-        MAX_FLAGS_ENCODING
-    }EncodingFlags;
 
     typedef enum _FrameFlags{
         PASSED,                // Is supported
-        REF_FRAMES_RESTRICT,   // Set maximum reference frames
-        REF_FRAMES_AUTOSELECT, // Allow encoder to select maximum reference frames (If !REF_FRAMES_RESTRICT --> REF_FRAMES_AUTOSELECT)
         SLICE,                 // Allow frame to be partitioned into multiple slices
         CBR,                   // Some encoders don't support CBR, if not supported --> attempt constant quantatication parameter instead
         DYNAMIC_RANGE,         // hdr
@@ -66,12 +56,9 @@ namespace encoder
         char* name;
         encoder::Config conf;
 
-        CodecConfig h264;
-        CodecConfig hevc;
+        CodecConfig codec_config;
 
         Profile profile;
-
-        std::bitset<EncodingFlags::MAX_FLAGS_ENCODING> flags;
 
         libav::HWDeviceType dev_type;
         libav::PixelFormat dev_pix_fmt;

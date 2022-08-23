@@ -31,6 +31,24 @@ namespace h264 {
         high,
         high_444p,
     }Profile;
+
+    encoder::CodecConfig
+    get_codec_config()
+    {
+        util::KeyValue* h264qp = util::new_keyvalue_pairs(2);
+        util::keyval_new_intval(h264qp,"qp",SCREENCODER_CONSTANT->qp);
+        util::KeyValue* h264pairs = util::new_keyvalue_pairs(6);
+        util::keyval_new_intval(h264pairs,"zerolatency",1);
+        util::keyval_new_intval(h264pairs,"preset",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(h264pairs,"rc",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(h264pairs,"coder",SCREENCODER_CONSTANT->nv.coder);
+        return
+        {
+            "h264_nvenc",
+            h264qp,
+            h264pairs,
+        };
+    }
 } // namespace nv
 
 namespace hevc {
@@ -39,9 +57,26 @@ namespace hevc {
         main_10,
         rext,
     }Profile;
+
+    encoder::CodecConfig
+    get_codec_config()
+    {        
+        util::KeyValue* hevcqp = util::new_keyvalue_pairs(1);
+        util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);
+        util::keyval_new_intval(hevcpairs,"zerolatency",1);
+        util::keyval_new_intval(hevcpairs,"preset",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(hevcpairs,"rc",SCREENCODER_CONSTANT->nv.rc);
+        return {
+            "hevc_nvenc",
+            hevcqp,
+            hevcpairs,
+        };
+    }
 }
 
 namespace encoder {
+
+
 
     /**
      * @brief 
@@ -81,7 +116,6 @@ namespace encoder {
     make_d3d11_encoder(int bitrate, char* codec)
     {
         static Encoder encoder = {0};
-        encoder.conf.bitrate = bitrate;
         RETURN_PTR_ONCE(encoder);
         
         encoder.name = "nvenc";
@@ -93,39 +127,8 @@ namespace encoder {
         };
 
 
-        encoder.conf.videoFormat = string_compare(codec,"h264") ? VideoFormat::H264 : VideoFormat::UNKNOWN;
-        encoder.conf.videoFormat = string_compare(codec,"h265") ? VideoFormat::H265 : VideoFormat::UNKNOWN;
-        encoder.conf.enableDynamicRange = TRUE;
-        encoder.conf.slicesPerFrame = 60;
-        encoder.conf.avcolor = (AVColorRange)LibavColor::MPEG;
-        encoder.conf.scalecolor = LibscaleColor::REC_709;
 
-        util::KeyValue* hevcqp = util::new_keyvalue_pairs(1);
-        util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);
-        util::keyval_new_intval(hevcpairs,"forced-idr",1);
-        util::keyval_new_intval(hevcpairs,"zerolatency",1);
-        util::keyval_new_intval(hevcpairs,"preset",SCREENCODER_CONSTANT->nv.rc);
-        util::keyval_new_intval(hevcpairs,"rc",SCREENCODER_CONSTANT->nv.rc);
-        encoder.hevc = CodecConfig {
-            "hevc_nvenc",
-            hevcqp,
-            hevcpairs,
-        };
 
-        util::KeyValue* h264qp = util::new_keyvalue_pairs(2);
-        util::keyval_new_intval(h264qp,"qp",SCREENCODER_CONSTANT->qp);
-        util::KeyValue* h264pairs = util::new_keyvalue_pairs(6);
-        util::keyval_new_intval(h264pairs,"forced-idr",1);
-        util::keyval_new_intval(h264pairs,"zerolatency",1);
-        util::keyval_new_intval(h264pairs,"preset",SCREENCODER_CONSTANT->nv.rc);
-        util::keyval_new_intval(h264pairs,"rc",SCREENCODER_CONSTANT->nv.rc);
-        util::keyval_new_intval(h264pairs,"coder",SCREENCODER_CONSTANT->nv.coder);
-        encoder.h264 = 
-        {
-            "h264_nvenc",
-            h264qp,
-            h264pairs,
-        };
 
 
         /**
@@ -147,11 +150,17 @@ namespace encoder {
          * @brief 
          * make device and encoding options
          */
-        encoder.flags.set().flip();
-        encoder.flags[EncodingFlags::DEFAULT] = true;
         encoder.make_hw_ctx_func = dxgi_make_hwdevice_ctx;
 
+        encoder.conf.bitrate = bitrate;
+        encoder.conf.videoFormat = string_compare(codec,"h264") ? VideoFormat::H264 : VideoFormat::UNKNOWN;
+        encoder.conf.videoFormat = string_compare(codec,"h265") ? VideoFormat::H265 : VideoFormat::UNKNOWN;
+        encoder.codec_config =     string_compare(codec,"h264") ? h264::get_codec_config() : encoder.codec_config;
+        encoder.codec_config =     string_compare(codec,"h265") ? hevc::get_codec_config() : encoder.codec_config;
         bool pass = encoder::validate_encoder(&encoder);
-        return &encoder;
+        if(pass)
+            return &encoder;
+        else 
+            return NULL;
     }
 }
