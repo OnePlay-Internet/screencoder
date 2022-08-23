@@ -95,7 +95,7 @@ namespace encoder {
 
         encoder.conf.videoFormat = string_compare(codec,"h264") ? VideoFormat::H264 : VideoFormat::UNKNOWN;
         encoder.conf.videoFormat = string_compare(codec,"h265") ? VideoFormat::H265 : VideoFormat::UNKNOWN;
-        encoder.conf.enableDynamicRange = TRUE;
+        encoder.conf.enableDynamicRange = FALSE;
         encoder.conf.slicesPerFrame = 60;
         encoder.conf.avcolor = (AVColorRange)LibavColor::MPEG;
         encoder.conf.scalecolor = LibscaleColor::REC_709;
