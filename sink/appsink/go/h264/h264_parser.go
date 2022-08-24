@@ -317,8 +317,6 @@ func (p *H264Payloader) Packetize(payload []byte, samples uint32) []*rtp.Packet 
 		return nil
 	}
 
-
-
 	payloads := p.Payload(p.MTU-12, payload)
 	packets := make([]*rtp.Packet, len(payloads))
 

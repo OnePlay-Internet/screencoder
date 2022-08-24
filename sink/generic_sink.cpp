@@ -31,6 +31,7 @@ namespace sink
         util::Broadcaster* shutdown_event = ctx->shutdown_event;
 
 
+        std::chrono::system_clock::time_point prev;        
         while(true) {
             if(!QUEUE_ARRAY_CLASS->peek(packets)) {
                 std::this_thread::sleep_for(1ms); // decrease sleep interval cause cpu consumption ramp up

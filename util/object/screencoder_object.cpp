@@ -43,6 +43,11 @@ namespace util
          */
         pointer data;
 
+        /**
+         * @brief 
+         * 
+         */
+        std::chrono::system_clock::time_point created;
     #ifdef BUFFER_TRACE
 
         error::BufferLog log;
@@ -60,6 +65,7 @@ namespace util
         memcpy(object->data,obj->data,obj->size);
         memcpy(object,obj,sizeof(Buffer));
         object->ref_count = 1;
+        object->created = std::chrono::high_resolution_clock::now();
         return object;
     }
 
@@ -118,7 +124,7 @@ namespace util
         Buffer* object = (Buffer*)malloc(sizeof(Buffer));
         memset(object,0,sizeof(Buffer));
         memcpy(object->log.dataType,type,strlen(type));
-        object->log.created = std::chrono::high_resolution_clock::now();
+        object->created = std::chrono::high_resolution_clock::now();
 
         object->data = data;
         object->free_func = free_func;
@@ -126,7 +132,7 @@ namespace util
         object->ref_count = 1;
 
 
-        error::log_buffer(&object->log,line,file,error::BufferEventType::INIT);
+        error::log_buffer(&object->log,object->created,line,file,error::BufferEventType::INIT);
 
         return object;
     }
@@ -140,7 +146,7 @@ namespace util
         if(FILTER_ERROR(obj))
             return NULL;
 
-        error::log_buffer(&obj->log,line,file,error::BufferEventType::REF);
+        error::log_buffer(&obj->log,obj->created,line,file,error::BufferEventType::REF);
 
         obj->ref_count++;
         if (size)
@@ -157,13 +163,10 @@ namespace util
         if(FILTER_ERROR(obj))
             return;
 
-        error::log_buffer(&obj->log,line,file,error::BufferEventType::UNREF);
-
+        error::log_buffer(&obj->log,obj->created,line,file,error::BufferEventType::UNREF);
         obj->ref_count--;
         if (!obj->ref_count) {
-
-            error::log_buffer(&obj->log,line,file,error::BufferEventType::FREE);
-
+            error::log_buffer(&obj->log,obj->created,line,file,error::BufferEventType::FREE);
             obj->free_func(obj->data);
             free(obj);
         }
@@ -318,10 +321,6 @@ namespace util
         klass.ref   = object_ref;
         klass.duplicate = object_duplicate;
         klass.size  = object_size;
-        klass.merge = buffer_merge;
-        klass.replace = replace;
-        klass.insert  = insert;
-        klass.search = search;
         return &klass;
     }
 } // namespace object
