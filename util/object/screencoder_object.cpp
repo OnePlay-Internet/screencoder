@@ -61,9 +61,11 @@ namespace util
     {
         Buffer* object = (Buffer*)malloc(sizeof(Buffer));
         memset(object,0,sizeof(Buffer));
-
-        memcpy(object->data,obj->data,obj->size);
         memcpy(object,obj,sizeof(Buffer));
+
+        object->data = malloc(obj->size);
+        memcpy(object->data,obj->data,obj->size);
+
         object->ref_count = 1;
         object->created = std::chrono::high_resolution_clock::now();
         return object;

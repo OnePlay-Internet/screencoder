@@ -125,9 +125,10 @@ namespace gpu {
 
             // TODO
             // Free resources before allocating on the next line.
-            self->cursor.input_res->Release();
-            self->cursor.input_res = NULL;
+            if(self->cursor.input_res)
+                self->cursor.input_res->Release();
 
+            self->cursor.input_res = NULL;
             status = base->device->CreateShaderResourceView(texture, &desc, &self->cursor.input_res);
             if(FAILED(status)) {
                 LOG_ERROR("Failed to create cursor shader resource view");
