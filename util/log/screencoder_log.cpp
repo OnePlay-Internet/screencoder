@@ -204,20 +204,13 @@ namespace error
                     char* file,
                     BufferEventType type)
     {
-
-        auto timestamp = std::chrono::high_resolution_clock::now() - created;
-        auto timestampnano = std::chrono::duration_cast<std::chrono::nanoseconds>(timestamp);
-
-        char timestampbuf[100] = {0}; char* timestampStr = timestampbuf;
-        get_string_fmt(timestampnano,&timestampStr);
-
         auto createTime = std::chrono::duration_cast<std::chrono::milliseconds>(created.time_since_epoch());
         auto strTemp = std::to_string(createTime.count());
         char* createTimeStr = strTemp.substr(strTemp.length()-3,3).data();
         
 
         char str[100] = {0};
-        snprintf(str, 100, "buffer id %s contain %s : %s at %s",createTimeStr,log->dataType,map_event(type),timestampStr);
+        snprintf(str, 100, "buffer id %s contain %s : %s",createTimeStr,log->dataType,map_event(type));
         error::log(file,line,"trace",str);
     }
 } // namespace error

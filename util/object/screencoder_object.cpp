@@ -196,7 +196,7 @@ namespace util
     int64
     object_create(Buffer* obj)
     {
-        return std::chrono::duration_cast<std::chrono::microseconds>(obj->created.time_since_epoch()).count();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(obj->created.time_since_epoch()).count();
     }
 
 
