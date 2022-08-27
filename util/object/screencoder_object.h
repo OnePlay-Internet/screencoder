@@ -107,6 +107,8 @@ namespace util
         Buffer* (*duplicate)(Buffer* obj);
 
         uint    (*size)     (Buffer* obj);
+
+        int64   (*created)(Buffer* obj);
     } BufferClass;
 
 

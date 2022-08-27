@@ -191,6 +191,12 @@ namespace util
         return obj->size;
     }
 
+    int64
+    object_create(Buffer* obj)
+    {
+        return std::chrono::duration_cast<std::chrono::microseconds>(obj->created.time_since_epoch()).count();
+    }
+
 
 
 
@@ -321,6 +327,7 @@ namespace util
         klass.ref   = object_ref;
         klass.duplicate = object_duplicate;
         klass.size  = object_size;
+        klass.created = object_create;
         return &klass;
     }
 } // namespace object
