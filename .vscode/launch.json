@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
 
+
     
         
 
@@ -18,11 +19,11 @@
             "program": "${workspaceFolder}/examples/go_rtp/main.go"
         },
         {
-            "name": "Launch file",
+            "name": "webrtc example",
             "type": "go",
             "request": "launch",
             "mode": "exec",
-            "program": "${workspaceFolder}/main.exe"
+            "program": "${workspaceFolder}/go_webrtc.exe"
         },
         {
             "name": "(gdb) Launch",
