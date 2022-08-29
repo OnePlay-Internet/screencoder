@@ -38,11 +38,5 @@ func (lis *ScreencoderListener) ReadSample() *media.Sample {
 	return <-chn
 }
 
-func (lis *ScreencoderListener) Open(){
-}
-
-func (lis *ScreencoderListener) OnClose(fun listener.OnCloseFunc) {
-}
-
 func (lis *ScreencoderListener) Close() {
 }

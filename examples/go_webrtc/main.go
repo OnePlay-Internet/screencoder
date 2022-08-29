@@ -29,7 +29,7 @@ func main() {
 
 	grpc := config.GrpcConfig{
 		Port:          30000,
-		ServerAddress: "grpc.signaling.thinkmay.net",
+		ServerAddress: "54.169.49.176",
 		Token:         token,
 	}
 	rtc := config.WebRTCConfig{
@@ -44,7 +44,8 @@ func main() {
 		},
 		},
 	}
-	br := []*config.BroadcasterConfig{}
+
+	br  := []*config.BroadcasterConfig{}
 	lis := []*config.ListenerConfig{{
 		Source: "screencoder",
 
@@ -53,7 +54,21 @@ func main() {
 		MediaType: "video",
 		Name:      "gpuGstreamer",
 		Codec:     webrtc.MimeTypeH264,
-	}}
+	}}		
+	
+	Lists := make([]listener.Listener, 0)
+	for _, lis_conf := range lis {
+		var Lis listener.Listener
+		if lis_conf.Source == "screencoder" {
+			Lis = NewScreencoderListener(*lis_conf)
+		} else {
+			fmt.Printf("Unimplemented listener\n")
+			continue
+		}
+		
+
+		Lists = append(Lists, Lis)
+	}
 
 	for {
 		chans := config.DataChannelConfig{
@@ -83,19 +98,7 @@ func main() {
 			}
 		}()
 
-		Lists := make([]listener.Listener, 0)
-		for _, lis_conf := range lis {
-			var Lis listener.Listener
-			if lis_conf.Source == "screencoder" {
-				Lis = NewScreencoderListener(*lis_conf)
-			} else {
-				fmt.Printf("Unimplemented listener\n")
-				continue
-			}
-			
 
-			Lists = append(Lists, Lis)
-		}
 
 		prox, err := proxy.InitWebRTCProxy(nil, &grpc, &rtc, br, &chans, Lists)
 		if err != nil {
