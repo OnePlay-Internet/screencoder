@@ -104,30 +104,11 @@ namespace util
     #endif
                              );
 
-
-
-
-
-
         Buffer* (*duplicate)(Buffer* obj);
 
-        Buffer* (*merge)   (Buffer* self,
-                             Buffer* inserter);
-
-        Buffer* (*replace)  (util::Buffer* original, 
-                            util::Buffer* old, 
-                            util::Buffer* _new) ;
-
-        Buffer* (*insert)   (uint64 insert_size, 
-                             uint64 slice_size, 
-                             util::Buffer* data,
-                             InsertAction action);
-
-        uint    (*search)   (util::Buffer* string, 
-                             util::Buffer* substring);
-
-        
         uint    (*size)     (Buffer* obj);
+
+        int64   (*created)(Buffer* obj);
     } BufferClass;
 
 

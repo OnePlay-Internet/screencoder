@@ -62,11 +62,10 @@ namespace error
         BufferEvent events[100];
 
         char dataType[50];
-
-        std::chrono::system_clock::time_point created;
     }BufferLog;
 
     void log_buffer(BufferLog* log,
+                    std::chrono::system_clock::time_point created,
                     int line,
                     char* file,
                     BufferEventType type);

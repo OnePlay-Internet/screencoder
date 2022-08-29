@@ -85,11 +85,16 @@ GoHandleAVPacket(void** data,
                  int* duration)
 {
     appsink::AppSink* sink = (appsink::AppSink*)APP_SINK;
+
+    static int64 prev = 0;
     if(QUEUE_ARRAY_CLASS->peek(sink->out)) {
         libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size);
+        int64 current = BUFFER_CLASS->created((util::Buffer*)*buf);
+
         *data = pkt->data;
         *size = pkt->size;
-        *duration = pkt->duration;
+        *duration = current - prev;
+        prev = BUFFER_CLASS->created((util::Buffer*)*buf);
         return 0;
     } else {
         return -1;
