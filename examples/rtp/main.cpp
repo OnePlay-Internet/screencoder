@@ -9,7 +9,6 @@
  * 
  */
 #include <screencoder_util.h>
-#include <iostream>
 
 #include <screencoder_session.h>
 #include <screencoder_config.h>
@@ -20,6 +19,9 @@
 #include <screencoder_rtp.h>
 #include <iostream>
 
+#include <thread>
+
+using namespace std::literals;
 
 bool 
 select_monitor (char* name)
@@ -27,14 +29,38 @@ select_monitor (char* name)
     return TRUE;
 }
 
-int
-set_bitrate ()
+void 
+wait_shutdown(util::Broadcaster* event)
 {
-    return 10*1000*1000*1000; // mbps
+    std::this_thread::sleep_for(10s);
+    RAISE_EVENT(event);
 }
 
 int 
 main(int argc, char ** argv)
 {
-    session::start_session(set_bitrate,select_monitor,RTP_SINK);
+    encoder::Encoder* encoder = NVENC(10*1000*1000*1000,"h265");
+    if(!encoder) {
+        LOG_ERROR("NVENC encoder is not ready");
+        return 0;
+    }
+
+    platf::Display** displays = display::get_all_display(encoder);
+
+    int i =0;
+    platf::Display* display;
+    while (*(displays+i)) {
+        if (select_monitor((*(displays+i))->name)) {
+            display = *(displays+i);
+            goto start;
+        }
+        i++;
+    }
+    LOG_INFO("no match display");
+    return 0; 
+start:
+    util::Broadcaster* shutdown = NEW_EVENT;
+    std::thread {wait_shutdown,shutdown};
+    session::start_session(display,encoder,shutdown,RTP_SINK);
+    return 0;
 }

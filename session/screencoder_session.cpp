@@ -37,60 +37,24 @@ namespace session {
     }Session;
 
 
-    void
-    set_bitrate(Session* session,
-                SetBitrate func)
-    {
-        while (TRUE) {
-            if (IS_INVOKED(session->shutdown_event))
-                return;
-
-            
-            std::this_thread::sleep_for(5s);
-            session->encoder->conf.bitrate = func();
-        }
-    }
 
 
     void
-    start_session(SetBitrate bitrate_ctrl, 
-                  SelectMonitor select,
+    start_session(platf::Display* disp,
+                  encoder::Encoder* encoder,
+                  util::Broadcaster* shutdown,
                   sink::GenericSink* sink)
     {
-        encoder::Encoder* encoder = NVENC(bitrate_ctrl(),"h265");
-        if(!encoder) {
-            LOG_ERROR("NVENC encoder is not ready");
-            return;
-        }
-
-        platf::Display** displays = display::get_all_display(encoder);
-
-        int i =0;
-        platf::Display* display;
-        while (*(displays+i)) {
-            if (select((*(displays+i))->name)) {
-                display = *(displays+i);
-                goto start;
-            }
-            i++;
-        }
-        LOG_INFO("no match display");
-        return; 
-    start:
         Session session;
         session.encoder = encoder;
-        session.display = display;
-        session.shutdown_event = NEW_EVENT;
-        session.packet_queue = QUEUE_ARRAY_CLASS->init();
+        session.display = disp;
+        session.shutdown_event = shutdown;
         session.sink = sink;
-
-        std::thread bitrate   { set_bitrate, 
-                                &session,
-                                bitrate_ctrl};
+        session.packet_queue = QUEUE_ARRAY_CLASS->init();
 
         std::thread capture   { encoder::capture, 
-                                display,
-                                encoder,
+                                session.display,
+                                session.encoder,
                                 session.sink,
                                 session.shutdown_event, 
                                 session.packet_queue };

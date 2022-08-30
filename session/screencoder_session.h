@@ -20,14 +20,10 @@
 
 namespace session
 {
-    
-    typedef bool (*SelectMonitor)   (char* name);
-
-    typedef int (*SetBitrate)       ();
-
-    void        start_session       (SetBitrate bitrate_control,
-                                     SelectMonitor select,
-                                     sink::GenericSink* sink);
+    void        start_session       (platf::Display* disp,
+                                    encoder::Encoder* encoder,
+                                    util::Broadcaster* shutdown,
+                                    sink::GenericSink* sink);
 } // namespace singleton
 
 

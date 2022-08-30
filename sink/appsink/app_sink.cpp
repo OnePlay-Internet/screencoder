@@ -12,6 +12,9 @@
 
 
 #include <screencoder_session.h>
+#include <encoder_d3d11_device.h>
+#include <display_base.h>
+
 extern "C" {
 #include <go_adapter.h>
 }
@@ -120,5 +123,26 @@ select_monitor (char* name)
 void
 InitScreencoder()
 {
-    session::start_session(GoGetBitrate,select_monitor,APP_SINK);
+    encoder::Encoder* encoder = NVENC(10*1000*1000*1000,"h265");
+    if(!encoder) {
+        LOG_ERROR("NVENC encoder is not ready");
+        return;
+    }
+
+    platf::Display** displays = display::get_all_display(encoder);
+
+    int i =0;
+    platf::Display* display;
+    while (*(displays+i)) {
+        if (select_monitor((*(displays+i))->name)) {
+            display = *(displays+i);
+            goto start;
+        }
+        i++;
+    }
+    LOG_INFO("no match display");
+    return; 
+start:
+    util::Broadcaster* shutdown = NEW_EVENT;
+    session::start_session(display,encoder,shutdown,APP_SINK);
 }
