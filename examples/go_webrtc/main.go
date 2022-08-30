@@ -49,7 +49,7 @@ func main() {
 	lis := []*config.ListenerConfig{{
 		Source: "screencoder",
 
-		DataType: "sample",
+		DataType: "rtp",
 
 		MediaType: "video",
 		Name:      "gpuGstreamer",
