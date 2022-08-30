@@ -42,11 +42,6 @@ namespace encoder
          * @brief 
          * NULL terminated
          */
-        util::KeyValue* qp;
-        /**
-         * @brief 
-         * NULL terminated
-         */
         util::KeyValue* options;
 
         std::bitset<FrameFlags::MAX_FLAGS_FRAME> capabilities;

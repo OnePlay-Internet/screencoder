@@ -50,8 +50,6 @@ namespace config
         static Constant encoder;
         RETURN_PTR_ONCE(encoder);
             
-        encoder.qp = 50;
-
         encoder.gop_size = 1;
         encoder.gop_size_min = 0;
         encoder.ref_frame_num = 1;

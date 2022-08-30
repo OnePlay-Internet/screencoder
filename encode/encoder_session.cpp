@@ -227,8 +227,6 @@ namespace encoder
                 ctx->rc_buffer_size = encoder->conf.bitrate / framerate;
                 ctx->bit_rate       = encoder->conf.bitrate;
                 ctx->rc_min_rate    = encoder->conf.bitrate;
-            } else if(video_format->qp) {
-                handle_options(&options,video_format->qp);
             } else {
                 LOG_ERROR("Couldn't set video quality");
                 return NULL;

@@ -35,17 +35,14 @@ namespace h264 {
     encoder::CodecConfig
     get_codec_config()
     {
-        util::KeyValue* h264qp = util::new_keyvalue_pairs(2);
-        util::keyval_new_intval(h264qp,"qp",SCREENCODER_CONSTANT->qp);
         util::KeyValue* h264pairs = util::new_keyvalue_pairs(6);
         util::keyval_new_intval(h264pairs,"zerolatency",1);
-        // util::keyval_new_intval(h264pairs,"preset",SCREENCODER_CONSTANT->nv.rc);
-        // util::keyval_new_intval(h264pairs,"rc",SCREENCODER_CONSTANT->nv.rc);
-        // util::keyval_new_intval(h264pairs,"coder",SCREENCODER_CONSTANT->nv.coder);
+        util::keyval_new_intval(h264pairs,"preset",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(h264pairs,"rc",SCREENCODER_CONSTANT->nv.rc);
+        util::keyval_new_intval(h264pairs,"coder",SCREENCODER_CONSTANT->nv.coder);
         return
         {
             "h264_nvenc",
-            h264qp,
             h264pairs,
         };
     }
@@ -61,23 +58,18 @@ namespace hevc {
     encoder::CodecConfig
     get_codec_config()
     {        
-        util::KeyValue* hevcqp = util::new_keyvalue_pairs(1);
         util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);
         util::keyval_new_intval(hevcpairs,"zerolatency",1);
         // util::keyval_new_intval(hevcpairs,"preset",SCREENCODER_CONSTANT->nv.rc);
         // util::keyval_new_intval(hevcpairs,"rc",SCREENCODER_CONSTANT->nv.rc);
         return {
             "hevc_nvenc",
-            hevcqp,
             hevcpairs,
         };
     }
 }
 
 namespace encoder {
-
-
-
     /**
      * @brief 
      * 

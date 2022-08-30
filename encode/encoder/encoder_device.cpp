@@ -119,7 +119,7 @@ namespace encoder
             encoder->codec_config.capabilities.set();
             bool result = validate_config(encoder, &test_case);
             if(!result) {
-                if(encoder->codec_config.qp && encoder->codec_config.capabilities[FrameFlags::CBR]) {
+                if(encoder->codec_config.capabilities[FrameFlags::CBR]) {
                     // It's possible the encoder isn't accepting Constant Bit Rate. Turn off CBR and make another attempt
                     encoder->codec_config.capabilities[FrameFlags::CBR] = FALSE;
                     goto retry;
