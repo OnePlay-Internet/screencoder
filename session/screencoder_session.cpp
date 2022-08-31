@@ -29,9 +29,11 @@ namespace session {
 
         util::QueueArray* packet_queue;
 
-       sink::GenericSink* sink; 
+        sink::GenericSink* sink; 
 
-       encoder::Encoder* encoder;
+        encoder::Encoder* encoder;
+
+        encoder::Config config;
 
         platf::Display* display;
     }Session;
@@ -51,10 +53,20 @@ namespace session {
         session.shutdown_event = shutdown;
         session.sink = sink;
         session.packet_queue = QUEUE_ARRAY_CLASS->init();
+        session.config = {
+            1000 * 1000 * 10,
+            encoder::SlicePerFrame::TWO,
+            encoder::DynamicRange::DISABLE,
+            (AVColorRange)encoder::LibavColor::JPEG,
+            encoder::LibscaleColor::REC_601
+        };
+
+
 
         std::thread capture   { encoder::capture, 
                                 session.display,
                                 session.encoder,
+                                &session.config,
                                 session.sink,
                                 session.shutdown_event, 
                                 session.packet_queue };

@@ -28,12 +28,12 @@ namespace encoder
      * @param hwdevice 
      * @return EncodeContext* 
      */
-    EncodeContext*            make_encode_context           (Encoder* encoder, 
-                                               int width, int height, int framerate,
-                                               platf::Device* hwdevice); 
+    EncodeContext*            make_encode_context           (Encoder* encoder, Config* config,
+                                                            int width, int height, int framerate,
+                                                            platf::Device* hwdevice); 
 
     
-    void                free_encode_context     (pointer data);
+    void                      free_encode_context           (pointer data);
  
     /**
      * @brief 
@@ -44,7 +44,7 @@ namespace encoder
      * @param sink 
      * @return util::Buffer* 
      */
-    util::Buffer*       make_encode_context_buffer    (Encoder* encoder,
+    util::Buffer*       make_encode_context_buffer    (Encoder* encoder,Config* config,
                                                 platf::Display* display,
                                                 sink::GenericSink* sink);
 

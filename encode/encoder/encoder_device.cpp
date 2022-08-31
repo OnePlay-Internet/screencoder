@@ -27,8 +27,8 @@
 namespace encoder
 {
     bool
-    validate_config(Encoder* encoder, 
-                    Config* config) 
+    validate_config(Encoder* encoder,
+                    Config config) 
     {
         platf::Display** disps = display::get_all_display(encoder);
         platf::Display* disp = *(disps);
@@ -38,7 +38,7 @@ namespace encoder
 
         
 
-        platf::PixelFormat pix_fmt  = config->enableDynamicRange ? 
+        platf::PixelFormat pix_fmt  = config.dynamicRangeOption == DynamicRange::ENABLE? 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt):
                                         platf::map_pix_fmt(encoder->static_pix_fmt);
 
@@ -47,7 +47,7 @@ namespace encoder
             return FALSE;
         }
         
-        EncodeContext* session = make_encode_context(encoder, 
+        EncodeContext* session = make_encode_context(encoder, &config,
                                disp->width, 
                                disp->height, 
                                disp->framerate,
@@ -106,29 +106,65 @@ namespace encoder
         return TRUE;
     }
 
-    bool 
+    Capabilities
     validate_encoder(Encoder* encoder) 
     {
-        encoder::Config test_case = encoder->conf;
-        test_case.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
-        test_case.scalecolor = encoder::LibscaleColor::REC_601;
+        Config config = {0};
+        config.bitrate = 1000;
 
+        encoder->codec_config.capabilities.set().flip(); // assume all capabilities is not meet
 
-        {
-            retry:
-            encoder->codec_config.capabilities.set();
-            bool result = validate_config(encoder, &test_case);
-            if(!result) {
-                if(encoder->codec_config.capabilities[FrameFlags::CBR]) {
-                    // It's possible the encoder isn't accepting Constant Bit Rate. Turn off CBR and make another attempt
-                    encoder->codec_config.capabilities[FrameFlags::CBR] = FALSE;
-                    goto retry;
-                }
-                return false;
+        { // basic test case
+            encoder->codec_config.capabilities[FrameFlags::PASSED] = TRUE;
+            encoder->codec_config.capabilities = encoder->codec_config.capabilities;
+            config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
+            config.scalecolor = encoder::LibscaleColor::REC_601;
+            config.dynamicRangeOption = DynamicRange::DISABLE;
+            config.slicesPerFrame = SlicePerFrame::ONE;
+            bool result = validate_config(encoder,config);
+            if (!result) {
+                encoder->codec_config.capabilities[FrameFlags::PASSED] = FALSE;
+                goto done;
             }
         }
-        encoder->conf.avcolor = test_case.avcolor;
-        encoder->conf.scalecolor = test_case.scalecolor;
-        return true;
+
+        { // basic test case
+            encoder->codec_config.capabilities[FrameFlags::CBR] = TRUE;
+            config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
+            config.scalecolor = encoder::LibscaleColor::REC_601;
+            config.dynamicRangeOption = DynamicRange::DISABLE;
+            config.slicesPerFrame = SlicePerFrame::ONE;
+            bool result = validate_config(encoder,config);
+            if (!result) {
+                encoder->codec_config.capabilities[FrameFlags::CBR] = FALSE;
+            }
+        }
+
+        { // basic test case
+            encoder->codec_config.capabilities[FrameFlags::DYNAMIC_RANGE] = TRUE;
+            config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
+            config.scalecolor = encoder::LibscaleColor::REC_2020;
+            config.dynamicRangeOption = DynamicRange::ENABLE;
+            config.slicesPerFrame = SlicePerFrame::ONE;
+            bool result = validate_config(encoder,config);
+            if (!result) {
+                encoder->codec_config.capabilities[FrameFlags::DYNAMIC_RANGE] = FALSE;
+            }
+        }
+
+        { // basic test case
+            encoder->codec_config.capabilities[FrameFlags::SLICE] = TRUE;
+            config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
+            config.scalecolor = encoder::LibscaleColor::REC_601;
+            config.dynamicRangeOption = DynamicRange::DISABLE;
+            config.slicesPerFrame = SlicePerFrame::TWO;
+            bool result = validate_config(encoder,config);
+            if (!result) {
+                encoder->codec_config.capabilities[FrameFlags::SLICE] = FALSE;
+            }
+        }
+
+    done:
+        return encoder->codec_config.capabilities;
     }
 }

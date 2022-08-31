@@ -14,9 +14,6 @@
 #include <screencoder_util.h>
 #include <generic_sink.h>
 
-#define APP_SINK       appsink::new_app_sink()
-
-
 namespace appsink
 {
     typedef struct _AppSink AppSink;

@@ -31,6 +31,7 @@ namespace encoder
     enum LibavColor{
         MPEG = AVCOL_RANGE_MPEG,
         JPEG = AVCOL_RANGE_JPEG,
+        LibavColorMax,
     };
     enum LibscaleColor{
         REC_601,
@@ -46,19 +47,36 @@ namespace encoder
         VIDEO_FORMAT_MAX,
     };
 
+    enum SlicePerFrame{
+        ONE = 1,
+        TWO = 2,
+        SLICE_PER_FRAME_MAX,
+    };
+
+    enum DynamicRange{
+        DISABLE = 0,
+        ENABLE = 1,
+        DYNAMIC_RANGE_MAX,
+    };
+
     struct _Config{
         int bitrate;
 
-        int slicesPerFrame;
-
+        SlicePerFrame slicesPerFrame;
+        DynamicRange dynamicRangeOption;
         AVColorRange avcolor;
         LibscaleColor scalecolor;
-        bool enableDynamicRange;
-
-
-        VideoFormat videoFormat;
     };
 
+    typedef enum _FrameFlags{
+        PASSED,                // Is supported
+        SLICE,                 // Allow frame to be partitioned into multiple slices
+        CBR,                   // Some encoders don't support CBR, if not supported --> attempt constant quantatication parameter instead
+        DYNAMIC_RANGE,         // hdr
+        MAX_FLAGS_FRAME
+    }FrameFlags;
+
+    typedef std::bitset<FrameFlags::MAX_FLAGS_FRAME> Capabilities;
 } // namespace encoder
 
 

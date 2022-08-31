@@ -109,8 +109,9 @@ namespace encoder
 
     EncodeContext*
     make_encode_context(Encoder* encoder, 
-                 int width, int height, int framerate,
-                 platf::Device* device) 
+                        Config* config,
+                        int width, int height, int framerate,
+                        platf::Device* device) 
     {
         CodecConfig* video_format = &encoder->codec_config;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
@@ -118,7 +119,8 @@ namespace encoder
             return NULL;
         }
 
-        if(encoder->conf.enableDynamicRange || !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
+        if(config->dynamicRangeOption == encoder::DynamicRange::ENABLE || 
+          !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
             LOG_ERROR("dynamic range not supported");
             return NULL;
         }
@@ -133,9 +135,9 @@ namespace encoder
             ctx->time_base = AVRational { 1, framerate };
             ctx->framerate = AVRational { framerate, 1 };
 
-            if(encoder->conf.videoFormat == VideoFormat::H264) {
+            if(encoder->codec_config.format == VideoFormat::H264) {
                 ctx->profile = encoder->profile.h264_high;
-            } else if(encoder->conf.enableDynamicRange) {
+            } else if(config->dynamicRangeOption == DynamicRange::ENABLE) {
                 ctx->profile = encoder->profile.hevc_main_10;
             } else {
                 ctx->profile = encoder->profile.hevc_main;
@@ -152,8 +154,8 @@ namespace encoder
             ctx->flags  |= (AV_CODEC_FLAG_CLOSED_GOP | AV_CODEC_FLAG_LOW_DELAY);
             ctx->flags2 |= AV_CODEC_FLAG2_FAST;
 
-            ctx->color_range = encoder->conf.avcolor;
-            switch(encoder->conf.scalecolor) {
+            ctx->color_range = config->avcolor;
+            switch(config->scalecolor) {
             case LibscaleColor::REC_601:
             default:
                 // Rec. 601
@@ -181,7 +183,7 @@ namespace encoder
                 break;
             }
 
-            libav::PixelFormat sw_fmt = encoder->conf.enableDynamicRange ?  
+            libav::PixelFormat sw_fmt = config->dynamicRangeOption == DynamicRange::ENABLE ?  
                 encoder->dynamic_pix_fmt:
                 encoder->static_pix_fmt; 
 
@@ -196,7 +198,7 @@ namespace encoder
                 if(hwframe_ctx(ctx, hwdevice_ctx, sw_fmt) != 0) 
                     return NULL;
                 
-                ctx->slices = encoder->conf.slicesPerFrame;
+                ctx->slices = config->slicesPerFrame;
             } else {
                 // TODO software 
                 // ctx->pix_fmt = sw_fmt;
@@ -222,14 +224,13 @@ namespace encoder
         {
             AVDictionary *options = NULL;
             handle_options(&options,video_format->options);
-            if(video_format->capabilities[FrameFlags::CBR]) {
-                ctx->rc_max_rate    = encoder->conf.bitrate;
-                ctx->rc_buffer_size = encoder->conf.bitrate / framerate;
-                ctx->bit_rate       = encoder->conf.bitrate;
-                ctx->rc_min_rate    = encoder->conf.bitrate;
+            if(video_format->capabilities[FrameFlags::CBR] && config->bitrate) {
+                ctx->rc_max_rate    = config->bitrate;
+                ctx->rc_buffer_size = config->bitrate / framerate;
+                ctx->bit_rate       = config->bitrate;
+                ctx->rc_min_rate    = config->bitrate;
             } else {
-                LOG_ERROR("Couldn't set video quality");
-                return NULL;
+                av_dict_set_int(&options,"qp",50,0);
             }
 
             if(int status = avcodec_open2(ctx, encode_ctx->codec, &options)) {
@@ -271,11 +272,12 @@ namespace encoder
      * @param ctx 
      */
     util::Buffer*
-    make_encode_context_buffer(Encoder* encoder,
-                        platf::Display* display,
-                        sink::GenericSink* sink) 
+    make_encode_context_buffer(Encoder* encoder, 
+                                Config* config,
+                                platf::Display* display,
+                                sink::GenericSink* sink) 
     {
-        platf::PixelFormat pix_fmt = !encoder->conf.enableDynamicRange ? 
+        platf::PixelFormat pix_fmt = !config->dynamicRangeOption == DynamicRange::ENABLE ?
                                         platf::map_pix_fmt(encoder->static_pix_fmt) : 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt);
 
@@ -284,7 +286,7 @@ namespace encoder
             NEW_ERROR(error::Error::CREATE_HW_DEVICE_FAILED);
         }
 
-        EncodeContext* context = make_encode_context(encoder,
+        EncodeContext* context = make_encode_context(encoder, config,
                                     display->width, 
                                     display->height, 
                                     display->framerate,

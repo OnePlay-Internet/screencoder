@@ -53,18 +53,16 @@ namespace appsink
     sink::GenericSink*    
     new_app_sink()
     {
-        static AppSink sink;
-        RETURN_ONCE((sink::GenericSink*)&sink);
+        AppSink* sink = (AppSink*)malloc(sizeof(AppSink));
         
-        sink.base.name = "appsink";
-        sink.base.options = util::new_keyvalue_pairs(1);
+        sink->base.name = "appsink";
+        sink->base.options = util::new_keyvalue_pairs(1);
+        sink->base.handle    = appsink_handle;
+        sink->base.preset    = appsink_preset;
+        sink->base.describe  = appsink_describe;
+        sink->base.start     = appsink_start;
 
-        sink.base.handle    = appsink_handle;
-        sink.base.preset    = appsink_preset;
-        sink.base.describe  = appsink_describe;
-        sink.base.start     = appsink_start;
-
-        sink.out = QUEUE_ARRAY_CLASS->init();
+        sink->out = QUEUE_ARRAY_CLASS->init();
         return (sink::GenericSink*)&sink;
     }
     
@@ -82,12 +80,13 @@ extern "C" {
 #define DEFAULT_BITRATE 1000
 
 int
-GoHandleAVPacket(void** data,
+GoHandleAVPacket(void* appsink_ptr,
+                 void** data,
                  void** buf, 
                  int* size, 
                  int* duration)
 {
-    appsink::AppSink* sink = (appsink::AppSink*)APP_SINK;
+    appsink::AppSink* sink = (appsink::AppSink*)appsink_ptr;
 
     static int64 prev = 0;
     if(QUEUE_ARRAY_CLASS->peek(sink->out)) {
@@ -104,8 +103,8 @@ GoHandleAVPacket(void** data,
     }
 }
     
-int 
-GoDestroyAVPacket(void* buf){
+void
+GoUnrefAVPacket(void* buf){
     util::Buffer* buffer = (util::Buffer*)buf;
     BUFFER_UNREF(buffer);
 }
@@ -120,13 +119,23 @@ select_monitor (char* name)
     return TRUE;
 }
 
-void
-InitScreencoder()
+void*
+InitScreencoder(void* app_sink,
+                void* shutdown,
+                char* encoder_name,
+                char* display_name,
+                int bitrate)
 {
-    encoder::Encoder* encoder = NVENC(10*1000*1000*1000,"h265");
+    encoder::Encoder* encoder = NULL;
+    if (string_compare(encoder_name,"nvenc_hevc")) {
+        encoder = NVENC("h265");
+    } else if (string_compare(encoder_name,"nvenc_h264")) {
+        encoder = NVENC("h264");
+    }
+    
     if(!encoder) {
         LOG_ERROR("NVENC encoder is not ready");
-        return;
+        return NULL;
     }
 
     platf::Display** displays = display::get_all_display(encoder);
@@ -134,15 +143,16 @@ InitScreencoder()
     int i =0;
     platf::Display* display;
     while (*(displays+i)) {
-        if (select_monitor((*(displays+i))->name)) {
+        if (string_compare((*(displays+i))->name,display_name)) {
             display = *(displays+i);
             goto start;
         }
         i++;
     }
     LOG_INFO("no match display");
-    return; 
+    return NULL; 
 start:
-    util::Broadcaster* shutdown = NEW_EVENT;
-    session::start_session(display,encoder,shutdown,APP_SINK);
+    session::start_session(display,encoder,
+        (util::Broadcaster*)shutdown,
+        (sink::GenericSink*)app_sink);
 }

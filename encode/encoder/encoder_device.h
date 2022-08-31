@@ -26,38 +26,26 @@ namespace encoder
 
 
 
-    typedef enum _FrameFlags{
-        PASSED,                // Is supported
-        SLICE,                 // Allow frame to be partitioned into multiple slices
-        CBR,                   // Some encoders don't support CBR, if not supported --> attempt constant quantatication parameter instead
-        DYNAMIC_RANGE,         // hdr
-        MAX_FLAGS_FRAME
-    }FrameFlags;
 
 
     typedef struct _CodecConfig{
         char* name;
 
-        /**
-         * @brief 
-         * NULL terminated
-         */
+        VideoFormat format;
+
         util::KeyValue* options;
 
-        std::bitset<FrameFlags::MAX_FLAGS_FRAME> capabilities;
+        Capabilities capabilities;
     }CodecConfig;
 
     struct _Encoder{
         char* name;
-        encoder::Config conf;
-
+        Profile profile;
         CodecConfig codec_config;
 
-        Profile profile;
-
         libav::HWDeviceType dev_type;
-        libav::PixelFormat dev_pix_fmt;
 
+        libav::PixelFormat dev_pix_fmt;
         libav::PixelFormat static_pix_fmt;
         libav::PixelFormat dynamic_pix_fmt;
 
@@ -72,7 +60,9 @@ namespace encoder
      * @return true 
      * @return false 
      */
-    bool        validate_encoder        (Encoder* encoder);
+    Capabilities validate_encoder        (Encoder* encoder);
+
+    char**      encoder_list            ();
 }
 
 #endif

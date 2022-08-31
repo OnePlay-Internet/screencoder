@@ -12,12 +12,13 @@
 #ifndef __GO_ADAPTER_H__
 #define __GO_ADAPTER_H__
 
-int GoHandleAVPacket(void** data,
+int GoHandleAVPacket(void* appsink_ptr,
+                     void** data,
                      void** buf, 
                      int* size, 
                      int* duration);
 
-int GoDestroyAVPacket(void* buf);
+void GoUnrefAVPacket(void* buf);
 
 void InitScreencoder();
 

@@ -48,6 +48,8 @@ namespace encoder {
         encoder::Encoder* encoder;
         platf::Display* display;
         sink::GenericSink* sink;
+
+        Config* config;
     };
 
 
@@ -119,7 +121,7 @@ namespace encoder {
 
         
 
-        util::Buffer* ctxBuf = make_encode_context_buffer(ctx->encoder,
+        util::Buffer* ctxBuf = make_encode_context_buffer(ctx->encoder, ctx->config,
                                                 ctx->display,
                                                 ctx->sink);
 
@@ -207,6 +209,7 @@ namespace encoder {
     void 
     capture( platf::Display* capture,
              encoder::Encoder* encoder,
+             encoder::Config* config,
              sink::GenericSink* sink,
              util::Broadcaster* shutdown_event,
              util::QueueArray* packet_queue) 
@@ -223,6 +226,7 @@ namespace encoder {
         ss_ctx.display = capture;
         ss_ctx.encoder = encoder;
         ss_ctx.sink = sink;
+        ss_ctx.config = config;
 
 
         ss_ctx.thread = std::thread {captureThread, &ss_ctx };

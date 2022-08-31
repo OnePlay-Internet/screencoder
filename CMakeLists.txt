@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_BUILD_TYPE "Debug")
-project(SunshineSDK VERSION 0.1.0 DESCRIPTION "Sunshine is a Gamestream host for Moonlight.")
+project(Screencoder VERSION 0.1.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(SCREENCODER_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")

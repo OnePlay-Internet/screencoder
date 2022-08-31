@@ -20,13 +20,13 @@ type ScreencoderListener struct {
 func NewScreencoderListener(conf config.ListenerConfig) listener.Listener {
 	ret := ScreencoderListener{}
 	ret.conf = conf;
-	ret.sink = appsink.NewAppsink();
 	return &ret;
 }
 
 
 
-func (lis *ScreencoderListener) ReadConfig() *config.ListenerConfig {
+func (lis *ScreencoderListener) Open() *config.ListenerConfig {
+	lis.sink = appsink.NewAppsink();
 	return &lis.conf;
 }
 

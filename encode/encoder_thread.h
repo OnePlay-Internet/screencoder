@@ -32,6 +32,7 @@ namespace encoder
      */
     void                capture          (platf::Display* capture,
                                           encoder::Encoder* encoder,
+                                          encoder::Config* config,
                                           sink::GenericSink* sink,
                                           util::Broadcaster* shutdown_event,
                                           util::QueueArray* packet_queue);
