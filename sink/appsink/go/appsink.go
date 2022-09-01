@@ -63,7 +63,7 @@ func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 	}
 
 	for _,disp := range app.displays {
-		if strings.Contains(disp,conf.Source) {
+		if strings.Contains(strings.ToLower(disp),strings.ToLower(conf.Source)) {
 			app.display = disp;	
 		}
 	}
@@ -110,6 +110,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		for {
 			var size, duration C.int
 			var data, buf unsafe.Pointer
+			if app.sink == nil || app.shutdown == nil { return;	}
 			res := C.GoHandleAVPacket(app.sink, &data, &buf, &size, &duration)
 			if res == 0 { continue; }
 			app.writeSample(data, size, duration)
@@ -132,4 +133,6 @@ func (lis *Appsink) ReadSample() *media.Sample {
 func (lis *Appsink) Close() {
 	C.RaiseEvent(lis.shutdown)
 	C.StopAppSink(lis.sink);
+	lis.sink = nil;
+	lis.shutdown = nil;
 }
