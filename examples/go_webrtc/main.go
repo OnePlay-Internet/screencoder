@@ -50,20 +50,28 @@ func main() {
 
 	br  := []*config.BroadcasterConfig{}
 	lis := []*config.ListenerConfig{{
-		Source: "",
+		Source: "Display",
 
-		DataType: "rtp",
+		DataType:  "rtp",
 		MediaType: "video",
 		Name:      "Screencoder",
 		Codec:     webrtc.MimeTypeH264,
-	}}		
+	},
+	{
+		Source: "Soundcard",
+
+		DataType:  "sample",
+		MediaType: "audio",
+		Name:      "Audicoder",
+		Codec:     webrtc.MimeTypeOpus,
+	}}
 	
 	Lists := make([]listener.Listener, 0)
 	for _, lis_conf := range lis {
 		var err error;
 		var Lis listener.Listener
-		if lis_conf.Name == "Screencoder" {
-			Lis,err =  appsink.NewAppsink(*lis_conf)
+		if lis_conf.MediaType == "video" {
+			Lis,err =  appsink.NewAppsink(lis_conf)
 		} else if lis_conf.MediaType == "audio" {
 			Lis = audio.CreatePipeline(lis_conf)
 		} else {

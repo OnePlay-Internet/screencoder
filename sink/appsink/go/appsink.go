@@ -30,7 +30,7 @@ import "C"
 
 type Appsink struct {
 	packetizer Packetizer
-	conf       config.ListenerConfig
+	conf       *config.ListenerConfig
 
 	sink     unsafe.Pointer
 	shutdown unsafe.Pointer
@@ -42,7 +42,7 @@ type Appsink struct {
 	channel chan *rtp.Packet
 }
 
-func NewAppsink(conf config.ListenerConfig) (*Appsink, error) {
+func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 	app := &Appsink{}
 	app.conf = conf
 	app.packetizer = h264.NewH264Payloader()
@@ -102,6 +102,8 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		C.StartScreencodeThread(app.sink, app.shutdown,
 			C.CString(app.encoder),
 			C.CString(app.display))
+	
+		fmt.Printf("screencode thread terminated\n");
 	}()
 
 	go func() {
@@ -115,7 +117,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		}
 	}()
 
-	return &app.conf
+	return app.conf
 }
 
 func (sink *Appsink) ReadRTP() *rtp.Packet {

@@ -14,11 +14,13 @@ func main() {
 	if err != nil{
 		fmt.Printf("%s\n",err.Error());	
 	}
+
+	sink.Open();
 	for {
 		rtp := sink.ReadRTP()
 		if rtp != nil {
 			buf,_ := rtp.Marshal()
-			// fmt.Printf("receive rtp packet, %s\n",rtp.String());
+			fmt.Printf("receive rtp packet, %s\n",rtp.String());
 			udp.Write(buf);
 		}
 	}
