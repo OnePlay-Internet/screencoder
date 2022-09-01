@@ -113,7 +113,7 @@ namespace encoder
                         int width, int height, int framerate,
                         platf::Device* device) 
     {
-        CodecConfig* video_format = &encoder->codec_config;
+        CodecConfig* video_format = encoder->codec_config;
         if(!video_format->capabilities[FrameFlags::PASSED]) {
             LOG_ERROR("encoder not supported");
             return NULL;
@@ -125,6 +125,7 @@ namespace encoder
             return NULL;
         }
 
+        LOG_INFO(video_format->name);
         EncodeContext* encode_ctx = alloc_encode_context(device,video_format->name);
         encode_ctx->dev_type = encoder->dev_type;
 
@@ -135,7 +136,7 @@ namespace encoder
             ctx->time_base = AVRational { 1, framerate };
             ctx->framerate = AVRational { framerate, 1 };
 
-            if(encoder->codec_config.format == VideoFormat::H264) {
+            if(encoder->codec_config->format == VideoFormat::H264) {
                 ctx->profile = encoder->profile.h264_high;
             } else if(config->dynamicRangeOption == DynamicRange::ENABLE) {
                 ctx->profile = encoder->profile.hevc_main_10;

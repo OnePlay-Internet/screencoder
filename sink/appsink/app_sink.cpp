@@ -75,7 +75,7 @@ namespace appsink
         sink->base.stop      = appsink_stop;
 
         sink->out = QUEUE_ARRAY_CLASS->init();
-        return (sink::GenericSink*)&sink;
+        return (sink::GenericSink*)sink;
     }
     
 } // namespace appsink
@@ -89,7 +89,6 @@ extern "C" {
 #include <go_adapter.h>
 }
 
-#define DEFAULT_BITRATE 1000
 
 int
 GoHandleAVPacket(void* appsink_ptr,
@@ -123,7 +122,7 @@ GoUnrefAVPacket(void* buf){
 
 
 void*
-NewAppSink() 
+AllocateAppSink() 
 {
     return (void*)appsink::new_app_sink();
 }
@@ -147,7 +146,8 @@ RaiseEvent(void* event)
     RAISE_EVENT((util::Broadcaster*)event);
 }
 
-char* QueryDisplay (int index)
+char* 
+QueryDisplay(int index)
 {
     encoder::Encoder encoder = NVENC("h264");
     platf::Display** displays = display::get_all_display(&encoder);
@@ -173,7 +173,7 @@ StartScreencodeThread(void* app_sink,
         encoder = NVENC("h264");
     }
     
-    if(!encoder.codec_config.capabilities[encoder::FrameFlags::PASSED]) {
+    if(!encoder.codec_config->capabilities[encoder::FrameFlags::PASSED]) {
         LOG_ERROR("NVENC encoder is not ready");
         return;
     }

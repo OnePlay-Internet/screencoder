@@ -21,13 +21,12 @@
 
 #include <thread>
 
+extern "C" {
+#include <go_adapter.h>
+}
+
 using namespace std::literals;
 
-bool 
-select_monitor (char* name)
-{
-    return TRUE;
-}
 
 void 
 wait_shutdown(util::Broadcaster* event)
@@ -39,8 +38,10 @@ wait_shutdown(util::Broadcaster* event)
 int 
 main(int argc, char ** argv)
 {
-    encoder::Encoder encoder = NVENC("h265");
-    if(!encoder.codec_config.capabilities[encoder::FrameFlags::PASSED]) {
+    encoder::Encoder encoder = NVENC("h264");
+    char* display_name = QueryDisplay(0);
+
+    if(!encoder.codec_config->capabilities[encoder::FrameFlags::PASSED]) {
         LOG_ERROR("NVENC encoder is not ready");
         return 0;
     }
@@ -50,7 +51,7 @@ main(int argc, char ** argv)
     int i =0;
     platf::Display* display;
     while (*(displays+i)) {
-        if (select_monitor((*(displays+i))->name)) {
+        if (string_compare((*(displays+i))->name,display_name)) {
             display = *(displays+i);
             goto start;
         }

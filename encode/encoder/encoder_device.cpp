@@ -112,58 +112,58 @@ namespace encoder
         Config config = {0};
         config.bitrate = 1000;
 
-        encoder->codec_config.capabilities.set().flip(); // assume all capabilities is not meet
+        encoder->codec_config->capabilities.set().flip(); // assume all capabilities is not meet
 
         { // basic test case
-            encoder->codec_config.capabilities[FrameFlags::PASSED] = TRUE;
+            encoder->codec_config->capabilities[FrameFlags::PASSED] = TRUE;
             config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;
             config.slicesPerFrame = SlicePerFrame::ONE;
             bool result = validate_config(encoder,config);
             if (!result) {
-                encoder->codec_config.capabilities[FrameFlags::PASSED] = FALSE;
+                encoder->codec_config->capabilities[FrameFlags::PASSED] = FALSE;
                 goto done;
             }
         }
 
         { // basic test case
-            encoder->codec_config.capabilities[FrameFlags::CBR] = TRUE;
+            encoder->codec_config->capabilities[FrameFlags::CBR] = TRUE;
             config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;
             config.slicesPerFrame = SlicePerFrame::ONE;
             bool result = validate_config(encoder,config);
             if (!result) {
-                encoder->codec_config.capabilities[FrameFlags::CBR] = FALSE;
+                encoder->codec_config->capabilities[FrameFlags::CBR] = FALSE;
             }
         }
 
         { // basic test case
-            encoder->codec_config.capabilities[FrameFlags::DYNAMIC_RANGE] = TRUE;
+            encoder->codec_config->capabilities[FrameFlags::DYNAMIC_RANGE] = TRUE;
             config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
             config.scalecolor = encoder::LibscaleColor::REC_2020;
             config.dynamicRangeOption = DynamicRange::ENABLE;
             config.slicesPerFrame = SlicePerFrame::ONE;
             bool result = validate_config(encoder,config);
             if (!result) {
-                encoder->codec_config.capabilities[FrameFlags::DYNAMIC_RANGE] = FALSE;
+                encoder->codec_config->capabilities[FrameFlags::DYNAMIC_RANGE] = FALSE;
             }
         }
 
         { // basic test case
-            encoder->codec_config.capabilities[FrameFlags::SLICE] = TRUE;
+            encoder->codec_config->capabilities[FrameFlags::SLICE] = TRUE;
             config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;
             config.slicesPerFrame = SlicePerFrame::TWO;
             bool result = validate_config(encoder,config);
             if (!result) {
-                encoder->codec_config.capabilities[FrameFlags::SLICE] = FALSE;
+                encoder->codec_config->capabilities[FrameFlags::SLICE] = FALSE;
             }
         }
 
     done:
-        return encoder->codec_config.capabilities;
+        return encoder->codec_config->capabilities;
     }
 }

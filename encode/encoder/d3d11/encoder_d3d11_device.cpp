@@ -32,11 +32,11 @@ namespace h264 {
         high_444p,
     }Profile;
 
-    encoder::CodecConfig
+    encoder::CodecConfig*
     get_codec_config()
     {
-        encoder::CodecConfig ret = {0};
-        RETURN_ONCE(ret);
+        static encoder::CodecConfig ret;
+        RETURN_PTR_ONCE(ret);
         ret.format = encoder::VideoFormat::H264;
         util::KeyValue* h264pairs = util::new_keyvalue_pairs(6);
         util::keyval_new_intval(h264pairs,"zerolatency",1);
@@ -45,7 +45,7 @@ namespace h264 {
         util::keyval_new_intval(h264pairs,"coder",SCREENCODER_CONSTANT->nv.coder);
         ret.name = "h264_nvenc";
         ret.options = h264pairs;
-        return ret;
+        return &ret;
     }
 } // namespace nv
 
@@ -56,11 +56,11 @@ namespace hevc {
         rext,
     }Profile;
 
-    encoder::CodecConfig
+    encoder::CodecConfig*
     get_codec_config()
     {        
-        encoder::CodecConfig ret = {0};
-        RETURN_ONCE(ret);
+        static encoder::CodecConfig ret;
+        RETURN_PTR_ONCE(ret);
         ret.format = encoder::VideoFormat::H265;
         util::KeyValue* hevcpairs = util::new_keyvalue_pairs(5);
         util::keyval_new_intval(hevcpairs,"zerolatency",1);
@@ -68,7 +68,7 @@ namespace hevc {
         util::keyval_new_intval(hevcpairs,"rc",SCREENCODER_CONSTANT->nv.rc);
         ret.name = "hevc_nvenc";
         ret.options = hevcpairs;
-        return ret;
+        return &ret;
     }
 }
 

@@ -41,7 +41,7 @@ namespace encoder
     struct _Encoder{
         char* name;
         Profile profile;
-        CodecConfig codec_config;
+        CodecConfig* codec_config;
 
         libav::HWDeviceType dev_type;
 

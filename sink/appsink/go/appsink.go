@@ -30,34 +30,44 @@ import "C"
 
 type Appsink struct {
 	packetizer Packetizer
-	conf config.ListenerConfig
+	conf       config.ListenerConfig
 
-	sink unsafe.Pointer
+	sink     unsafe.Pointer
 	shutdown unsafe.Pointer
-	encoder string
-	display string
+	encoder  string
+	display  string
 
-	channel    chan *rtp.Packet
+	channel chan *rtp.Packet
 }
 
-func NewAppsink(conf config.ListenerConfig) *Appsink {
+func NewAppsink(conf config.ListenerConfig) (*Appsink, error) {
 	app := &Appsink{}
-	app.conf = conf;
+	app.conf = conf
 
 	app.packetizer = h264.NewH264Payloader()
 	app.channel = make(chan *rtp.Packet, 1000)
 
-	app.shutdown = C.NewEvent();
-	app.sink = C.NewAppSink();
+	app.shutdown = C.NewEvent()
+	if app.shutdown == nil {
+		return nil, fmt.Errorf("unable to create event")
+	}
+	app.sink = C.AllocateAppSink()
+	if app.sink == nil {
+		return nil, fmt.Errorf("unable to create appsink")
+	}
 
-	app.encoder = "nvenc_h264";
+	app.encoder = "nvenc_h264"
 
-	i := 0;
-	c_str := C.QueryDisplay(C.int(i));
-	app.display = string(C.GoBytes(unsafe.Pointer(c_str),C.StringLength(c_str)));
-	fmt.Printf("display name: %s\n",app.display);
+	i := 0
+	c_str := C.QueryDisplay(C.int(i))
+	app.display = string(C.GoBytes(unsafe.Pointer(c_str), C.StringLength(c_str)))
+	if app.display == "out of range" {
+		err := fmt.Errorf("no display found")
+		return nil, err
+	}
 
-	return app
+	fmt.Printf("display name: %s\n", app.display)
+	return app, nil
 }
 
 func (s *Appsink) writeSample(buffer unsafe.Pointer,
@@ -76,15 +86,15 @@ func (s *Appsink) writeSample(buffer unsafe.Pointer,
 }
 
 func (app *Appsink) Open() *config.ListenerConfig {
-	go C.StartScreencodeThread(app.sink,app.shutdown,
-			C.CString(app.encoder),
-			C.CString(app.display))
+	go C.StartScreencodeThread(app.sink, app.shutdown,
+		C.CString(app.encoder),
+		C.CString(app.display))
 	go func() {
 		for {
 			var size, duration C.int
 			var data, buf unsafe.Pointer
 
-			res := C.GoHandleAVPacket(app.sink,&data, &buf, &size, &duration)
+			res := C.GoHandleAVPacket(app.sink, &data, &buf, &size, &duration)
 			if int(res) == 0 {
 				app.writeSample(data, size, duration)
 				C.GoUnrefAVPacket(buf)
@@ -92,7 +102,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		}
 	}()
 
-	return &app.conf;
+	return &app.conf
 }
 
 func (sink *Appsink) ReadRTP() *rtp.Packet {
@@ -100,10 +110,10 @@ func (sink *Appsink) ReadRTP() *rtp.Packet {
 }
 
 func (lis *Appsink) ReadSample() *media.Sample {
-	chn := make(chan *media.Sample);
+	chn := make(chan *media.Sample)
 	return <-chn
 }
 
 func (lis *Appsink) Close() {
-	C.RaiseEvent(lis.shutdown);
+	C.RaiseEvent(lis.shutdown)
 }

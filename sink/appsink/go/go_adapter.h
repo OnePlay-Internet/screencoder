@@ -27,7 +27,7 @@ void StartScreencodeThread(void* app_sink,
 
 char* QueryDisplay (int index);
 
-void* NewAppSink     ();
+void* AllocateAppSink     ();
 
 void  StopAppSink     (void* data);
 

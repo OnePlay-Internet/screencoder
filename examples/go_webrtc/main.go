@@ -61,16 +61,21 @@ func main() {
 	
 	Lists := make([]listener.Listener, 0)
 	for _, lis_conf := range lis {
+		var err error;
 		var Lis listener.Listener
 		if lis_conf.Source == "screencoder" {
-			Lis = appsink.NewAppsink(*lis_conf)
+			Lis,err =  appsink.NewAppsink(*lis_conf)
 		// } else if lis_conf.MediaType == "audio" {
 		// 	Lis = audio.CreatePipeline(lis_conf)
 		} else {
 			fmt.Printf("Unimplemented listener\n")
 			continue
 		}
-		
+
+		if err != nil {
+			fmt.Printf("%s\n",err.Error());
+			return;
+		}
 
 		Lists = append(Lists, Lis)
 	}
