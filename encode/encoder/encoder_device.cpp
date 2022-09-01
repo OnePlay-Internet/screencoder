@@ -116,7 +116,6 @@ namespace encoder
 
         { // basic test case
             encoder->codec_config.capabilities[FrameFlags::PASSED] = TRUE;
-            encoder->codec_config.capabilities = encoder->codec_config.capabilities;
             config.avcolor = (AVColorRange)encoder::LibavColor::JPEG;
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;

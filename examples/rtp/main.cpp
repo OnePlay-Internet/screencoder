@@ -39,7 +39,7 @@ wait_shutdown(util::Broadcaster* event)
 int 
 main(int argc, char ** argv)
 {
-    encoder::Encoder* encoder = NVENC(10*1000*1000*1000,"h265");
+    encoder::Encoder* encoder = NVENC("h265");
     if(!encoder) {
         LOG_ERROR("NVENC encoder is not ready");
         return 0;

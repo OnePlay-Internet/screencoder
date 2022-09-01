@@ -4,14 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
-
-
-    
-        
-
-
-
         {
             "name": "rtp example",
             "type": "go",
@@ -32,16 +24,12 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/screencoder.exe",
             "args": [],
-            "stopAtEntry": false,
+            "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:\\msys64\\mingw64\\bin\\gdb.exe",
-            "sourceFileMap": 
-            { 
-                "/e/": "E:/" 
-            },
             "setupCommands": [
                 {
                 "description": "Enable pretty-printing for gdb",
