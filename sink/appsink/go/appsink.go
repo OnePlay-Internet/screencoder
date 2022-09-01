@@ -2,7 +2,7 @@ package appsink
 
 import (
 	"fmt"
-	"time"
+	"strings"
 	"unsafe"
 
 	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
@@ -35,7 +35,9 @@ type Appsink struct {
 	sink     unsafe.Pointer
 	shutdown unsafe.Pointer
 	encoder  string
+
 	display  string
+	displays []string
 
 	channel chan *rtp.Packet
 }
@@ -43,27 +45,31 @@ type Appsink struct {
 func NewAppsink(conf config.ListenerConfig) (*Appsink, error) {
 	app := &Appsink{}
 	app.conf = conf
-
 	app.packetizer = h264.NewH264Payloader()
 	app.channel = make(chan *rtp.Packet, 1000)
-
-	app.shutdown = C.NewEvent()
-	if app.shutdown == nil {
-		return nil, fmt.Errorf("unable to create event")
-	}
-	app.sink = C.AllocateAppSink()
-	if app.sink == nil {
-		return nil, fmt.Errorf("unable to create appsink")
-	}
-
+	app.displays = make([]string, 0);
 	app.encoder = "nvenc_h264"
+	app.display = "";
 
 	i := 0
-	c_str := C.QueryDisplay(C.int(i))
-	app.display = string(C.GoBytes(unsafe.Pointer(c_str), C.StringLength(c_str)))
-	if app.display == "out of range" {
-		err := fmt.Errorf("no display found")
-		return nil, err
+	for {
+		c_str := C.QueryDisplay(C.int(i))
+		display := string(C.GoBytes(unsafe.Pointer(c_str), C.StringLength(c_str)))
+		if display == "out of range" {
+			break;
+		}
+		app.displays = append(app.displays, display);
+		i++
+	}
+
+	for _,disp := range app.displays {
+		if strings.Contains(disp,conf.Source) {
+			app.display = disp;	
+		}
+	}
+
+	if app.display == "" {
+		return nil,fmt.Errorf("no display found");	
 	}
 
 	fmt.Printf("display name: %s\n", app.display)
@@ -71,34 +77,41 @@ func NewAppsink(conf config.ListenerConfig) (*Appsink, error) {
 }
 
 func (s *Appsink) writeSample(buffer unsafe.Pointer,
-	bufferLen C.int,
-	C_duration C.int) {
+							bufferLen C.int,
+							C_duration C.int) {
+
 	c_byte := C.GoBytes(buffer, bufferLen)
-	duration := time.Duration(C_duration)
-
-	// TODO clock rate
-	samples := uint32(duration.Seconds() * float64(90000))
+	samples := uint32((float64(C_duration) / 1000000000) * 90000)
 	packets := s.packetizer.Packetize(c_byte, samples)
-
 	for _, p := range packets {
 		s.channel <- p
 	}
 }
 
 func (app *Appsink) Open() *config.ListenerConfig {
-	go C.StartScreencodeThread(app.sink, app.shutdown,
-		C.CString(app.encoder),
-		C.CString(app.display))
+	app.shutdown = C.NewEvent()
+	if app.shutdown == nil {
+		return nil
+	}
+	app.sink = C.AllocateAppSink()
+	if app.sink == nil {
+		return nil
+	}
+
+	go func ()  {
+		C.StartScreencodeThread(app.sink, app.shutdown,
+			C.CString(app.encoder),
+			C.CString(app.display))
+	}()
+
 	go func() {
 		for {
 			var size, duration C.int
 			var data, buf unsafe.Pointer
-
 			res := C.GoHandleAVPacket(app.sink, &data, &buf, &size, &duration)
-			if int(res) == 0 {
-				app.writeSample(data, size, duration)
-				C.GoUnrefAVPacket(buf)
-			}
+			if res == 0 { continue; }
+			app.writeSample(data, size, duration)
+			C.GoUnrefAVPacket(buf)
 		}
 	}()
 
@@ -116,4 +129,5 @@ func (lis *Appsink) ReadSample() *media.Sample {
 
 func (lis *Appsink) Close() {
 	C.RaiseEvent(lis.shutdown)
+	C.StopAppSink(lis.sink);
 }

@@ -136,12 +136,12 @@ namespace error
     get_string_fmt(std::chrono::nanoseconds time,
                    char** string)
     {
-        auto min = std::to_string(std::chrono::duration_cast<std::chrono::minutes>(time).count() %1000 %1000 %1000 %1000 %60).data();
-        auto sec = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(time).count() %1000 %1000 % 1000 % 1000).data();
-        auto mili = std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(time).count() %1000 % 1000 % 1000).data();
-        auto micro = std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(time).count() %1000 % 1000).data();
-        auto nano = std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(time).count() %1000 ).data();
-        snprintf(*string,100,"(min:%s|sec:%s|mili:%s|micro:%s|nano:%s)",min,sec,mili,micro,nano);
+        int64 min =      std::chrono::duration_cast<std::chrono::minutes>(time).count() %1000 %1000 %1000 %1000 %60;
+        int64 sec =      std::chrono::duration_cast<std::chrono::seconds>(time).count() %1000 %1000 % 1000 % 1000;
+        int64 mili =     std::chrono::duration_cast<std::chrono::milliseconds>(time).count() %1000 % 1000 % 1000;
+        int64 micro =    std::chrono::duration_cast<std::chrono::microseconds>(time).count() %1000 % 1000;
+        int64 nano =     std::chrono::duration_cast<std::chrono::microseconds>(time).count() %1000;
+        snprintf(*string,100,"(min:%d|sec:%d|mili:%d|micro:%d|nano:%d)",min,sec,mili,micro,nano);
     }
 
     std::chrono::nanoseconds 
@@ -204,13 +204,9 @@ namespace error
                     char* file,
                     BufferEventType type)
     {
-        auto createTime = std::chrono::duration_cast<std::chrono::milliseconds>(created.time_since_epoch());
-        auto strTemp = std::to_string(createTime.count());
-        char* createTimeStr = strTemp.substr(strTemp.length()-3,3).data();
-        
-
+        int64 createTime = std::chrono::duration_cast<std::chrono::milliseconds>(created.time_since_epoch()).count() % 1000;
         char str[100] = {0};
-        snprintf(str, 100, "buffer id %s contain %s : %s",createTimeStr,log->dataType,map_event(type));
+        snprintf(str, 100, "buffer id %d contain %s : %s",createTime,log->dataType,map_event(type));
         error::log(file,line,"trace",str);
     }
 } // namespace error
