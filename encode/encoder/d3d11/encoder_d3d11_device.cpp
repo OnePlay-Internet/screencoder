@@ -108,13 +108,10 @@ namespace encoder {
 
 
 
-    Encoder*
+    Encoder
     make_d3d11_encoder(char* codec)
     {
-        static Encoder encoder = {0};
-        static Encoder* ret = NULL;
-        RETURN_ONCE(ret);
-
+        Encoder encoder = {0};
         encoder.name = "nvenc";
         encoder.profile = { 
             (int)h264::Profile::high, 
@@ -147,9 +144,6 @@ namespace encoder {
         encoder.codec_config =     string_compare(codec,"h265") ? hevc::get_codec_config() : encoder.codec_config;
 
         Capabilities pass = encoder::validate_encoder(&encoder);
-        if(pass[FrameFlags::PASSED])
-            ret = &encoder;
-
-        return ret;
+        return encoder;
     }
 }

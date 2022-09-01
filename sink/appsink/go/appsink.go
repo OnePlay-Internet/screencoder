@@ -27,6 +27,12 @@ import "C"
 
 type Appsink struct {
 	packetizer Packetizer
+
+	sink unsafe.Pointer
+	shutdown unsafe.Pointer
+	encoder C.CString
+	display C.CString
+
 	channel    chan *rtp.Packet
 }
 
@@ -36,7 +42,12 @@ func NewAppsink() *Appsink {
 	app.packetizer = h264.NewH264Payloader()
 	app.channel = make(chan *rtp.Packet, 1000)
 
-	go C.InitScreencoder()
+	app.shutdown = C.NewEvent();
+	app.sink = C.NewAppSink();
+	app.encoder = C.CString("nvenc_h264");
+	app.encoder = C.CString("nvenc_h264");
+
+	go C.StartScreencodeThread(app.sink,app.shutdown,,)
 	go func() {
 		for {
 			var size, duration C.int

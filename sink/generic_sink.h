@@ -35,6 +35,8 @@ namespace sink
 
         int   (*start)      (GenericSink* sink);
 
+        void  (*stop)       (GenericSink* sink);
+
         void  (*handle)     (GenericSink* sink,
                             util::Buffer* pkt);
     };

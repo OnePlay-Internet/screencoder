@@ -76,6 +76,8 @@ namespace session {
                                 session.shutdown_event, 
                                 session.packet_queue };
 
+        capture.detach();
+        broadcast.detach();
         WAIT_EVENT(session.shutdown_event);
     }
 }

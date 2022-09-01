@@ -119,7 +119,7 @@ namespace encoder
             return NULL;
         }
 
-        if(config->dynamicRangeOption == encoder::DynamicRange::ENABLE || 
+        if(config->dynamicRangeOption == encoder::DynamicRange::ENABLE &&
           !video_format->capabilities[FrameFlags::DYNAMIC_RANGE]) {
             LOG_ERROR("dynamic range not supported");
             return NULL;

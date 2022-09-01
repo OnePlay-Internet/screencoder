@@ -20,9 +20,18 @@ int GoHandleAVPacket(void* appsink_ptr,
 
 void GoUnrefAVPacket(void* buf);
 
-void InitScreencoder();
+void StartScreencodeThread(void* app_sink,
+                    void* shutdown,
+                    char* encoder_name,
+                    char* display_name);
 
-void GoSetBitrate(int bitrate);
+char* QueryDisplay (int index);
 
+void* NewAppSink     ();
 
+void  StopAppSink     (void* data);
+
+void* NewEvent();
+
+void  RaiseEvent(void* event);
 #endif

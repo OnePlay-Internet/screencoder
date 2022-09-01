@@ -141,6 +141,13 @@ namespace util
     }
 
     void
+    free_keyvalue_pairs(KeyValue* val)
+    {
+        free((void*)val);
+    }
+
+
+    void
     keyval_new_strval(KeyValue* pair, 
                       char* key, 
                       char* val)

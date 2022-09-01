@@ -35,4 +35,3 @@ string_compare(char* a,
     else
         return false;
 }
-

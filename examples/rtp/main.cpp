@@ -39,13 +39,13 @@ wait_shutdown(util::Broadcaster* event)
 int 
 main(int argc, char ** argv)
 {
-    encoder::Encoder* encoder = NVENC("h265");
+    encoder::Encoder encoder = NVENC("h265");
     if(!encoder) {
         LOG_ERROR("NVENC encoder is not ready");
         return 0;
     }
 
-    platf::Display** displays = display::get_all_display(encoder);
+    platf::Display** displays = display::get_all_display(&encoder);
 
     int i =0;
     platf::Display* display;
@@ -60,7 +60,9 @@ main(int argc, char ** argv)
     return 0; 
 start:
     util::Broadcaster* shutdown = NEW_EVENT;
-    std::thread {wait_shutdown,shutdown};
-    session::start_session(display,encoder,shutdown,RTP_SINK);
+    std::thread wait10s {wait_shutdown,shutdown};
+    wait10s.detach();
+    
+    session::start_session(display,&encoder,shutdown,RTP_SINK);
     return 0;
 }

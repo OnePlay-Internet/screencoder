@@ -58,14 +58,16 @@ namespace util
 
     KeyValue* new_keyvalue_pairs (int size);
 
-    void
-    keyval_new_intval(KeyValue* pair, 
+
+    void free_keyvalue_pairs(KeyValue* val);
+
+
+    void keyval_new_intval(KeyValue* pair, 
                       char* key, 
                       int val);
     
 
-    void
-    keyval_new_strval(KeyValue* pair, 
+    void keyval_new_strval(KeyValue* pair, 
                       char* key, 
                       char* val);
 }
