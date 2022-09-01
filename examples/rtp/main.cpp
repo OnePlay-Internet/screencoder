@@ -40,7 +40,7 @@ int
 main(int argc, char ** argv)
 {
     encoder::Encoder encoder = NVENC("h265");
-    if(!encoder) {
+    if(!encoder.codec_config.capabilities[encoder::FrameFlags::PASSED]) {
         LOG_ERROR("NVENC encoder is not ready");
         return 0;
     }

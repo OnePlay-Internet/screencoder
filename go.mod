@@ -3,7 +3,7 @@ module github.com/Oneplay-Internet/screencoder
 go 1.18
 
 require (
-	github.com/OnePlay-Internet/webrtc-proxy v1.0.7
+	github.com/OnePlay-Internet/webrtc-proxy v1.0.8
 	github.com/pion/randutil v0.1.0
 	github.com/pion/rtp v1.7.13
 	github.com/pion/webrtc/v3 v3.1.43
@@ -26,6 +26,7 @@ require (
 	github.com/pion/transport v0.13.1 // indirect
 	github.com/pion/turn/v2 v2.0.8 // indirect
 	github.com/pion/udp v0.1.1 // indirect
+	github.com/pion/webrtc/v2 v2.2.26
 	golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8 // indirect
 	golang.org/x/net v0.0.0-20220630215102-69896b714898 // indirect
 	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664 // indirect

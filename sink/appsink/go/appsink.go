@@ -1,11 +1,14 @@
 package appsink
 
 import (
+	"fmt"
 	"time"
 	"unsafe"
 
+	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
 	"github.com/Oneplay-Internet/screencoder/sink/appsink/go/h264"
 	"github.com/pion/rtp"
+	"github.com/pion/webrtc/v3/pkg/media"
 )
 
 // #cgo LDFLAGS: ${SRCDIR}/../../../build/libscreencoderlib.a
@@ -27,39 +30,33 @@ import "C"
 
 type Appsink struct {
 	packetizer Packetizer
+	conf config.ListenerConfig
 
 	sink unsafe.Pointer
 	shutdown unsafe.Pointer
-	encoder C.CString
-	display C.CString
+	encoder string
+	display string
 
 	channel    chan *rtp.Packet
 }
 
-func NewAppsink() *Appsink {
+func NewAppsink(conf config.ListenerConfig) *Appsink {
 	app := &Appsink{}
+	app.conf = conf;
 
 	app.packetizer = h264.NewH264Payloader()
 	app.channel = make(chan *rtp.Packet, 1000)
 
 	app.shutdown = C.NewEvent();
 	app.sink = C.NewAppSink();
-	app.encoder = C.CString("nvenc_h264");
-	app.encoder = C.CString("nvenc_h264");
 
-	go C.StartScreencodeThread(app.sink,app.shutdown,,)
-	go func() {
-		for {
-			var size, duration C.int
-			var data, buf unsafe.Pointer
+	app.encoder = "nvenc_h264";
 
-			res := C.GoHandleAVPacket(&data, &buf, &size, &duration)
-			if int(res) == 0 {
-				app.writeSample(data, size, duration)
-				C.GoUnrefAVPacket(buf)
-			}
-		}
-	}()
+	i := 0;
+	c_str := C.QueryDisplay(C.int(i));
+	app.display = string(C.GoBytes(unsafe.Pointer(c_str),C.StringLength(c_str)));
+	fmt.Printf("display name: %s\n",app.display);
+
 	return app
 }
 
@@ -78,6 +75,35 @@ func (s *Appsink) writeSample(buffer unsafe.Pointer,
 	}
 }
 
+func (app *Appsink) Open() *config.ListenerConfig {
+	go C.StartScreencodeThread(app.sink,app.shutdown,
+			C.CString(app.encoder),
+			C.CString(app.display))
+	go func() {
+		for {
+			var size, duration C.int
+			var data, buf unsafe.Pointer
+
+			res := C.GoHandleAVPacket(app.sink,&data, &buf, &size, &duration)
+			if int(res) == 0 {
+				app.writeSample(data, size, duration)
+				C.GoUnrefAVPacket(buf)
+			}
+		}
+	}()
+
+	return &app.conf;
+}
+
 func (sink *Appsink) ReadRTP() *rtp.Packet {
 	return <-sink.channel
+}
+
+func (lis *Appsink) ReadSample() *media.Sample {
+	chn := make(chan *media.Sample);
+	return <-chn
+}
+
+func (lis *Appsink) Close() {
+	C.RaiseEvent(lis.shutdown);
 }

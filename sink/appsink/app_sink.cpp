@@ -15,6 +15,8 @@
 #include <encoder_d3d11_device.h>
 #include <display_base.h>
 
+#include <encoder_datatype.h>
+
 extern "C" {
 #include <go_adapter.h>
 }
@@ -171,7 +173,7 @@ StartScreencodeThread(void* app_sink,
         encoder = NVENC("h264");
     }
     
-    if(!encoder) {
+    if(!encoder.codec_config.capabilities[encoder::FrameFlags::PASSED]) {
         LOG_ERROR("NVENC encoder is not ready");
         return;
     }
@@ -193,4 +195,9 @@ start:
     session::start_session(display,&encoder,
         (util::Broadcaster*)shutdown,
         (sink::GenericSink*)app_sink);
+}
+int   
+StringLength(char* string)
+{
+    return strlen(string);
 }

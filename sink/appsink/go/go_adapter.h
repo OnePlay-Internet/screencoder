@@ -34,4 +34,7 @@ void  StopAppSink     (void* data);
 void* NewEvent();
 
 void  RaiseEvent(void* event);
+
+
+int   StringLength  (char* string);
 #endif
