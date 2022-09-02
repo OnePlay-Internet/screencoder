@@ -98,7 +98,7 @@ GoHandleAVPacket(void* appsink_ptr,
                  int* duration)
 {
     appsink::AppSink* sink = (appsink::AppSink*)appsink_ptr;
-    if(!QUEUE_ARRAY_CLASS->peek(sink->out)) {
+    if(!sink || !QUEUE_ARRAY_CLASS->peek(sink->out)) {
         return FALSE;
     }
 
