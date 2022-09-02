@@ -10,7 +10,7 @@ import (
 
 func main() {
 	udp,_ := net.Dial("udp","localhost:6000")
-	sink,err := appsink.NewAppsink(config.ListenerConfig{});
+	sink,err := appsink.NewAppsink(&config.ListenerConfig{});
 	if err != nil{
 		fmt.Printf("%s\n",err.Error());	
 	}

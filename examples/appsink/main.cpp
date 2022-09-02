@@ -8,7 +8,9 @@
  * @copyright Copyright (c) 2022
  * 
  */
+extern "C" {
 #include <go_adapter.h>
+}
 
 #include <thread>
 
