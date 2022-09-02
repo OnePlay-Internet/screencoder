@@ -70,10 +70,10 @@ namespace error
         outfile.open("./log.txt", std::ios_base::app); // append instead of overwrite
         while(true)
         {
-            if(!QUEUE_ARRAY_CLASS->peek(array)) {
-                std::this_thread::sleep_for(10ms);
-                continue;
+            while(!QUEUE_ARRAY_CLASS->peek(array)) {
+                std::this_thread::sleep_for(50ms);
             }
+
 
             util::Buffer* buf;
             Err* err = (Err*)QUEUE_ARRAY_CLASS->pop(array,&buf,NULL);

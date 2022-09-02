@@ -20,6 +20,9 @@
 
 using namespace std;
 
+#include <thread>
+using namespace std::literals;
+
 namespace util {
     /**
      * @brief 
@@ -34,40 +37,7 @@ namespace util {
     };
 
 
-    bool            queue_array_push        (QueueArray* queue, 
-                                             Buffer* object);
 
-    bool            queue_array_peek        (QueueArray* queue);
-
-
-    pointer         queue_array_pop         (QueueArray* queue, 
-                                             util::Buffer** buf,
-                                             int* size);
-
-
-    QueueArray*     queue_array_init        ();
-
-    void            queue_array_finalize    (QueueArray* queue);
-
-
-
-    /**
-     * @brief 
-     * 
-     */
-    QueueArrayClass*
-    queue_array_class_init()
-    {
-        static QueueArrayClass klass = {0};
-        RETURN_PTR_ONCE(klass);
-
-        klass.init = queue_array_init;
-        klass.peek = queue_array_peek;
-        klass.pop  = queue_array_pop;
-        klass.push = queue_array_push;
-        klass.stop = queue_array_finalize;
-        return &klass;
-    }
 
     /**
      * @brief 
@@ -99,11 +69,18 @@ namespace util {
         return true;
     }
 
-
-    bool            
+    bool
     queue_array_peek(QueueArray* queue)
     {
         return queue->first ? true : false;
+    }
+
+    void
+    queue_array_wait(QueueArray* queue)
+    {
+        while(!queue->first) {
+            std::this_thread::sleep_for(5ms); // decrease sleep interval cause cpu consumption ramp up
+        }
     }
 
 
@@ -143,5 +120,25 @@ namespace util {
     queue_array_finalize(QueueArray* queue)
     {
         free(queue);
+    }
+
+    /**
+     * 
+     * @brief 
+     * 
+     */
+    QueueArrayClass*
+    queue_array_class_init()
+    {
+        static QueueArrayClass klass = {0};
+        RETURN_PTR_ONCE(klass);
+
+        klass.init = queue_array_init;
+        klass.wait = queue_array_wait;
+        klass.peek = queue_array_peek;
+        klass.pop  = queue_array_pop;
+        klass.push = queue_array_push;
+        klass.stop = queue_array_finalize;
+        return &klass;
     }
 }

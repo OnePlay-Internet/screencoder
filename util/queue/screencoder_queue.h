@@ -25,6 +25,8 @@ namespace util
     typedef struct _QueueArrayClass{
         bool (*push) (QueueArray* queue, util::Buffer* data);
 
+        void (*wait) (QueueArray* queue);
+
         bool (*peek) (QueueArray* queue);
 
         pointer       (*pop) (QueueArray* queue, 

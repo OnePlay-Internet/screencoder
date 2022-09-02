@@ -102,11 +102,7 @@ GoHandleAVPacket(void* appsink_ptr,
     if (!sink)
         return FALSE;
     
-    retry:
-    if(!QUEUE_ARRAY_CLASS->peek(sink->out)) {
-        std::this_thread::sleep_for(50us);
-        goto retry;
-    }
+    QUEUE_ARRAY_CLASS->wait(sink->out);
 
     libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size);
     int64 current = BUFFER_CLASS->created((util::Buffer*)*buf);

@@ -33,9 +33,8 @@ namespace util
     bool            
     wait_event(Broadcaster* broadcaster)
     {
-        while (!QUEUE_ARRAY_CLASS->peek(broadcaster)) 
-        { 
-            std::this_thread::sleep_for(100ms); 
+        while (!QUEUE_ARRAY_CLASS->peek(broadcaster)) { 
+            std::this_thread::sleep_for(1s); 
         }
         return true;
     }
