@@ -23,7 +23,7 @@ readloop(void* appsink)
         void* data,*buf;
         res = GoHandleAVPacket(appsink,&data,&buf,&size,&duration);
         if (!res)
-            continue;
+            return;
         
         GoUnrefAVPacket(buf);
     }

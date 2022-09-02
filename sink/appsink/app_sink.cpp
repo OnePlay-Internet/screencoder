@@ -17,9 +17,9 @@
 
 #include <encoder_datatype.h>
 
-extern "C" {
-#include <go_adapter.h>
-}
+
+#include <thread>
+using namespace std::literals;
 
 
 namespace appsink
@@ -98,8 +98,14 @@ GoHandleAVPacket(void* appsink_ptr,
                  int* duration)
 {
     appsink::AppSink* sink = (appsink::AppSink*)appsink_ptr;
-    if(!sink || !QUEUE_ARRAY_CLASS->peek(sink->out)) {
+
+    if (!sink)
         return FALSE;
+    
+    retry:
+    if(!QUEUE_ARRAY_CLASS->peek(sink->out)) {
+        std::this_thread::sleep_for(50us);
+        goto retry;
     }
 
     libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size);
