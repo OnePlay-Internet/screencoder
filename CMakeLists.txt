@@ -189,3 +189,16 @@ target_compile_definitions(screencoder PUBLIC ${SCREENCODER_DEFINITIONS})
 set_target_properties(screencoder PROPERTIES CXX_STANDARD 17
                                VERSION ${PROJECT_VERSION}
                                SOVERSION ${PROJECT_VERSION_MAJOR})
+
+add_executable(appsinktest
+	examples/appsink/main.cpp
+)
+
+target_link_libraries(appsinktest
+	${CMAKE_CURRENT_BINARY_DIR}/libscreencoderlib.a
+	${SCREENCODER_EXTERNAL_LIBRARIES}
+)
+target_compile_definitions(appsinktest PUBLIC ${SCREENCODER_DEFINITIONS})
+set_target_properties(appsinktest PROPERTIES CXX_STANDARD 17
+                               VERSION ${PROJECT_VERSION}
+                               SOVERSION ${PROJECT_VERSION_MAJOR})

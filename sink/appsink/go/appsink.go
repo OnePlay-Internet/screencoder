@@ -40,6 +40,7 @@ type Appsink struct {
 	displays []string
 
 	channel chan *rtp.Packet
+	pktchannel chan *GoPacket
 }
 
 func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
@@ -47,6 +48,7 @@ func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 	app.conf = conf
 	app.packetizer = h264.NewH264Payloader()
 	app.channel = make(chan *rtp.Packet, 1000)
+	app.pktchannel = make(chan *GoPacket, 1000)
 	app.displays = make([]string, 0);
 	app.encoder = "nvenc_h264"
 	app.display = "";
@@ -88,6 +90,11 @@ func (s *Appsink) writeSample(buffer unsafe.Pointer,
 	}
 }
 
+type  GoPacket struct {
+	size, duration C.int
+	data, buf unsafe.Pointer
+}
+
 func (app *Appsink) Open() *config.ListenerConfig {
 	app.shutdown = C.NewEvent()
 	if app.shutdown == nil {
@@ -106,17 +113,22 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		fmt.Printf("screencode thread terminated\n");
 	}()
 
+
 	go func() {
 		for {
-			var size, duration C.int
-			var data, buf unsafe.Pointer
-			res := C.GoHandleAVPacket(app.sink, &data, &buf, &size, &duration)
+			var pkt GoPacket;
+			res := C.GoHandleAVPacket(app.sink, &pkt.data, &pkt.buf, &pkt.size, &pkt.duration)
 			if res == 0 { continue; }
-			app.writeSample(data, size, duration)
-			C.GoUnrefAVPacket(buf)
+			app.pktchannel <- &pkt;
 		}
 	}()
-
+	go func() {
+		for {
+			pkt :=<-app.pktchannel;
+			app.writeSample(pkt.data, pkt.size, pkt.duration)
+			C.GoUnrefAVPacket(pkt.buf)
+		}
+	}()
 	return app.conf
 }
 
@@ -133,3 +145,4 @@ func (lis *Appsink) Close() {
 	C.RaiseEvent(lis.shutdown)
 	C.StopAppSink(lis.sink);
 }
+
