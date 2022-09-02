@@ -118,7 +118,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		for {
 			var pkt GoPacket;
 			res := C.GoHandleAVPacket(app.sink, &pkt.data, &pkt.buf, &pkt.size, &pkt.duration)
-			if res == 0 { continue; }
+			if res == 0 { fmt.Printf("appsink is null pointer"); return; }
 			app.pktchannel <- &pkt;
 		}
 	}()
