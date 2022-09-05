@@ -109,6 +109,10 @@ namespace encoder {
     void 
     captureThread(EncodeThreadContext* ctx) 
     {
+        bool reinit = false;
+        static int reinit_count = 0;
+        reinit_count++;
+
         // allocate display image and intialize with dummy data
         util::Buffer* imgBuf = ctx->display->klass->alloc_img(ctx->display);
 
@@ -146,6 +150,10 @@ namespace encoder {
                 continue;
             } else if (ret == platf::Capture::error) {
                 LOG_ERROR("Could not encode video packet");
+                break;
+            } else if (ret == platf::Capture::reinit) {
+                LOG_INFO("Reinitialize encode thread");
+                reinit = true;
                 break;
             }
 
@@ -195,7 +203,14 @@ namespace encoder {
         BUFFER_UNREF(ctxBuf);
         BUFFER_UNREF(imgBuf);
         BUFFER_UNREF(frameBuf);
-        RAISE_EVENT(ctx->join_event);
+
+        if (reinit && reinit_count < 10)
+            captureThread(ctx);
+        else
+            RAISE_EVENT(ctx->join_event);
+
+        return;
+        
     }
 
     /**

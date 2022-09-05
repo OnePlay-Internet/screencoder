@@ -46,7 +46,7 @@ namespace gpu {
      * @return platf::Capture 
      */
     platf::Capture 
-    display_vram_snapshot(platf::Display* disp,
+    display_vram_capture(platf::Display* disp,
                           platf::Image *img_base, 
                           bool cursor_visible) 
     {
@@ -441,7 +441,7 @@ namespace gpu {
         klass.base.alloc_img     = display_vram_alloc_img;
         klass.base.dummy_img     = display_vram_dummy_img;
         klass.base.make_hwdevice = display_vram_make_hwdevice;
-        klass.base.capture       = display_vram_snapshot;
+        klass.base.capture       = display_vram_capture;
         return &klass;
     }
 } // namespace platf::dxgi

@@ -51,7 +51,8 @@ namespace platf {
     typedef enum _Capture{
         ok,
         timeout,
-        error
+        error,
+        reinit
     }Capture;
 
     typedef struct _Image {
