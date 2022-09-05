@@ -54,7 +54,7 @@ namespace session {
         session.sink = sink;
         session.packet_queue = QUEUE_ARRAY_CLASS->init();
         session.config = {
-            1000 * 1000 * 10,
+            1000 * 1000 * 30,
             encoder::SlicePerFrame::TWO,
             encoder::DynamicRange::DISABLE,
             (AVColorRange)encoder::LibavColor::JPEG,

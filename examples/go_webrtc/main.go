@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"os"
 
 	proxy "github.com/OnePlay-Internet/webrtc-proxy"
@@ -91,44 +90,41 @@ func main() {
 		}
 	}
 
-	_hid := hid.NewHIDSingleton(URL)
-	for {
-		chans := config.DataChannelConfig{
-			Offer: true,
-			Confs: map[string]*struct {
-				Send    chan string
-				Recv    chan string
-				Channel *webrtc.DataChannel
-			}{
-				"hid": {
-					Send:    make(chan string),
-					Recv:    make(chan string),
-					Channel: nil,
-				},
+	chans := config.DataChannelConfig{
+		Offer: true,
+		Confs: map[string]*struct {
+			Send    chan string
+			Recv    chan string
+			Channel *webrtc.DataChannel
+		}{
+			"hid": {
+				Send:    make(chan string),
+				Recv:    make(chan string),
+				Channel: nil,
 			},
-		}
-
-		go func() {
-			for {
-				channel := chans.Confs["hid"]
-				if channel != nil {
-					str := <-chans.Confs["hid"].Recv
-					_hid.ParseHIDInput(str)
-				} else {
-					return
-				}
-			}
-		}()
-
-
-
-		prox, err := proxy.InitWebRTCProxy(nil, &grpc, &rtc, br, &chans, Lists)
-		if err != nil {
-			fmt.Printf("failed to init webrtc proxy, try again in 2 second\n")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		<-prox.Shutdown
+		},
 	}
+
+	_hid := hid.NewHIDSingleton(URL)
+	go func() {
+		for {
+			channel := chans.Confs["hid"]
+			if channel != nil {
+				str := <-chans.Confs["hid"].Recv
+				_hid.ParseHIDInput(str)
+			} else {
+				return
+			}
+		}
+	}()
+
+
+
+	prox, err := proxy.InitWebRTCProxy(nil, &grpc, &rtc, br, &chans, Lists)
+	if err != nil {
+		fmt.Printf("%s\n",err.Error())
+		return;
+	}
+	<-prox.Shutdown
 }
 
