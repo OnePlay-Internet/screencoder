@@ -31,11 +31,8 @@ namespace sink
         util::Broadcaster* shutdown_event = ctx->shutdown_event;
 
 
-        while(true) {
+        while(!IS_INVOKED(shutdown_event)) {
             QUEUE_ARRAY_CLASS->wait(packets);
-
-            if(IS_INVOKED(shutdown_event))
-                break;
 
             int size;
             util::Buffer* video_packet_buffer;

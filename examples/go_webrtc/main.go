@@ -1,14 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"bytes"
-	"os"
 	"time"
+	"os"
 
 	proxy "github.com/OnePlay-Internet/webrtc-proxy"
+	"github.com/OnePlay-Internet/webrtc-proxy/hid"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener"
 	appsink "github.com/Oneplay-Internet/screencoder/sink/appsink/go"
 
@@ -20,11 +18,16 @@ import (
 func main() {
 	var token string
 	args := os.Args[1:]
+	URL := "localhost:5000"
+
 	for i, arg := range args {
 		if arg == "--token" {
 			token = args[i+1]
+		} else if arg == "--hid" {
+			URL = args[i+1]
 		} else if arg == "--help" {
 			fmt.Printf("--token |  server token\n")
+			fmt.Printf("--hid   |  HID server URL (example: localhost:5000)\n")
 			return
 		}
 	}
@@ -88,6 +91,7 @@ func main() {
 		}
 	}
 
+	_hid := hid.NewHIDSingleton(URL)
 	for {
 		chans := config.DataChannelConfig{
 			Offer: true,
@@ -108,8 +112,8 @@ func main() {
 			for {
 				channel := chans.Confs["hid"]
 				if channel != nil {
-					// str := <-chans.Confs["hid"].Recv
-					// go ParseHIDInput(str)
+					str := <-chans.Confs["hid"].Recv
+					_hid.ParseHIDInput(str)
 				} else {
 					return
 				}
@@ -128,94 +132,3 @@ func main() {
 	}
 }
 
-
-
-
-
-/*
- * HID code
- */
-const (
-	HIDproxyEndpoint = "localhost:5000"
-)
-
-const (
-	mouseWheel = 0
-	mouseMove = 1
-	mouseBtnUp = 2
-	mouseBtnDown = 3
-	
-	keyUp = 4
-	keyDown = 5
-	keyPress = 6
-	keyReset = 7
-)
-
-
-type HIDMsg struct {
-	EventCode int			`json:"code"`
-	Data map[string]interface{} `json:"data"`
-}
-
-func ParseHIDInput(data string) {
-	var err error;
-	var route string;
-	var out []byte;
-
-	bodymap := make(map[string]float64)
-	var bodyfloat float64
-	var bodystring string 
-	bodyfloat = -1;
-	bodystring = "";
-
-	var msg HIDMsg;
-	json.Unmarshal([]byte(data),&msg);
-	json.Unmarshal([]byte(data),&msg);
-	switch msg.EventCode {
-	case mouseWheel:
-		route = "Mouse/Wheel"
-		bodyfloat = msg.Data["deltaY"].(float64);
-	case mouseBtnUp:
-		route = "Mouse/Up"
-		bodyfloat = msg.Data["button"].(float64);
-	case mouseBtnDown:
-		route = "Mouse/Down"
-		bodyfloat = msg.Data["button"].(float64);
-	case mouseMove:
-		route = "Mouse/Move"
-		bodymap["X"] = msg.Data["dX"].(float64);
-		bodymap["Y"] = msg.Data["dY"].(float64);
-
-	case keyUp:
-		route = "Keyboard/Up"
-		bodystring = msg.Data["key"].(string);
-	case keyDown:
-		route = "Keyboard/Down"
-		bodystring = msg.Data["key"].(string);
-
-	case keyReset:
-		route = "Keyboard/Reset"
-	case keyPress:
-		route = "Keyboard/Press"
-	}
-
-	
-	if bodyfloat != -1 {
-		out,err = json.Marshal(bodyfloat)
-	} else if bodystring != "" {
-		out,err = json.Marshal(bodystring)
-	} else if len(bodymap) != 0 {
-		out,err = json.Marshal(bodymap)
-	} else {
-		out = []byte("");
-	}
-
-	if err != nil {
-		fmt.Printf("fail to marshal output: %s\n",err.Error());
-	}
-	_,err = http.Post(fmt.Sprintf("http://%s/%s",HIDproxyEndpoint,route),
-		"application/json",bytes.NewBuffer(out));
-	if err != nil {
-		fmt.Printf("fail to forward input: %s\n",err.Error());
-	}
-}
