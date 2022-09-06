@@ -112,6 +112,7 @@ namespace platf {
     struct _Display {
         DisplayClass* klass;
         char name[100];
+        bool reinit_request;
 
         // Offsets for when streaming a specific monitor. By default, they are 0.
         int offset_x, offset_y;
@@ -127,6 +128,8 @@ namespace platf {
                                                      Image* img);
 
         util::Buffer*          (*alloc_img)        (Display* self);
+
+        void                   (*free)            (Display* self);
 
         Device*                (*make_hwdevice)    (Display* self,
                                                     PixelFormat pix_fmt);

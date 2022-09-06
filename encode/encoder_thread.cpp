@@ -38,9 +38,9 @@ using namespace std::literals;
 namespace encoder {
     struct _EncodeThreadContext {
         int frame_nr;
+        bool reinit;
 
         util::Broadcaster* shutdown_event;
-        util::Broadcaster* join_event;
         util::QueueArray* packet_queue;
 
         std::thread thread;
@@ -109,9 +109,7 @@ namespace encoder {
     void 
     captureThread(EncodeThreadContext* ctx) 
     {
-        bool reinit = false;
-        static int reinit_count = 0;
-        reinit_count++;
+        ctx->reinit = false;
 
         // allocate display image and intialize with dummy data
         util::Buffer* imgBuf = ctx->display->klass->alloc_img(ctx->display);
@@ -153,7 +151,7 @@ namespace encoder {
                 break;
             } else if (ret == platf::Capture::reinit) {
                 LOG_INFO("Reinitialize encode thread");
-                reinit = true;
+                ctx->reinit = true;
                 break;
             }
 
@@ -203,11 +201,6 @@ namespace encoder {
         BUFFER_UNREF(ctxBuf);
         BUFFER_UNREF(imgBuf);
         BUFFER_UNREF(frameBuf);
-
-        if (reinit && reinit_count < 10)
-            captureThread(ctx);
-        else
-            RAISE_EVENT(ctx->join_event);
     }
 
     /**
@@ -226,14 +219,12 @@ namespace encoder {
              util::Broadcaster* shutdown_event,
              util::QueueArray* packet_queue) 
     {
-        util::Broadcaster* join_event = NEW_EVENT;
-
         // push new session context to concode queue
         EncodeThreadContext ss_ctx = {0};
         ss_ctx.shutdown_event = shutdown_event;
-        ss_ctx.join_event = join_event;
         ss_ctx.packet_queue = packet_queue;
         ss_ctx.frame_nr = 1;
+        ss_ctx.reinit = true;
 
         ss_ctx.display = capture;
         ss_ctx.encoder = encoder;
@@ -241,13 +232,14 @@ namespace encoder {
         ss_ctx.config = config;
 
 
-        ss_ctx.thread = std::thread {captureThread, &ss_ctx };
-
-        // Wait for join signal
-        WAIT_EVENT(join_event);
+        while (ss_ctx.reinit)
+        {
+            ss_ctx.thread = std::thread {captureThread, &ss_ctx };
+            ss_ctx.thread.join();
+            if (ss_ctx.reinit)
+                capture->reinit_request = true;
+            
+            std::this_thread::sleep_for(100ms);
+        }
     }
-
-
-
-
 }

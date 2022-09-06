@@ -4,8 +4,14 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
 
+        {
+            "name": "Attach to Process",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": 0
+        },
         {
             "name": "rtp example",
             "type": "go",
@@ -29,7 +35,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/appsinktest.exe",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": true,
@@ -49,7 +55,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/screencoder.exe",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": true,

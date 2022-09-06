@@ -61,8 +61,8 @@ main(int argc, char ** argv)
     return 0; 
 start:
     util::Broadcaster* shutdown = NEW_EVENT;
-    std::thread wait10s {wait_shutdown,shutdown};
-    wait10s.detach();
+    // std::thread wait10s {wait_shutdown,shutdown};
+    // wait10s.detach();
     
     session::start_session(display,&encoder,shutdown,RTP_SINK);
     return 0;

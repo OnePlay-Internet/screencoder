@@ -182,7 +182,30 @@ namespace gpu {
 
         return platf::Capture::ok;
     }    
-    
+
+    void
+    display_vram_free(platf::Display* disp)
+    {
+        display::DisplayBase* base = (display::DisplayBase*) disp; 
+        platf::Display* disp = (platf::Display*) disp; 
+        DisplayVram* self = (DisplayVram*) disp; 
+
+        if(self->blend_disable) { self->blend_disable->Release(); }
+        if(self->blend_enable) { self->blend_enable->Release(); }
+        if(self->scene_ps) { self->scene_ps->Release(); }
+        if(self->scene_vs) { self->scene_vs->Release(); }
+        if(self->src) { self->src->Release(); }
+        if(self->sampler_linear) { self->sampler_linear->Release(); }
+        if(self->cursor.input_res) { self->cursor.input_res->Release(); }
+        if(self->cursor.texture) { self->cursor.texture->Release(); }
+        if(base->output) { base->output->Release(); }
+        if(base->factory) { base->factory->Release(); }
+        if(base->adapter) { base->adapter->Release(); }
+        if(base->device) { base->device->Release(); }
+        if(base->device_ctx) { base->device_ctx->Release(); }
+        DUPLICATION_CLASS->finalize(&base->dup);
+        free((pointer)disp);
+    }
 
     platf::Display*
     display_vram_init(char* display_name) 
@@ -438,6 +461,7 @@ namespace gpu {
         RETURN_PTR_ONCE(klass);
         
         klass.base.init          = display_vram_init;
+        klass.base.free          = display_vram_free;
         klass.base.alloc_img     = display_vram_alloc_img;
         klass.base.dummy_img     = display_vram_dummy_img;
         klass.base.make_hwdevice = display_vram_make_hwdevice;

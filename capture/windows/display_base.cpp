@@ -31,6 +31,30 @@ using namespace std::literals;
 
 
 namespace display{
+    void
+    display_watcher_thread(platf::Display** disps,
+                           encoder::Encoder* encoder)
+    {
+        while (true)
+        {
+            int i = 0;
+            while (*(disps+i))
+            {
+                platf::Display* disp = *(disps+i);
+                if(disp->reinit_request)
+                {
+                    char name[100] = {0};
+                    memcpy(name,disp->name,100);
+                    *(disps+i) = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), name);
+                    disp->klass->free(disp);
+                }
+                i++
+            }
+            std::this_thread::sleep_for(50ms);
+        }
+    }
+
+
     // display selection
     platf::Display**
     get_all_display(encoder::Encoder* encoder)
