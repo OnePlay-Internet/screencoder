@@ -41,14 +41,10 @@ namespace display{
             while (*(disps+i))
             {
                 platf::Display* disp = *(disps+i);
-                if(disp->reinit_request)
-                {
-                    char name[100] = {0};
-                    memcpy(name,disp->name,100);
-                    *(disps+i) = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), name);
-                    disp->klass->free(disp);
-                }
-                i++
+                if(IS_INVOKED(disp->reset_event))
+                    disp->klass->reset(disp);
+
+                i++;
             }
             std::this_thread::sleep_for(50ms);
         }
@@ -60,6 +56,14 @@ namespace display{
     get_all_display(encoder::Encoder* encoder)
     {
         static platf::Display* displays[10] = {0};
+        static bool init = false;
+        if (!init) {
+            display_watcher_thread(displays,encoder);
+            init = true; 
+        }
+
+        
+
         char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
 
         int count = 0;
@@ -142,6 +146,10 @@ namespace display{
         syncThreadDesktop();
 
         platf::Display* disp = (platf::Display*)self;
+        disp->reset_event = NEW_EVENT;
+        disp->reset_lock = new std::mutex();
+
+
         // Get rectangle of full desktop for absolute mouse coordinates
         disp->env_width  = GetSystemMetrics(SM_CXVIRTUALSCREEN);
         disp->env_height = GetSystemMetrics(SM_CYVIRTUALSCREEN);

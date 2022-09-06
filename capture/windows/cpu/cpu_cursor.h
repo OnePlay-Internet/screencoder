@@ -18,7 +18,7 @@
 namespace cpu
 {    
     typedef struct _Cursor {
-        byte* img_data;
+        uint8* img_data;
         DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info;
         int x, y;
         bool visible;

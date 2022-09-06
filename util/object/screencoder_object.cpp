@@ -228,7 +228,7 @@ namespace util
 
         BUFFER_MALLOC(ret,elements * insert_size + data->size,ptr);
 
-        byte* next = (byte*)data->data;
+        uint8* next = (uint8*)data->data;
         for(int x = 0; x < elements; ++x) {
             pointer p = ptr + (x * (insert_size + slice_size));
 
@@ -266,8 +266,8 @@ namespace util
            util::Buffer* substring)
     {
         int size_string, size_substring;
-        byte* string_ptr = (byte*)BUFFER_REF(string,&size_string);
-        byte* substring_ptr = (byte*)BUFFER_REF(substring,&size_substring);
+        uint8* string_ptr = (uint8*)BUFFER_REF(string,&size_string);
+        uint8* substring_ptr = (uint8*)BUFFER_REF(substring,&size_substring);
 
         int ret = 1;
         while (ret < size_string)
@@ -293,9 +293,9 @@ namespace util
             util::Buffer* _new) 
     {
         int size_origin, size_old, size_new;
-        byte* origin_ptr = (byte*)BUFFER_REF(original,&size_origin);
-        byte* old_ptr = (byte*)BUFFER_REF(old,&size_old);
-        byte* new_ptr = (byte*)BUFFER_REF(_new,&size_new);
+        uint8* origin_ptr = (uint8*)BUFFER_REF(original,&size_origin);
+        uint8* old_ptr = (uint8*)BUFFER_REF(old,&size_old);
+        uint8* new_ptr = (uint8*)BUFFER_REF(_new,&size_new);
 
         uint replace_size = size_origin - size_old + MAX(size_old,size_new);
         BUFFER_MALLOC(ret,replace_size,replaced);

@@ -37,4 +37,12 @@ void do_nothing(void*);
 
 bool string_compare(char* a, char* b);
 
+
+
+/**
+ * @brief 
+ * create a copy of ptr to mutex, lock mutex then unlock after function is done
+ */
+#define LOCK(x)   std::mutex* mutx_ptr = x; (*mutx_ptr).lock(); defer _(NULL, [mutx_ptr](...){(*mutx_ptr).unlock();} )
+
 #endif

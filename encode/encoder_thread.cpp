@@ -237,9 +237,7 @@ namespace encoder {
             ss_ctx.thread = std::thread {captureThread, &ss_ctx };
             ss_ctx.thread.join();
             if (ss_ctx.reinit)
-                capture->reinit_request = true;
-            
-            std::this_thread::sleep_for(100ms);
+                RAISE_EVENT(ss_ctx.display->reset_event);
         }
     }
 }

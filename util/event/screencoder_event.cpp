@@ -22,6 +22,12 @@ namespace util
         return QUEUE_ARRAY_CLASS->init();
     }
 
+    void
+    destroy_event(Broadcaster* event) 
+    {
+        return QUEUE_ARRAY_CLASS->stop(event);
+    }
+
     void            
     raise_event(Broadcaster* broadcaster)
     {

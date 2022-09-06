@@ -15,6 +15,7 @@
 
 #define NEW_EVENT       util::new_event()
 #define RAISE_EVENT(x)  util::raise_event(x)
+#define DESTROY_EVENT(x)util::destroy_event(x)
 #define WAIT_EVENT(x)   util::wait_event(x)
 #define IS_INVOKED(x)   util::is_invoked(x)
 
@@ -23,6 +24,8 @@ namespace util
     typedef util::QueueArray       Broadcaster;
 
     Broadcaster*    new_event       ();
+
+    void            destroy_event   (Broadcaster* broadcaster);
 
     void            raise_event     (Broadcaster* broadcaster);
 

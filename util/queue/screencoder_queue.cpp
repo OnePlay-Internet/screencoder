@@ -119,6 +119,13 @@ namespace util {
     void            
     queue_array_finalize(QueueArray* queue)
     {
+        while(queue_array_peek(queue))
+        {
+            util::Buffer* buf;
+            queue_array_pop(queue,&buf,NULL);
+            BUFFER_UNREF(buf);
+        }
+
         free(queue);
     }
 

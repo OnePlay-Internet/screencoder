@@ -1,7 +1,13 @@
-//
-// Created by loki on 6/21/19.
-//
-
+/**
+ * @file platform_common.h
+ * @author {Do Huy Hoang} ({huyhoangdo0205@gmail.com})
+ * @brief 
+ * @version 1.0
+ * @date 2022-09-06
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 #ifndef SUNSHINE_COMMON_H
 #define SUNSHINE_COMMON_H
 #include <screencoder_util.h>
@@ -12,6 +18,8 @@
 #include <mutex>
 #include <string>
 #include <d3d11_datatype.h>
+
+#include <mutex>
 
 
 using float4 = float[4];
@@ -56,7 +64,7 @@ namespace platf {
     }Capture;
 
     typedef struct _Image {
-        byte* data;
+        uint8* data;
         int32 pixel_pitch;
         int32 row_pitch;
     }Image;
@@ -112,7 +120,9 @@ namespace platf {
     struct _Display {
         DisplayClass* klass;
         char name[100];
-        bool reinit_request;
+
+        std::mutex* reset_lock;
+        util::Broadcaster* reset_event;
 
         // Offsets for when streaming a specific monitor. By default, they are 0.
         int offset_x, offset_y;
@@ -129,7 +139,7 @@ namespace platf {
 
         util::Buffer*          (*alloc_img)        (Display* self);
 
-        void                   (*free)            (Display* self);
+        void                   (*reset)            (Display* self);
 
         Device*                (*make_hwdevice)    (Display* self,
                                                     PixelFormat pix_fmt);

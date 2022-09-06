@@ -69,7 +69,7 @@ namespace gpu
         hw->img.base.pixel_pitch = 4;
 
         int inf_size = 16 / sizeof(float);
-        float info_in[inf_size] { 1.0f / (float)disp->width }; //aligned to 16-byte
+        float info_in[inf_size] { 1.0f / (float)disp->width }; //aligned to 16-uint8
         util::Buffer* buf = BUFFER_INIT((float*)info_in,16,DO_NOTHING);
         hw->info_scene = helper::convert_to_d3d11_buffer(device, buf);
 
