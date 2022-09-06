@@ -208,9 +208,6 @@ namespace encoder {
             captureThread(ctx);
         else
             RAISE_EVENT(ctx->join_event);
-
-        return;
-        
     }
 
     /**
