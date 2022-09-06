@@ -121,7 +121,7 @@ namespace platf {
         DisplayClass* klass;
         char name[100];
 
-        std::mutex* reset_lock;
+        bool reset_lock;
         util::Broadcaster* reset_event;
 
         // Offsets for when streaming a specific monitor. By default, they are 0.

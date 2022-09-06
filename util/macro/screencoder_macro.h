@@ -43,6 +43,6 @@ bool string_compare(char* a, char* b);
  * @brief 
  * create a copy of ptr to mutex, lock mutex then unlock after function is done
  */
-#define LOCK(x)   std::mutex* mutx_ptr = x; (*mutx_ptr).lock(); defer _(NULL, [mutx_ptr](...){(*mutx_ptr).unlock();} )
+#define LOCK(x)   bool* asdf = &x; while((*asdf)) {std::this_thread::sleep_for(1ms);}  *asdf = true; defer _(NULL, [asdf](...){*asdf = false;} )
 
 #endif

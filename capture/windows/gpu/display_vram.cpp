@@ -410,8 +410,6 @@ namespace gpu {
     display_vram_dummy_img(platf::Display* disp,
                           platf::Image *img_base) 
     {
-        LOCK(disp->reset_lock);
-
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         DisplayVram* self = (DisplayVram*) disp; 
 

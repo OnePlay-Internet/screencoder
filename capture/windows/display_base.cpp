@@ -35,6 +35,7 @@ namespace display{
     display_watcher_thread(platf::Display** disps,
                            encoder::Encoder* encoder)
     {
+        int count = 0;
         while (true)
         {
             int i = 0;
@@ -42,8 +43,10 @@ namespace display{
             {
                 platf::Display* disp = *(disps+i);
                 if(IS_INVOKED(disp->reset_event))
+                {
                     disp->klass->reset(disp);
-
+                    count++;
+                }
                 i++;
             }
             std::this_thread::sleep_for(50ms);
@@ -58,7 +61,8 @@ namespace display{
         static platf::Display* displays[10] = {0};
         static bool init = false;
         if (!init) {
-            display_watcher_thread(displays,encoder);
+            std::thread watecher { display_watcher_thread, displays,encoder };
+            watecher.detach();
             init = true; 
         }
 
@@ -147,7 +151,7 @@ namespace display{
 
         platf::Display* disp = (platf::Display*)self;
         disp->reset_event = NEW_EVENT;
-        disp->reset_lock = new std::mutex();
+        disp->reset_lock = false;
 
 
         // Get rectangle of full desktop for absolute mouse coordinates
