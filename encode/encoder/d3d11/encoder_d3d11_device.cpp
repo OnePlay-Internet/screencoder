@@ -165,7 +165,7 @@ namespace encoder {
 
 
     Encoder
-    make_d3d11_encoder(char* codec)
+    make_d3d11_nvidia_encoder(char* codec)
     {
         Encoder encoder = {0};
         encoder.name = "nvenc";

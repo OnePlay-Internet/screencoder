@@ -14,11 +14,14 @@
 #include <encoder_device.h>
 
 
-#define NVENC(y) encoder::make_d3d11_encoder(y)
+#define NVENC(y) encoder::make_d3d11_nvidia_encoder(y)
+#define AMD(y)   encoder::make_d3d11_amd_encoder(y)
 
 namespace encoder
 {
-    Encoder make_d3d11_encoder(char* codec);
+    Encoder make_d3d11_nvidia_encoder(char* codec);
+
+    Encoder make_d3d11_amd_encoder(char* codec);
 }
 
 

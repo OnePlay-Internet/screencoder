@@ -314,6 +314,7 @@ namespace platf {
     char**
     display_names(MemoryType type) 
     {
+      static char* ret[10];
       static char display_names[10][100] = {0};
 
       HRESULT status;
@@ -342,7 +343,6 @@ namespace platf {
         }
       }
 
-      static char* ret[10];
       for (int i = 0; i < 10; i++) {
         ret[i] = display_names[i];
       }

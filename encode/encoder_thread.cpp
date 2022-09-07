@@ -118,8 +118,10 @@ namespace encoder {
         error::Error err = ctx->display->klass->dummy_img(ctx->display,img1);
         BUFFER_UNREF(imgBuf);
 
-        if(FILTER_ERROR(err)) 
+        if(FILTER_ERROR(err)) {
             RAISE_EVENT(ctx->shutdown_event);
+            return;
+        }
 
         
 
@@ -127,8 +129,10 @@ namespace encoder {
                                                 ctx->display,
                                                 ctx->sink);
 
-        if(FILTER_ERROR(ctxBuf)) 
+        if(FILTER_ERROR(ctxBuf)) {
             RAISE_EVENT(ctx->shutdown_event);
+            return;
+        }
         
         EncodeContext* session0 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
         util::Buffer* frameBuf = make_avframe_buffer(session0);
