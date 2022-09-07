@@ -234,10 +234,17 @@ namespace encoder {
 
         while (ss_ctx.reinit)
         {
-            ss_ctx.thread = std::thread {captureThread, &ss_ctx };
-            ss_ctx.thread.join();
-            if (ss_ctx.reinit)
-                RAISE_EVENT(ss_ctx.display->reset_event);
+            captureThread(&ss_ctx);
+            std::this_thread::sleep_for(200ms);
+            ss_ctx.display->klass->free(ss_ctx.display);
+            platf::Display* replace = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type),capture->name);
+            if (!replace) {
+                LOG_ERROR("DISPLAY is unavailable");
+                break;
+            }
+            
+            memcpy(ss_ctx.display,replace,sizeof(platf::Display));
+            free((pointer)replace);
         }
     }
 }

@@ -31,43 +31,11 @@ using namespace std::literals;
 
 
 namespace display{
-    void
-    display_watcher_thread(platf::Display** disps,
-                           encoder::Encoder* encoder)
-    {
-        int count = 0;
-        while (true)
-        {
-            int i = 0;
-            while (*(disps+i))
-            {
-                platf::Display* disp = *(disps+i);
-                if(IS_INVOKED(disp->reset_event))
-                {
-                    disp->klass->reset(disp);
-                    count++;
-                }
-                i++;
-            }
-            std::this_thread::sleep_for(50ms);
-        }
-    }
-
-
     // display selection
     platf::Display**
     get_all_display(encoder::Encoder* encoder)
     {
         static platf::Display* displays[10] = {0};
-        static bool init = false;
-        if (!init) {
-            std::thread watecher { display_watcher_thread, displays,encoder };
-            watecher.detach();
-            init = true; 
-        }
-
-        
-
         char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
 
         int count = 0;
@@ -150,7 +118,6 @@ namespace display{
         syncThreadDesktop();
 
         platf::Display* disp = (platf::Display*)self;
-        disp->reset_event = NEW_EVENT;
         disp->reset_lock = false;
 
 

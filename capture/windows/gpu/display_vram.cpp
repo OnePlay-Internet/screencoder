@@ -54,8 +54,6 @@ namespace gpu {
                           platf::Image *img_base, 
                           bool cursor_visible) 
     {
-        LOCK(disp->reset_lock);
-
         DisplayVram* self = (DisplayVram*) disp; 
         display::DisplayBase* base = (display::DisplayBase*) disp; 
 
@@ -263,10 +261,8 @@ namespace gpu {
     }
 
     void
-    display_vram_reset(platf::Display* disp)
+    display_vram_free(platf::Display* disp)
     {
-        LOCK(disp->reset_lock);
-
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         DisplayVram* self = (DisplayVram*) disp; 
 
@@ -285,13 +281,6 @@ namespace gpu {
         if(base->device) { base->device->Release(); }
         if(base->device_ctx) { base->device_ctx->Release(); }
         DUPLICATION_CLASS->finalize(&base->dup);
-
-        if(disp->reset_event) { QUEUE_ARRAY_CLASS->stop(disp->reset_event); }
-
-
-        platf::Display* replace = display_vram_init(disp->name);
-        memcpy(disp,replace,sizeof(DisplayVram));
-        free((pointer)replace);
     }
 
 
@@ -354,8 +343,6 @@ namespace gpu {
     util::Buffer*
     display_vram_alloc_img(platf::Display* disp) 
     {
-        LOCK(disp->reset_lock);
-
         gpu::ImageGpu* img = (gpu::ImageGpu*)malloc(sizeof(gpu::ImageGpu));
         platf::Image* img_base = (platf::Image*)img;
 
@@ -453,8 +440,6 @@ namespace gpu {
     display_vram_make_hwdevice(platf::Display* disp,
                                platf::PixelFormat pix_fmt) 
     {
-        LOCK(disp->reset_lock);
-
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         DisplayVram* self = (DisplayVram*) disp; 
         
@@ -481,7 +466,7 @@ namespace gpu {
         RETURN_PTR_ONCE(klass);
         
         klass.base.init          = display_vram_init;
-        klass.base.reset         = display_vram_reset;
+        klass.base.free         = display_vram_free;
         klass.base.alloc_img     = display_vram_alloc_img;
         klass.base.dummy_img     = display_vram_dummy_img;
         klass.base.make_hwdevice = display_vram_make_hwdevice;
