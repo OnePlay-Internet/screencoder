@@ -26,6 +26,13 @@ namespace config
         int coder;
     }NVconfig;
 
+    typedef struct _AMDConfig{
+        int quality;
+        int rc_h264;
+        int rc_hevc;
+        int coder;
+    } AMDConfig;
+
     typedef struct _SWconfig {
         /**
          * @brief 
@@ -36,6 +43,7 @@ namespace config
 
     typedef struct _Constant{
         NVconfig nv;
+        AMDConfig amd;
         SWconfig sw;
         
         int gop_size;
