@@ -261,7 +261,7 @@ namespace gpu {
     }
 
     void
-    display_vram_free(platf::Display* disp)
+    display_vram_free_resources(platf::Display* disp)
     {
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         DisplayVram* self = (DisplayVram*) disp; 
@@ -275,11 +275,11 @@ namespace gpu {
         if(self->cursor.input_res) { self->cursor.input_res->Release(); }
         if(self->cursor.texture) { self->cursor.texture->Release(); }
 
-        if(base->output) { base->output->Release(); }
         if(base->factory) { base->factory->Release(); }
         if(base->adapter) { base->adapter->Release(); }
         if(base->device) { base->device->Release(); }
         if(base->device_ctx) { base->device_ctx->Release(); }
+        if(base->output) { base->output->Release(); }
         DUPLICATION_CLASS->finalize(&base->dup);
     }
 
@@ -466,7 +466,7 @@ namespace gpu {
         RETURN_PTR_ONCE(klass);
         
         klass.base.init          = display_vram_init;
-        klass.base.free         = display_vram_free;
+        klass.base.free_resources= display_vram_free_resources;
         klass.base.alloc_img     = display_vram_alloc_img;
         klass.base.dummy_img     = display_vram_dummy_img;
         klass.base.make_hwdevice = display_vram_make_hwdevice;

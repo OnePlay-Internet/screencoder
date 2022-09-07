@@ -118,8 +118,6 @@ namespace display{
         syncThreadDesktop();
 
         platf::Display* disp = (platf::Display*)self;
-        disp->reset_lock = false;
-
 
         // Get rectangle of full desktop for absolute mouse coordinates
         disp->env_width  = GetSystemMetrics(SM_CXVIRTUALSCREEN);

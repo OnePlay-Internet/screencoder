@@ -232,19 +232,24 @@ namespace encoder {
         ss_ctx.config = config;
 
 
+        int count = 0;
         while (ss_ctx.reinit)
         {
             captureThread(&ss_ctx);
             std::this_thread::sleep_for(200ms);
-            ss_ctx.display->klass->free(ss_ctx.display);
-            platf::Display* replace = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type),capture->name);
+            ss_ctx.display->klass->free_resources(ss_ctx.display);
+
+            platf::Display* replace = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type),ss_ctx.display->name);
             if (!replace) {
                 LOG_ERROR("DISPLAY is unavailable");
                 break;
             }
-            
-            memcpy(ss_ctx.display,replace,sizeof(platf::Display));
-            free((pointer)replace);
+
+            pointer old = (pointer)ss_ctx.display;
+            ss_ctx.display = replace;
+            free(old);
+            count++;
         }
+        RAISE_EVENT(ss_ctx.shutdown_event);
     }
 }

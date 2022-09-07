@@ -136,7 +136,7 @@ namespace platf {
 
         util::Buffer*          (*alloc_img)        (Display* self);
 
-        void                   (*free)             (Display* self);
+        void                   (*free_resources)             (Display* self);
 
         Device*                (*make_hwdevice)    (Display* self,
                                                     PixelFormat pix_fmt);

@@ -67,6 +67,8 @@ namespace error
     render_log(util::QueueArray* array) 
     {
         std::ofstream outfile;
+        outfile.open("./log.txt", std::ofstream::out | std::ofstream::trunc);
+        outfile.close();
         outfile.open("./log.txt", std::ios_base::app); // append instead of overwrite
         while(true)
         {

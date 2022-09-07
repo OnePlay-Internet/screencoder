@@ -83,6 +83,8 @@ namespace duplication
     void
     duplication_finalize(Duplication* dup) {
       duplication_release_frame(dup);
+      if (dup->dup) { dup->dup->Release(); }
+      
     }
 
 
