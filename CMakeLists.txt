@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(BASE_DOWNLOAD_URL STRING "https://github.com/OnePlay-Internet/screencoder/releases/download/library" )
 
 file(DOWNLOAD 
-	"${BASE_DOWNLOAD_URL}/mingw_x64_staticlib.zip"
+	"https://github.com/OnePlay-Internet/screencoder/releases/download/library/mingw_x64_staticlib.zip"
 	"${CMAKE_CURRENT_SOURCE_DIR}/build-tools/mingw.zip"
 	TIMEOUT 60)
 file(ARCHIVE_EXTRACT
@@ -17,7 +17,7 @@ file(ARCHIVE_EXTRACT
 )
 
 file(DOWNLOAD 
-	"${BASE_DOWNLOAD_URL}/msvc_x64_staticlib.zip"
+	"https://github.com/OnePlay-Internet/screencoder/releases/download/library/msvc_x64_staticlib.zip"
 	"${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip"
 	TIMEOUT 60)
 file(ARCHIVE_EXTRACT
@@ -25,12 +25,6 @@ file(ARCHIVE_EXTRACT
 	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip
 	DESTINATION 
 	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc)
-file(ARCHIVE_EXTRACT
-	INPUT 
-	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc/msvc_x64_staticlib.zip
-	DESTINATION 
-	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc
-)
 
 
 set(CMAKE_BUILD_TYPE "Debug")
