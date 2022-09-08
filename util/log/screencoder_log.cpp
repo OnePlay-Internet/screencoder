@@ -155,7 +155,7 @@ namespace error
              char* level,
              char* message)
     {
-        if(find_substr(file,"/util/"))
+        if(find_substr(file,"util"))
             return;
 
         char timestr[100] = {0};

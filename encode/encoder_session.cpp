@@ -92,7 +92,7 @@ namespace encoder
 
 
         ctx->device = device;
-        ctx->codec = avcodec_find_encoder_by_name(encoder);
+        ctx->codec = (libav::Codec*)avcodec_find_encoder_by_name(encoder);
         if(!ctx->codec) {
             LOG_ERROR("Couldn't create encoder");
             return NULL;

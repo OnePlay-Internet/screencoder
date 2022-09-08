@@ -61,7 +61,7 @@ namespace rtp
         }
 
         rtp->format->streams[0] = rtp->stream;
-        if (avio_open(&rtp->format->pb, rtp->format->filename, AVIO_FLAG_WRITE) < 0){
+        if (avio_open(&rtp->format->pb, rtp->format->url, AVIO_FLAG_WRITE) < 0){
             LOG_ERROR("Error opening output file");
             return -1;
         }
@@ -103,7 +103,7 @@ namespace rtp
         while ((base->options+i) &&
                (base->options+i)->type == util::Type::INT && 
                string_compare((base->options+i)->key,"port") ){
-            snprintf(sink->format->filename, sizeof(sink->format->filename), 
+            snprintf(sink->format->url, sizeof(sink->format->url), 
                 "rtp://%s:%d", "localhost", (base->options+i)->int_value);
             i++;
         }

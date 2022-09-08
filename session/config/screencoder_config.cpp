@@ -79,9 +79,9 @@ namespace config
 
         encoder.dwmflush = true;
 
-        encoder.nv.rc = nvenc::rc_e::cbr;
-        encoder.nv.coder = nvenc::coder_e::_auto;
-        encoder.nv.preset = nvenc::preset_e::_default;
+        encoder.nv.rc       = nvenc::rc_e::cbr;
+        encoder.nv.coder    = nvenc::coder_e::_auto;
+        encoder.nv.preset   = nvenc::preset_e::_default;
 
         encoder.amd.quality = (int)amd::quality_e::balanced; 
         encoder.amd.rc_h264 = (int)amd::rc_h264_e::cbr;

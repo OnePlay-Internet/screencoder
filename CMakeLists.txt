@@ -1,10 +1,46 @@
 cmake_minimum_required(VERSION 3.0)
 
-set(CMAKE_BUILD_TYPE "Debug")
 project(Screencoder VERSION 0.1.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(SCREENCODER_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
+set(BASE_DOWNLOAD_URL STRING "https://github.com/OnePlay-Internet/screencoder/releases/download/library" )
+
+file(DOWNLOAD 
+	"${BASE_DOWNLOAD_URL}/mingw_x64_staticlib.zip"
+	"${CMAKE_CURRENT_SOURCE_DIR}/build-tools/mingw.zip"
+	TIMEOUT 60)
+file(ARCHIVE_EXTRACT
+	INPUT 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/mingw.zip
+	DESTINATION 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/mingw
+)
+
+file(DOWNLOAD 
+	"${BASE_DOWNLOAD_URL}/msvc_x64_staticlib.zip"
+	"${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip"
+	TIMEOUT 60)
+file(ARCHIVE_EXTRACT
+	INPUT 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip
+	DESTINATION 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc)
+file(ARCHIVE_EXTRACT
+	INPUT 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc/msvc_x64_staticlib.zip
+	DESTINATION 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc
+)
+
+
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_SOURCE_DIR}/bin) 
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_SOURCE_DIR}/bin) 
+set(CMAKE_PDB_OUTPUT_DIRECTORY      ${CMAKE_SOURCE_DIR}/bin) 
+
+
 
 
 
@@ -13,61 +49,36 @@ set(SCREENCODER_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 enable_language(RC)
 set(CMAKE_RC_COMPILER windres)
-file(
-	DOWNLOAD "https://github.com/TheElixZammuto/sunshine-prebuilt/releases/download/1.0.0/pre-compiled.zip" "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled.zip"
-	TIMEOUT 60
-	EXPECTED_HASH SHA256=5d59986bd7f619eaaf82b2dd56b5127b747c9cbe8db61e3b898ff6b485298ed6)
-file(ARCHIVE_EXTRACT
-	INPUT "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled.zip"
-	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/pre-compiled)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-
-if(NOT DEFINED SCREENCODER_PREPARED_BINARIES)
-	set(SCREENCODER_PREPARED_BINARIES "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled/windows")
-endif()
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_SOURCE_DIR}/build-tools/msvc/x64-windows-static/lib/pkgconfig")
+set(INCLUDE_LIBRARY      "${CMAKE_SOURCE_DIR}/build-tools/msvc/x64-windows-static/lib")
 
 
-set(PLATFORM_INCLUDE_DIR
-	${SCREENCODER_PREPARED_BINARIES}/platform
-	${SCREENCODER_PREPARED_BINARIES}/platform/windows
-    )
+find_package( PkgConfig REQUIRED)
+pkg_check_modules(AVDEVICE REQUIRED libavdevice)
+pkg_check_modules(AVFILTER REQUIRED libavfilter)
+pkg_check_modules(AVUTIL   REQUIRED libavutil)
+pkg_check_modules(AVSWCALE REQUIRED libswscale)
+pkg_check_modules(AVFORMAT REQUIRED libavformat)
+pkg_check_modules(AVRESAMPLE REQUIRED libswresample)
 
 set(FFMPEG_INCLUDE_DIRS
-	${SCREENCODER_PREPARED_BINARIES}/include)
+	${AVDEVICE_INCLUDE_DIRS}
+	${AVFILTER_INCLUDE_DIRS}
+	${AVUTIL_INCLUDE_DIRS}
+	${AVSWCALE_INCLUDE_DIRS}
+	${AVFORMAT_INCLUDE_DIRS}
+	${AVRESAMPLE_INCLUDE_DIRS}
+)
 
 set(FFMPEG_LIBRARIES
-	${SCREENCODER_PREPARED_BINARIES}/lib/libavformat.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libavcodec.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libavdevice.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libavfilter.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libavutil.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libpostproc.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libswresample.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libswscale.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libx264.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libx265.a
-	${SCREENCODER_PREPARED_BINARIES}/lib/libhdr10plus.a
-	
-	z lzma bcrypt libiconv.a
-	)
-
-list(PREPEND PLATFORM_LIBRARIES
-	libstdc++.a
-	libwinpthread.a
-	libssp.a
-
-	ksuser
-	wsock32
-	ws2_32
-	d3d11 dxgi D3DCompiler
-	setupapi
-	dwmapi
-
-	bz2
-	
-	Secur32
-	Bcrypt
+	${AVDEVICE_LIBRARIES}
+	${AVFILTER_LIBRARIES}
+	${AVUTIL_LIBRARIES}
+	${AVSWCALE_LIBRARIES}
+	${AVFORMAT_LIBRARIES}
+	${AVRESAMPLE_LIBRARIES}
 )
+
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -112,9 +123,9 @@ file(GLOB PLATFORM_SOURCE_LIST
 
 set(SCREENCODER_TARGET_FILES
 	${UTIL_SOURCE_LIST}
-	${SESSION_SOURCE_LIST}
 	${ENCODER_SOURCE_LIST}
 	${RTP_SOURCE_LIST}
+	${SESSION_SOURCE_LIST}
 	${PLATFORM_SOURCE_LIST}
 )
 
@@ -151,20 +162,11 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows/duplication
 
   ${FFMPEG_INCLUDE_DIRS}
-  ${PLATFORM_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIR}
 )
  
 
 
 
-list(APPEND SCREENCODER_EXTERNAL_LIBRARIES
-    ${CBS_EXTERNAL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${FFMPEG_LIBRARIES}
-    ${PLATFORM_LIBRARIES}
-    ${Boost_LIBRARIES}
-)
 
 
 
@@ -174,8 +176,30 @@ add_library(screencoderlib STATIC
 	${SCREENCODER_TARGET_FILES}
 )
 
+target_link_directories(screencoderlib PUBLIC ${INCLUDE_LIBRARY} )    
+target_compile_options(screencoderlib PUBLIC	${AVDEVICE_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVFILTER_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVUTIL_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVSWCALE_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVFORMAT_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVRESAMPLE_CFLAGS})
 
-target_link_libraries(screencoderlib ${SCREENCODER_EXTERNAL_LIBRARIES})
+set(ADDITIONAL_LIB 
+	ksuser
+	wsock32
+	ws2_32
+	d3d11 dxgi D3DCompiler
+	setupapi
+	dwmapi
+	bz2
+	Secur32
+	Bcrypt
+)
+
+target_link_libraries(screencoderlib 
+	${FFMPEG_LIBRARIES}
+	${ADDITIONAL_LIB}
+)
 target_compile_definitions(screencoderlib PUBLIC ${SCREENCODER_DEFINITIONS})
 set_target_properties(screencoderlib PROPERTIES CXX_STANDARD 17
                                VERSION ${PROJECT_VERSION}
@@ -187,22 +211,33 @@ add_executable(screencoder
 
 target_link_libraries(screencoder 
 	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
-	${SCREENCODER_EXTERNAL_LIBRARIES}
+	${FFMPEG_LIBRARIES}
+	${ADDITIONAL_LIB}
 )
+
+
+
+target_link_directories(screencoder PUBLIC ${INCLUDE_LIBRARY} )    
+target_compile_options(screencoder PUBLIC	${AVDEVICE_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVFILTER_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVUTIL_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVSWCALE_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVFORMAT_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVRESAMPLE_CFLAGS})
 target_compile_definitions(screencoder PUBLIC ${SCREENCODER_DEFINITIONS})
 set_target_properties(screencoder PROPERTIES CXX_STANDARD 17
                                VERSION ${PROJECT_VERSION}
                                SOVERSION ${PROJECT_VERSION_MAJOR})
 
-add_executable(appsinktest
-	examples/appsink/main.cpp
-)
+# add_executable(appsinktest
+# 	examples/appsink/main.cpp
+# )
 
-target_link_libraries(appsinktest
-	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
-	${SCREENCODER_EXTERNAL_LIBRARIES}
-)
-target_compile_definitions(appsinktest PUBLIC ${SCREENCODER_DEFINITIONS})
-set_target_properties(appsinktest PROPERTIES CXX_STANDARD 17
-                               VERSION ${PROJECT_VERSION}
-                               SOVERSION ${PROJECT_VERSION_MAJOR})
+# target_link_libraries(appsinktest
+# 	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
+# 	${FFMPEG_INCLUDE_DIRS}
+# )
+# target_compile_definitions(appsinktest PUBLIC ${SCREENCODER_DEFINITIONS})
+# set_target_properties(appsinktest PROPERTIES CXX_STANDARD 17
+#                                VERSION ${PROJECT_VERSION}
+#                                SOVERSION ${PROJECT_VERSION_MAJOR})
