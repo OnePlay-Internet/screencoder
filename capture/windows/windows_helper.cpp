@@ -202,7 +202,7 @@ namespace helper
     // #ifndef NDEBUG
     //   flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
     // #endif
-      wchar_t wFile[1000];
+      wchar_t wFile[1000] = {0};
       mbstowcs(wFile,file,strlen(file)); 
       auto status = D3DCompileFromFile(wFile, nullptr, nullptr, entrypoint, shader_model, flags, 0, &compiled_p, &msg_p);
 
