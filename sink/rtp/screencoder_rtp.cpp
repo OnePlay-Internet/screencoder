@@ -14,8 +14,6 @@
 #include <screencoder_rtp.h>
 #include <screencoder_config.h>
 
-#include <winsock2.h>
-#include <Ws2tcpip.h>
 #include <stdio.h>
 
 

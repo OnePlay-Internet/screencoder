@@ -57,7 +57,7 @@ namespace sink
      * @param ctx 
      * @return int 
      */
-    int 
+    void
     start_broadcast(sink::GenericSink* sink,
                     util::Broadcaster* shutdown_event,
                     util::QueueArray* packet_queue) 

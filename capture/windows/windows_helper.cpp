@@ -202,10 +202,9 @@ namespace helper
     // #ifndef NDEBUG
     //   flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
     // #endif
-      std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
-
-      auto wFile  = converter.from_bytes(file);
-      auto status = D3DCompileFromFile(wFile.c_str(), nullptr, nullptr, entrypoint, shader_model, flags, 0, &compiled_p, &msg_p);
+      wchar_t wFile[1000];
+      mbstowcs(wFile,file,strlen(file)); 
+      auto status = D3DCompileFromFile(wFile, nullptr, nullptr, entrypoint, shader_model, flags, 0, &compiled_p, &msg_p);
 
       if(msg_p) {
         // BOOST_LOG(warning) << std::string_view { (const char *)msg_p->GetBufferPointer(), msg_p->GetBufferSize() - 1 };

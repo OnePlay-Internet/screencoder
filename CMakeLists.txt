@@ -47,6 +47,7 @@ set(FFMPEG_LIBRARIES
 	${SCREENCODER_PREPARED_BINARIES}/lib/libx264.a
 	${SCREENCODER_PREPARED_BINARIES}/lib/libx265.a
 	${SCREENCODER_PREPARED_BINARIES}/lib/libhdr10plus.a
+	
 	z lzma bcrypt libiconv.a
 	)
 
@@ -54,13 +55,16 @@ list(PREPEND PLATFORM_LIBRARIES
 	libstdc++.a
 	libwinpthread.a
 	libssp.a
+
 	ksuser
 	wsock32
 	ws2_32
 	d3d11 dxgi D3DCompiler
 	setupapi
 	dwmapi
+
 	bz2
+	
 	Secur32
 	Bcrypt
 )
@@ -182,7 +186,7 @@ add_executable(screencoder
 )
 
 target_link_libraries(screencoder 
-	${CMAKE_CURRENT_BINARY_DIR}/libscreencoderlib.a
+	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
 	${SCREENCODER_EXTERNAL_LIBRARIES}
 )
 target_compile_definitions(screencoder PUBLIC ${SCREENCODER_DEFINITIONS})
@@ -195,7 +199,7 @@ add_executable(appsinktest
 )
 
 target_link_libraries(appsinktest
-	${CMAKE_CURRENT_BINARY_DIR}/libscreencoderlib.a
+	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
 	${SCREENCODER_EXTERNAL_LIBRARIES}
 )
 target_compile_definitions(appsinktest PUBLIC ${SCREENCODER_DEFINITIONS})

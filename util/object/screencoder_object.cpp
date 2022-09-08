@@ -47,7 +47,7 @@ namespace util
          * @brief 
          * 
          */
-        std::chrono::system_clock::time_point created;
+        std::chrono::high_resolution_clock::time_point created;
     #ifdef BUFFER_TRACE
 
         error::BufferLog log;
@@ -183,7 +183,7 @@ namespace util
         uint new_size = buffer->size+inserter->size;
         pointer new_ptr = malloc(new_size);
         memcpy(new_ptr,buffer,buffer->size);
-        memcpy(new_ptr+buffer->size,inserter,inserter->size);
+        memcpy((char*)new_ptr+buffer->size,inserter,inserter->size);
         return BUFFER_INIT(new_ptr,new_size,free);
     }
 
@@ -230,7 +230,7 @@ namespace util
 
         uint8* next = (uint8*)data->data;
         for(int x = 0; x < elements; ++x) {
-            pointer p = ptr + (x * (insert_size + slice_size));
+            pointer p = (char*)ptr + (x * (insert_size + slice_size));
 
             Buffer* buf = BUFFER_INIT(p,insert_size,DO_NOTHING);
             action(buf,x,elements);
@@ -247,7 +247,7 @@ namespace util
             else
                 copy_size = slice_size;
 
-            memcpy(p + insert_size,next, slice_size);
+            memcpy((char*)p + insert_size,next, slice_size);
             next += slice_size;
         }
         return ret;
@@ -305,9 +305,9 @@ namespace util
         uint origin_found = inserter;
 
         if(inserter != size_origin) {
-            memcpy(replaced + inserter, _new, size_new);
+            memcpy((char*)replaced + inserter, _new, size_new);
             inserter += size_new;
-            memcpy(replaced + inserter, original + size_old + origin_found, size_new);
+            memcpy((char*)replaced + inserter, original + size_old + origin_found, size_new);
         }
 
         BUFFER_UNREF(original);

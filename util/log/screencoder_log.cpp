@@ -195,7 +195,7 @@ namespace error
 
 
     void log_buffer(BufferLog* log,
-                    std::chrono::system_clock::time_point created,
+                    std::chrono::high_resolution_clock::time_point created,
                     int line,
                     char* file,
                     BufferEventType type)

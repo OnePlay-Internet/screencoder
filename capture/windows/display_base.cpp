@@ -63,7 +63,7 @@ namespace display{
             display = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), name);
             if(!display) {
                 LOG_ERROR("unable to create display");
-                for(int z = 0; z< 10; z++) {
+                for(int z = 0; z< 10; z++) { // add display name to black list
                     if (!strlen(blacklist[z])) {
                         memcpy(blacklist[z],name,strlen(name));
                         break;
@@ -71,9 +71,7 @@ namespace display{
                 }
             } else {
                 y=0;
-                while(displays[y]) 
-                    y++;
-                
+                while(displays[y]) { y++; } 
                 displays[y] = display;
             }
         next:
@@ -93,7 +91,7 @@ namespace display{
         D3DKMT_SCHEDULINGPRIORITYCLASS_REALTIME
     } D3DKMT_SCHEDULINGPRIORITYCLASS;
 
-    typedef NTSTATUS WINAPI (*PD3DKMTSetProcessSchedulingPriorityClass)(HANDLE, D3DKMT_SCHEDULINGPRIORITYCLASS);
+    typedef NTSTATUS (*PD3DKMTSetProcessSchedulingPriorityClass)(HANDLE, D3DKMT_SCHEDULINGPRIORITYCLASS);
 
 
 
@@ -208,7 +206,7 @@ namespace display{
             adapter_p,
             D3D_DRIVER_TYPE_UNKNOWN,
             nullptr,
-            D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+            D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
             featureLevels, 
             sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
             D3D11_SDK_VERSION,
@@ -221,6 +219,16 @@ namespace display{
         if(FAILED(status)) {
             LOG_ERROR("Failed to create D3D11 device");
             return -1;
+        }
+        
+        ID3D11Debug *d3dDebug = nullptr;
+        if( SUCCEEDED( self->device->QueryInterface( __uuidof(ID3D11Debug), (void**)&d3dDebug ) ) )
+        {
+            ID3D11InfoQueue *d3dInfoQueue = nullptr;
+            if( SUCCEEDED( d3dDebug->QueryInterface( __uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue ) ) ) {
+                d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_CORRUPTION, true );
+                d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_ERROR, true );
+            }
         }
 
 

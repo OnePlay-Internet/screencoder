@@ -5,13 +5,9 @@
 
 #include <string.h>
 
-#include <d3dcompiler.h>
-#include <directxmath.h>
 
-extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext_d3d11va.h>
-}
 
 
 #include <d3d11_datatype.h>
@@ -27,6 +23,7 @@ extern "C" {
 
 #include <memory>
 #include <iostream>
+
 using namespace std;
 using defer = shared_ptr<void>;    
 

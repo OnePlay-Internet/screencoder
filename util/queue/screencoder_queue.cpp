@@ -34,6 +34,9 @@ namespace util {
          * 
          */
         BufferLL* first;
+
+
+        std::mutex mut;
     };
 
 
@@ -58,6 +61,7 @@ namespace util {
         last->obj  = obj;
         last->next = NULL;
 
+        queue->mut.lock();
         if(!queue->first) {
             queue->first = last;
         } else {
@@ -65,6 +69,7 @@ namespace util {
             while (container->next) { container = container->next; }
             container->next = last;
         }
+        queue->mut.unlock();
 
         return true;
     }
@@ -92,12 +97,13 @@ namespace util {
         if (!queue_array_peek(queue))
             return NULL;
 
+        queue->mut.lock();
         BufferLL* container = queue->first;
         Buffer *ret = container->obj;
-
-
         queue->first = container->next;
         free(container);
+        queue->mut.unlock();
+
         *buf = ret;
         pointer data = BUFFER_REF(ret,size);
         BUFFER_UNREF(ret);

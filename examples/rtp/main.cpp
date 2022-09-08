@@ -38,7 +38,17 @@ wait_shutdown(util::Broadcaster* event)
 int 
 main(int argc, char ** argv)
 {
-    encoder::Encoder encoder = NVENC("h264");
+    encoder::Encoder encoder;
+    if (string_compare(*(argv+1),"nvidia")) 
+        encoder = NVENC("h264");
+    else if (string_compare(*(argv+1),"amd"))
+        encoder = AMD("h264");
+    else 
+        return 0;
+    
+
+   
+    
     char* display_name = QueryDisplay(0);
 
     if(!encoder.codec_config->capabilities[encoder::FrameFlags::PASSED]) {

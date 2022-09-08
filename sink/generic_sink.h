@@ -51,7 +51,7 @@ namespace sink
         util::QueueArray* packet_queue;
     }BroadcastContext;
 
-    int             start_broadcast (sink::GenericSink* sink,
+    void             start_broadcast (sink::GenericSink* sink,
                                      util::Broadcaster* shutdown_event,
                                      util::QueueArray* packet_queue) ;
 } // namespace sink
