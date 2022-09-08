@@ -12,9 +12,10 @@
 #include <screencoder_macro.h>
 #define BASE_SIZE 1024
 
-using namespace std;
 
 #include <thread>
+#include <stdio.h>
+#include <string.h>
 using namespace std::literals;
 
 namespace util {

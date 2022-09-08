@@ -6,3 +6,4 @@ build-tools/
 *.pdb
 log.txt
 bin/
+CMakeLists.txt

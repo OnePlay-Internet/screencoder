@@ -83,7 +83,11 @@ namespace error
             char file_log[36] = {" "};
             file_log[35] = 0;
             snprintf(file_log,35,"FILE: %s:%d",
+#ifndef MINGW
             find_from_back(err->file,"\\"),
+#else
+            find_from_back(err->file,"/"),
+#endif
             err->line);
 
             for (int i = 0; i < 35; i++) {

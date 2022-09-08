@@ -1,0 +1,230 @@
+cmake_minimum_required(VERSION 3.0)
+
+set(CMAKE_BUILD_TYPE "Debug")
+project(Screencoder VERSION 0.1.0)
+
+file(DOWNLOAD 
+	"https://github.com/OnePlay-Internet/screencoder/releases/download/library/msvc_x64_staticlib.zip"
+	"${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip"
+	TIMEOUT 60)
+file(ARCHIVE_EXTRACT
+	INPUT 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip
+	DESTINATION 
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc)
+
+
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_SOURCE_DIR}/bin) 
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_SOURCE_DIR}/bin) 
+set(CMAKE_PDB_OUTPUT_DIRECTORY      ${CMAKE_SOURCE_DIR}/bin) 
+
+
+set(CMAKE_RC_COMPILER windres)
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_SOURCE_DIR}/build-tools/msvc/x64-windows-static/lib/pkgconfig")
+set(INCLUDE_LIBRARY      "${CMAKE_SOURCE_DIR}/build-tools/msvc/x64-windows-static/lib")
+
+
+find_package( PkgConfig REQUIRED)
+pkg_check_modules(AVDEVICE REQUIRED libavdevice)
+pkg_check_modules(AVFILTER REQUIRED libavfilter)
+pkg_check_modules(AVUTIL   REQUIRED libavutil)
+pkg_check_modules(AVSWCALE REQUIRED libswscale)
+pkg_check_modules(AVFORMAT REQUIRED libavformat)
+pkg_check_modules(AVRESAMPLE REQUIRED libswresample)
+
+set(FFMPEG_INCLUDE_DIRS
+	${AVDEVICE_INCLUDE_DIRS}
+	${AVFILTER_INCLUDE_DIRS}
+	${AVUTIL_INCLUDE_DIRS}
+	${AVSWCALE_INCLUDE_DIRS}
+	${AVFORMAT_INCLUDE_DIRS}
+	${AVRESAMPLE_INCLUDE_DIRS}
+)
+
+set(FFMPEG_LIBRARIES
+	${AVDEVICE_LIBRARIES}
+	${AVFILTER_LIBRARIES}
+	${AVUTIL_LIBRARIES}
+	${AVSWCALE_LIBRARIES}
+	${AVFORMAT_LIBRARIES}
+	${AVRESAMPLE_LIBRARIES}
+)
+
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+file(GLOB UTIL_SOURCE_LIST 
+	util/*.cpp
+	util/queue/*.cpp
+	util/object/*.cpp
+	util/macro/*.cpp
+	util/event/*.cpp
+	util/log/*.cpp
+	util/datatype/*.cpp
+	util/avcodec/*.cpp
+	util/array/*.cpp
+)
+
+file(GLOB ENCODER_SOURCE_LIST 
+	encode/*.cpp
+	encode/encoder/*.cpp
+	encode/encoder/d3d11/*.cpp
+)
+
+file(GLOB RTP_SOURCE_LIST 
+	sink/*.cpp
+	sink/rtp/*.cpp
+	sink/appsink/*.cpp
+	sink/appsink/go/*.cpp
+)
+
+
+file(GLOB SESSION_SOURCE_LIST 
+	session/*.cpp
+	session/config/*.cpp
+)
+
+file(GLOB PLATFORM_SOURCE_LIST 
+	capture/*.cpp
+	capture/windows/*.cpp
+	capture/windows/gpu/*.cpp
+	capture/windows/duplication/*.cpp
+)
+
+
+set(SCREENCODER_TARGET_FILES
+	${UTIL_SOURCE_LIST}
+	${ENCODER_SOURCE_LIST}
+	${RTP_SOURCE_LIST}
+	${SESSION_SOURCE_LIST}
+	${PLATFORM_SOURCE_LIST}
+)
+
+
+
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/audio
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/encode
+  ${CMAKE_CURRENT_SOURCE_DIR}/encode/encoder/d3d11
+  ${CMAKE_CURRENT_SOURCE_DIR}/encode/encoder
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/input
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink/rtp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink
+  ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink/go
+  ${CMAKE_CURRENT_SOURCE_DIR}/session
+  ${CMAKE_CURRENT_SOURCE_DIR}/session/config
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/util
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/queue
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/object
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/macro
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/event
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/log
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/datatype
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/avcodec
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/array
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows/gpu
+  ${CMAKE_CURRENT_SOURCE_DIR}/capture/windows/duplication
+
+  ${FFMPEG_INCLUDE_DIRS}
+)
+ 
+
+
+
+
+
+
+
+
+add_library(screencoderlib STATIC
+	${SCREENCODER_TARGET_FILES}
+)
+
+target_link_directories(screencoderlib PUBLIC ${INCLUDE_LIBRARY} )    
+target_compile_options(screencoderlib PUBLIC	${AVDEVICE_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVFILTER_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVUTIL_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVSWCALE_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVFORMAT_CFLAGS})
+target_compile_options(screencoderlib PUBLIC	${AVRESAMPLE_CFLAGS})
+
+set(ADDITIONAL_LIB 
+	ksuser
+	wsock32
+	ws2_32
+	d3d11 dxgi D3DCompiler
+	setupapi
+	dwmapi
+	bz2
+	Secur32
+	Bcrypt
+)
+
+
+
+
+
+
+target_link_libraries(screencoderlib 
+	${FFMPEG_LIBRARIES}
+	${ADDITIONAL_LIB}
+)
+target_compile_definitions(screencoderlib PUBLIC ${SCREENCODER_DEFINITIONS})
+set_target_properties(screencoderlib PROPERTIES CXX_STANDARD 17
+                               VERSION ${PROJECT_VERSION}
+                               SOVERSION ${PROJECT_VERSION_MAJOR})
+
+add_executable(screencoder 
+	examples/rtp/main.cpp
+)
+target_link_libraries(screencoder 
+	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
+	${FFMPEG_LIBRARIES}
+	${ADDITIONAL_LIB}
+)
+target_link_directories(screencoder PUBLIC  ${INCLUDE_LIBRARY} )    
+target_compile_options(screencoder PUBLIC	${AVDEVICE_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVFILTER_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVUTIL_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVSWCALE_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVFORMAT_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVRESAMPLE_CFLAGS})
+target_compile_definitions(screencoder PUBLIC ${SCREENCODER_DEFINITIONS})
+set_target_properties(screencoder PROPERTIES CXX_STANDARD 17
+                               VERSION ${PROJECT_VERSION}
+                               SOVERSION ${PROJECT_VERSION_MAJOR})
+
+
+
+
+
+add_executable(appsinktest
+	examples/appsink/main.cpp
+)
+
+target_link_libraries(appsinktest
+	${CMAKE_CURRENT_BINARY_DIR}/Debug/screencoderlib.lib
+	${FFMPEG_INCLUDE_DIRS}
+	${ADDITIONAL_LIB}
+)
+target_link_directories(screencoder PUBLIC ${INCLUDE_LIBRARY} )    
+target_compile_options(screencoder PUBLIC	${AVDEVICE_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVFILTER_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVUTIL_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVSWCALE_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVFORMAT_CFLAGS})
+target_compile_options(screencoder PUBLIC	${AVRESAMPLE_CFLAGS})
+target_compile_definitions(appsinktest PUBLIC ${SCREENCODER_DEFINITIONS})
+set_target_properties(appsinktest PROPERTIES CXX_STANDARD 17
+                               VERSION ${PROJECT_VERSION}
+                               SOVERSION ${PROJECT_VERSION_MAJOR})
