@@ -39,7 +39,7 @@ namespace display{
         char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
 
         int count = 0;
-        static int blacklist[10] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+        static char blacklist[10][100] = {0};
         while (*(display_names+count)) {
             platf::Display* display = NULL;
             char* name = *(display_names+count);
@@ -55,7 +55,7 @@ namespace display{
             }
 
             for(int z = 0; z< 10; z++) { // filter display that already fail to create resources
-                if (blacklist[z] == count)
+                if (string_compare(blacklist[z],name))
                     goto next;
             }
 
@@ -64,8 +64,8 @@ namespace display{
             if(!display) {
                 LOG_ERROR("unable to create display");
                 for(int z = 0; z< 10; z++) {
-                    if (blacklist[z] == -1) {
-                        blacklist[z] = count;
+                    if (!strlen(blacklist[z])) {
+                        memcpy(blacklist[z],name,strlen(name));
                         break;
                     }
                 }

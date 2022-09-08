@@ -315,7 +315,8 @@ namespace platf {
     display_names(MemoryType type) 
     {
       static char* ret[10];
-      static char display_names[10][100] = {0};
+      static char display_names[10][100];
+      memset(display_names,0,sizeof(char)*1000);
 
       HRESULT status;
 
