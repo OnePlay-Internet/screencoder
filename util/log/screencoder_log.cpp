@@ -38,7 +38,7 @@ namespace error
     find_from_back(char* str, char* word)
     {
         int count = strlen(str) - 1;
-        while (*(str+count) != *word) {
+        while (*(str+count) != *word && count > 0) {
             count--;
         }
         return str + count + 1;
@@ -82,9 +82,11 @@ namespace error
 
             char file_log[36] = {" "};
             file_log[35] = 0;
-            snprintf(file_log,35,"FILE: %s:%d",find_from_back(err->file,"/"),err->line);
+            snprintf(file_log,35,"FILE: %s:%d",
+            find_from_back(err->file,"\\"),
+            err->line);
 
-            for (int i = 0; i < 36; i++) {
+            for (int i = 0; i < 35; i++) {
                 if (file_log[i] == 0) {
                     memcpy(file_log + i ," ",1);
                 }
@@ -94,7 +96,7 @@ namespace error
             level_log[30] = 0;
             snprintf(level_log,30,"LEVEL: %s",err->level);
 
-            for (int i = 0; i < 31; i++) {
+            for (int i = 0; i < 30; i++) {
                 if (level_log[i] == 0) {
                     memcpy(level_log + i ," ",1);
                 }
@@ -104,7 +106,7 @@ namespace error
             time_log[60] = 0;
             snprintf(time_log,60,"TIMESTAMP: %s",err->time);
 
-            for (int i = 0; i < 61; i++) {
+            for (int i = 0; i < 60; i++) {
                 if (time_log[i] == 0) {
                     memcpy(time_log+ i ," ",1);
                 }
@@ -155,7 +157,7 @@ namespace error
              char* level,
              char* message)
     {
-        if(find_substr(file,"util"))
+        if(find_substr(file,"/util/") || find_substr(file, "\\util\\"))
             return;
 
         char timestr[100] = {0};

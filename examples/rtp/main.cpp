@@ -35,9 +35,20 @@ wait_shutdown(util::Broadcaster* event)
     RAISE_EVENT(event);
 }
 
+
+#include <memory>
+#include <iostream>
+#include <functional>
+
+
 int 
 main(int argc, char ** argv)
 {
+    std::shared_ptr<void> _{ NULL,[](...) {
+        LOG_INFO("waiting for log to flush");
+        std::this_thread::sleep_for(5s);
+    } };
+
     encoder::Encoder encoder;
     if (string_compare(*(argv+1),"nvidia")) 
         encoder = NVENC("h264");
@@ -46,6 +57,7 @@ main(int argc, char ** argv)
     else 
         return 0;
     
+
 
    
     

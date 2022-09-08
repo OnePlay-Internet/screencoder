@@ -10,12 +10,6 @@
  */
 #include <screencoder_queue.h>
 #include <screencoder_macro.h>
-#include <screencoder_datatype.h>
-#include <screencoder_object.h>
-#include <cstdlib>
-#include <mutex>
-#include <string.h>
-
 #define BASE_SIZE 1024
 
 using namespace std;
@@ -34,9 +28,6 @@ namespace util {
          * 
          */
         BufferLL* first;
-
-
-        std::mutex mut;
     };
 
 
@@ -61,7 +52,6 @@ namespace util {
         last->obj  = obj;
         last->next = NULL;
 
-        queue->mut.lock();
         if(!queue->first) {
             queue->first = last;
         } else {
@@ -69,8 +59,6 @@ namespace util {
             while (container->next) { container = container->next; }
             container->next = last;
         }
-        queue->mut.unlock();
-
         return true;
     }
 
@@ -97,12 +85,10 @@ namespace util {
         if (!queue_array_peek(queue))
             return NULL;
 
-        queue->mut.lock();
         BufferLL* container = queue->first;
         Buffer *ret = container->obj;
         queue->first = container->next;
         free(container);
-        queue->mut.unlock();
 
         *buf = ret;
         pointer data = BUFFER_REF(ret,size);
@@ -115,8 +101,6 @@ namespace util {
     queue_array_init()
     {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
-        memset(array,0,sizeof(QueueArray));
-
         array->first = NULL;
         return array;
     }
