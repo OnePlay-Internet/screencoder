@@ -103,8 +103,8 @@ namespace rtp
         while ((base->options+i) &&
                (base->options+i)->type == util::Type::INT && 
                string_compare((base->options+i)->key,"port") ){
-            snprintf(sink->format->url, sizeof(sink->format->url), 
-                "rtp://%s:%d", "localhost", (base->options+i)->int_value);
+            snprintf(sink->url, 100, "rtp://%s:%d", "localhost", (base->options+i)->int_value);
+            sink->format->url = sink->url;
             i++;
         }
     }

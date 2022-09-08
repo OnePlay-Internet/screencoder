@@ -26,6 +26,8 @@ namespace rtp
 
         libav::FormatContext* format;
 
+        char url[100];
+
         bool preseted;
     };
 
