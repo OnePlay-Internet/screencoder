@@ -11,7 +11,7 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 )
 
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/libscreencoderlib.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../buildmingw/libscreencoderlib.a
 // #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavformat.a
 // #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavcodec.a
 // #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavdevice.a

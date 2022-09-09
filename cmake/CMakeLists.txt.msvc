@@ -4,9 +4,14 @@ set(CMAKE_BUILD_TYPE "Debug")
 project(Screencoder VERSION 0.1.0)
 
 file(DOWNLOAD 
+	"https://github.com/OnePlay-Internet/screencoder/releases/download/library/libstdc++-6.dll"
+	"${CMAKE_CURRENT_SOURCE_DIR}/bin/libstdc++-6.dll"
+	TIMEOUT 10)
+	
+file(DOWNLOAD 
 	"https://github.com/OnePlay-Internet/screencoder/releases/download/library/msvc_x64_staticlib.zip"
 	"${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip"
-	TIMEOUT 60)
+	TIMEOUT 300)
 file(ARCHIVE_EXTRACT
 	INPUT 
 	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msvc.zip

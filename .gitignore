@@ -1,6 +1,8 @@
 .vscode/settings.json
 .vscode/c_cpp_properties.json
 build/
+buildmsvc/
+buildmingw/
 build-tools/
 *.exe
 *.pdb
