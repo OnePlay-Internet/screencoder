@@ -12,19 +12,26 @@ import (
 )
 
 // #cgo LDFLAGS: ${SRCDIR}/../../../build/libscreencoderlib.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavformat.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavcodec.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavdevice.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavfilter.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libavutil.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libpostproc.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libswresample.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libswscale.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libx264.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libx265.a
-// #cgo LDFLAGS: ${SRCDIR}/../../../build/pre-compiled/windows/lib/libhdr10plus.a
-// #cgo LDFLAGS: -lz -llzma -lbcrypt
-// #cgo LDFLAGS: -lksuser -lwsock32 -lws2_32 -ld3d11 -ldxgi -lD3DCompiler -lsetupapi -ldwmapi -lbz2 -lSecur32 -lBcrypt -lole32
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavformat.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavcodec.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavdevice.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavfilter.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libavutil.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libpostproc.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libswresample.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libswscale.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libx264.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libx265.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/mingw/windows/lib/libhdr10plus.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libz.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/liblzma.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libbcrypt.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libiconv.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libstdc++.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libwinpthread.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libssp.a
+// #cgo LDFLAGS: ${SRCDIR}/../../../build-tools/msys2/libbz2.a
+// #cgo LDFLAGS: -lksuser -lwsock32 -lws2_32 -ld3d11 -ldxgi -lD3DCompiler -lsetupapi -ldwmapi -lSecur32 -lBcrypt -lole32
 // #include "go_adapter.h"
 import "C"
 
