@@ -56,6 +56,11 @@ set(FFMPEG_LIBRARIES
 	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/msys2/libbz2.a
 )
 
+set(FFMPEG_INCLUDE_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/build-tools/mingw/windows/include
+
+)
+
 list(PREPEND PLATFORM_LIBRARIES
 	ksuser
 	wsock32
@@ -149,7 +154,6 @@ include_directories(
 
   ${FFMPEG_INCLUDE_DIRS}
   ${PLATFORM_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIR}
 )
  
 
