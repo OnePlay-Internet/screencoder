@@ -119,10 +119,10 @@ namespace error
 
             outfile << level_log << "||"<< file_log << "||"<< time_log << " || MESSAGE: "<< err->message << std::endl; 
 
-            if(find_substr(err->level,"buffer"))
+            if(find_substr(err->level,"trace"))
                 goto done;
 
-            std::cout << " LOG LEVEL: " << err->level << " || FILE : " << find_from_back(err->file,"/") << " : " << err->line << " || MESSAGE: "<< err->message << std::endl; 
+            std::cout << level_log << "||"<< file_log << "||"<< time_log << " || MESSAGE: "<< err->message << std::endl; 
         done:
             BUFFER_UNREF(buf);
         }
