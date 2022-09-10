@@ -28,7 +28,7 @@ namespace error
 {
     typedef struct _Err {
         int line;
-        char file[2000];
+        char* file;
         char level[100];
         char message[100];
         char time[100];
@@ -178,9 +178,9 @@ namespace error
         BUFFER_MALLOC(buf,sizeof(Err),ptr);
         memcpy(((Err*)ptr)->message,message,strlen(message));
         memcpy(((Err*)ptr)->level,level,strlen(level));
-        memcpy(((Err*)ptr)->file,file,strlen(file));
         memcpy(((Err*)ptr)->time,timestr,strlen(timestr));
         ((Err*)ptr)->line = line;
+        ((Err*)ptr)->file = file;
         QUEUE_ARRAY_CLASS->push(LOG_QUEUE,buf);
         BUFFER_UNREF(buf);
         return;
