@@ -28,7 +28,7 @@ namespace error
 {
     typedef struct _Err {
         int line;
-        char file[100];
+        char file[2000];
         char level[100];
         char message[100];
         char time[100];
