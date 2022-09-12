@@ -14,6 +14,8 @@
 #include <screencoder_util.h>
 #include <generic_sink.h>
 
+#include <chrono>
+
 namespace appsink
 {
     typedef struct _AppSink AppSink;
@@ -21,6 +23,9 @@ namespace appsink
         sink::GenericSink base;
 
         util::QueueArray* out;
+
+        std::chrono::high_resolution_clock::time_point prev_pkt_sent;
+        std::chrono::high_resolution_clock::time_point this_pkt_sent;
     };
 
 

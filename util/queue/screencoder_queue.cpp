@@ -29,6 +29,8 @@ namespace util {
          * 
          */
         BufferLL* first;
+
+        uint64 size;
     };
 
 
@@ -60,6 +62,8 @@ namespace util {
             while (container->next) { container = container->next; }
             container->next = last;
         }
+
+        queue->size++;
         return true;
     }
 
@@ -67,6 +71,12 @@ namespace util {
     queue_array_peek(QueueArray* queue)
     {
         return queue->first ? true : false;
+    }
+
+    uint64
+    queue_array_size(QueueArray* queue)
+    {
+        return queue->size;
     }
 
     void
@@ -94,6 +104,7 @@ namespace util {
         *buf = ret;
         pointer data = BUFFER_REF(ret,size);
         BUFFER_UNREF(ret);
+        queue->size--;
         return data;
     }
 
@@ -103,6 +114,7 @@ namespace util {
     {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
         array->first = NULL;
+        array->size = 0;
         return array;
     }
 
@@ -132,6 +144,7 @@ namespace util {
         RETURN_PTR_ONCE(klass);
 
         klass.init = queue_array_init;
+        klass.size = queue_array_size;
         klass.wait = queue_array_wait;
         klass.peek = queue_array_peek;
         klass.pop  = queue_array_pop;

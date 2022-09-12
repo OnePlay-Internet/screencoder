@@ -117,7 +117,17 @@ GoHandleAVPacket(void* appsink_ptr,
 }
     
 void
-GoUnrefAVPacket(void* buf){
+GoUnrefAVPacket(void* appsink_ptr,
+                void* buf)
+{
+    appsink::AppSink* sink = (appsink::AppSink*)appsink_ptr;
+
+    sink->this_pkt_sent = std::chrono::high_resolution_clock::now(); 
+    std::chrono::nanoseconds delta = sink->this_pkt_sent - sink->prev_pkt_sent;
+    sink->prev_pkt_sent = sink->this_pkt_sent;
+
+    
+
     util::Buffer* buffer = (util::Buffer*)buf;
     BUFFER_UNREF(buffer);
 }

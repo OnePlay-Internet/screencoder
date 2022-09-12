@@ -34,6 +34,8 @@ namespace util
                               int* size);
         QueueArray* (*init) ();
 
+        uint64 (*size) (QueueArray* queue);
+
         void (*stop) (QueueArray* queue);
     } QueueArrayClass;
     
