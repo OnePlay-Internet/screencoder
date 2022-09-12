@@ -206,7 +206,11 @@ namespace display{
             adapter_p,
             D3D_DRIVER_TYPE_UNKNOWN,
             nullptr,
+#ifdef DIRECTX_DEBUG
             D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+#else
+            D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+#endif
             featureLevels, 
             sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
             D3D11_SDK_VERSION,
@@ -221,6 +225,7 @@ namespace display{
             return -1;
         }
         
+#ifdef DIRECTX_DEBUG
         ID3D11Debug *d3dDebug = nullptr;
         if( SUCCEEDED( self->device->QueryInterface( __uuidof(ID3D11Debug), (void**)&d3dDebug ) ) )
         {
@@ -230,6 +235,7 @@ namespace display{
                 d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_ERROR, true );
             }
         }
+#endif 
 
 
         // Enable DwmFlush() only if the current refresh rate can match the client framerate.
