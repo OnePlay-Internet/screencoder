@@ -151,32 +151,34 @@ namespace encoder {
             {
                 util::Buffer* buf = NULL;
                 adaptive::AdaptiveEvent* event =  (adaptive::AdaptiveEvent*)QUEUE_ARRAY_CLASS->pop(ctx->capture_event_in,&buf,NULL);
-                switch (event->code)
-                {
-                case adaptive::AdaptiveEventCode::DISABLE_CAPTURE_DELAY_INTERVAL:
-                    ctx->enable_delay = false;
-                    break;
-                case adaptive::AdaptiveEventCode::UPDATE_CAPTURE_DELAY_INTERVAL:
+                if( event->code == adaptive::AdaptiveEventCode::UPDATE_CAPTURE_DELAY_INTERVAL) {
                     ctx->enable_delay = true;
                     ctx->delay = event->time_data;
-                    break;
-                case adaptive::AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE:
-                    EncodeContext* session0 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
-                    session0->context->time_base = AVRational { 1, event->num_data };
-                    session0->context->framerate = AVRational { event->num_data , 1 };
-                    session0->context->rc_buffer_size = session0->context->bit_rate / event->num_data;
-                    BUFFER_UNREF(ctxBuf);
-                    break;
-                case adaptive::AdaptiveEventCode::AVCODEC_BITRATE_CHANGE:
-                    EncodeContext* session1 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
-                    session1->context->rc_max_rate    = event->num_data ;
-                    session1->context->rc_buffer_size = event->num_data / session1->context->framerate.den;
-                    session1->context->bit_rate       = event->num_data ;
-                    session1->context->rc_min_rate    = event->num_data ;
-                    BUFFER_UNREF(ctxBuf);
+                    BUFFER_UNREF(buf);
                     break;
                 }
 
+                EncodeContext* session = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
+                if( event->code == adaptive::AdaptiveEventCode::DISABLE_CAPTURE_DELAY_INTERVAL) {
+                    ctx->enable_delay = false;
+                    session->context->time_base = AVRational { 1, ctx->display->framerate };
+                    session->context->framerate = AVRational { ctx->display->framerate, 1 };
+                    session->context->rc_buffer_size = session->context->bit_rate / ctx->display->framerate;
+                    BUFFER_UNREF(ctxBuf);
+                } else if ( event->code == adaptive::AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE) {
+                    session->context->time_base = AVRational { 1, event->num_data };
+                    session->context->framerate = AVRational { event->num_data , 1 };
+                    session->context->rc_buffer_size = session0->context->bit_rate / event->num_data;
+                    BUFFER_UNREF(ctxBuf);
+                } else if ( event->code == adaptive::AdaptiveEventCode::AVCODEC_BITRATE_CHANGE) {
+                    session->context->rc_max_rate    = event->num_data ;
+                    session->context->rc_buffer_size = event->num_data / session->context->framerate.den;
+                    session->context->bit_rate       = event->num_data ;
+                    session->context->rc_min_rate    = event->num_data ;
+                } 
+                
+
+                BUFFER_UNREF(ctxBuf);
                 BUFFER_UNREF(buf);
             }
 
@@ -275,6 +277,8 @@ namespace encoder {
              encoder::Encoder* encoder,
              encoder::Config* config,
              sink::GenericSink* sink,
+             util::QueueArray* capture_event_in,
+             util::QueueArray* capture_event_out,
              util::Broadcaster* shutdown_event,
              util::QueueArray* packet_queue) 
     {
@@ -290,6 +294,8 @@ namespace encoder {
         ss_ctx.encoder = encoder;
         ss_ctx.sink = sink;
         ss_ctx.config = config;
+        ss_ctx.capture_event_in = capture_event_in;
+        ss_ctx.capture_event_out = capture_event_out;
 
 
         int count = 0;

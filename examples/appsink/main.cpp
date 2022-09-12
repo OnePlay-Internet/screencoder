@@ -25,15 +25,17 @@ readloop(void* appsink)
         if (!res)
             return;
         
-        GoUnrefAVPacket(buf);
+        GoUnrefAVPacket(appsink,buf);
     }
 }
 
 int main()
 {
-    void* appsink = AllocateAppSink();
+    void* queue_in = NewEvent();
+    void* queue_out = NewEvent();
+    void* appsink = AllocateAppSink(queue_in,queue_out);
     void* shutdown = NewEvent();
     std::thread handle {readloop,appsink};
     handle.detach();
-    StartScreencodeThread(appsink,shutdown,"nvenc_h264",QueryDisplay(0));
+    StartScreencodeThread(appsink,shutdown,"nvenc_h264",QueryDisplay(0),queue_in,queue_out);
 }

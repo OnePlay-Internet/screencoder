@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 
+#include <screencoder_adaptive.h>
 
 
 #include <thread>
@@ -89,6 +90,15 @@ namespace rtp
             LOG_ERROR("write failed");
         }
 
+        rtp->this_pkt_sent = std::chrono::high_resolution_clock::now(); 
+        std::chrono::nanoseconds delta = rtp->this_pkt_sent - rtp->prev_pkt_sent;
+        rtp->prev_pkt_sent = rtp->this_pkt_sent;
+
+        BUFFER_MALLOC(evebuf,sizeof(adaptive::AdaptiveEvent),ptr);
+        adaptive::AdaptiveEvent* eve = (adaptive::AdaptiveEvent*)ptr;
+        eve->code == adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
+        eve->time_data = delta;
+        QUEUE_ARRAY_CLASS->push(rtp->sink_event_out,evebuf);
         BUFFER_UNREF(buf);
     }
 
@@ -111,7 +121,8 @@ namespace rtp
 
 
     sink::GenericSink*    
-    new_rtp_sink    ()
+    new_rtp_sink(util::QueueArray* sink_event_out,
+                 util::QueueArray* sink_event_in)
     {
         static RtpSink sink = {0};
         RETURN_ONCE((sink::GenericSink*)&sink);

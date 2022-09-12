@@ -54,8 +54,8 @@ func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 	app := &Appsink{}
 	app.conf = conf
 	app.packetizer = h264.NewH264Payloader()
-	app.channel = make(chan *rtp.Packet,1000)
-	app.pktchannel = make(chan *GoPacket,1000)
+	app.channel = make(chan *rtp.Packet)
+	app.pktchannel = make(chan *GoPacket)
 	app.displays = make([]string, 0);
 	app.encoder = "nvenc_h264"
 	app.display = "";
@@ -107,19 +107,26 @@ func (app *Appsink) Open() *config.ListenerConfig {
 	if app.shutdown == nil {
 		return nil
 	}
-	app.sink = C.AllocateAppSink()
+
+	queue_in := C.NewEvent();
+	queue_out := C.NewEvent();
+	app.sink = C.AllocateAppSink(queue_in,queue_out);
 	if app.sink == nil {
 		return nil
 	}
 
+			
 	go func ()  {
 		C.StartScreencodeThread(app.sink, app.shutdown,
 			C.CString(app.encoder),
-			C.CString(app.display))
+			C.CString(app.display),queue_in,queue_out);
 	
 		fmt.Printf("screencode thread terminated\n");
 	}()
-
+			
+		
+		
+		
 
 	go func() {
 		for {
@@ -133,7 +140,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		for {
 			pkt :=<-app.pktchannel;
 			app.writeSample(pkt.data, pkt.size, pkt.duration)
-			C.GoUnrefAVPacket(pkt.buf)
+			C.GoUnrefAVPacket(app.sink,pkt.buf)
 		}
 	}()
 	return app.conf

@@ -12,8 +12,9 @@
 #define __SUNSHINE_RTP_H__
 #include <screencoder_util.h>
 #include <generic_sink.h>
+#include <chrono>
 
-#define RTP_SINK       rtp::new_rtp_sink()
+#define RTP_SINK(in,out)       rtp::new_rtp_sink(in,out)
 
 
 namespace rtp
@@ -26,13 +27,20 @@ namespace rtp
 
         libav::FormatContext* format;
 
+        util::QueueArray* sink_event_out;
+        util::QueueArray* sink_event_in;
+
+        std::chrono::high_resolution_clock::time_point prev_pkt_sent;
+        std::chrono::high_resolution_clock::time_point this_pkt_sent;
+
         char url[100];
 
         bool preseted;
     };
 
 
-    sink::GenericSink*    new_rtp_sink    ();
+    sink::GenericSink*  new_rtp_sink   (util::QueueArray* sink_event_in,
+                                        util::QueueArray* sink_event_out);
 
 
 

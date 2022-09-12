@@ -34,6 +34,8 @@ namespace encoder
                                           encoder::Encoder* encoder,
                                           encoder::Config* config,
                                           sink::GenericSink* sink,
+                                          util::QueueArray* capture_event_in,
+                                          util::QueueArray* capture_event_out,
                                           util::Broadcaster* shutdown_event,
                                           util::QueueArray* packet_queue);
     

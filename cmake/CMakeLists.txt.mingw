@@ -105,6 +105,9 @@ file(GLOB RTP_SOURCE_LIST
 	sink/appsink/go/*.cpp
 )
 
+file(GLOB ADAPTIVE_SOURCE_LIST 
+	adaptive/*.cpp
+)
 
 file(GLOB SESSION_SOURCE_LIST 
 	session/*.cpp
@@ -123,6 +126,7 @@ set(SCREENCODER_TARGET_FILES
 	${UTIL_SOURCE_LIST}
 	${SESSION_SOURCE_LIST}
 	${ENCODER_SOURCE_LIST}
+	${ADAPTIVE_SOURCE_LIST}
 	${RTP_SOURCE_LIST}
 	${PLATFORM_SOURCE_LIST}
 )
@@ -137,6 +141,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/encode/encoder
 
   ${CMAKE_CURRENT_SOURCE_DIR}/input
+  ${CMAKE_CURRENT_SOURCE_DIR}/adaptive
   ${CMAKE_CURRENT_SOURCE_DIR}/sink
   ${CMAKE_CURRENT_SOURCE_DIR}/sink/rtp
   ${CMAKE_CURRENT_SOURCE_DIR}/sink/appsink

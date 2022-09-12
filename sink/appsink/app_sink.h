@@ -24,12 +24,16 @@ namespace appsink
 
         util::QueueArray* out;
 
+        util::QueueArray* sink_event_out;
+        util::QueueArray* sink_event_in;
+
         std::chrono::high_resolution_clock::time_point prev_pkt_sent;
         std::chrono::high_resolution_clock::time_point this_pkt_sent;
     };
 
 
-    sink::GenericSink*    new_app_sink    ();
+    sink::GenericSink*    new_app_sink      (util::QueueArray* sink_event_out,
+                                             util::QueueArray* sink_event_in);
 } // namespace rtp
 
 

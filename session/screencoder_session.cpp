@@ -12,7 +12,7 @@
 
 #include <screencoder_session.h>
 #include <screencoder_util.h>
-#include <screencoder_rtp.h>
+#include <screencoder_adaptive.h>
 #include <encoder_thread.h>
 
 #include <encoder_d3d11_device.h>
@@ -36,6 +36,11 @@ namespace session {
         encoder::Config config;
 
         platf::Display* display;
+
+        util::QueueArray* capture_event_in;
+        util::QueueArray* capture_event_out;
+        util::QueueArray* sink_event_in;
+        util::QueueArray* sink_event_out;
     }Session;
 
 
@@ -45,6 +50,8 @@ namespace session {
     start_session(platf::Display* disp,
                   encoder::Encoder* encoder,
                   util::Broadcaster* shutdown,
+                  util::QueueArray* sink_event_in,
+                  util::QueueArray* sink_event_out,
                   sink::GenericSink* sink)
     {
         Session session;
@@ -60,6 +67,11 @@ namespace session {
             encoder::LibscaleColor::REC_601
         };
 
+        session.capture_event_in = QUEUE_ARRAY_CLASS->init();
+        session.capture_event_out = QUEUE_ARRAY_CLASS->init();
+        session.sink_event_in = sink_event_in;
+        session.sink_event_out = sink_event_out;
+
 
 
         std::thread capture   { encoder::capture, 
@@ -67,6 +79,8 @@ namespace session {
                                 session.encoder,
                                 &session.config,
                                 session.sink,
+                                session.capture_event_in,
+                                session.capture_event_out,
                                 session.shutdown_event, 
                                 session.packet_queue };
 
@@ -75,8 +89,17 @@ namespace session {
                                 session.shutdown_event, 
                                 session.packet_queue };
 
+        std::thread control   { adaptive::newAdaptiveControl, 
+                                session.shutdown_event, 
+                                session.packet_queue,
+                                session.capture_event_in,
+                                session.capture_event_out,
+                                session.sink_event_in,
+                                session.sink_event_out};
+
         capture.detach();
         broadcast.detach();
+        control.detach();
         WAIT_EVENT(session.shutdown_event);
     }
 }

@@ -48,6 +48,7 @@ namespace sink
         util::Broadcaster* shutdown_event;
         util::Broadcaster* join_event;
 
+
         util::QueueArray* packet_queue;
     }BroadcastContext;
 

@@ -16,6 +16,7 @@ using namespace std::literals;
 
 
 #define EVALUATION_INTERVAL 3s
+#define BUFFER_LIMIT 3ms
 
 namespace adaptive 
 {
@@ -65,7 +66,7 @@ namespace adaptive
 
                 switch (event->code)
                 {
-                case AdaptiveEventCode::SINK_LATENCY_REPORT:
+                case AdaptiveEventCode::SINK_CYCLE_REPORT:
                     rec.sink_cycle = event->time_data;
                     has_sink = true;
                     break;
@@ -129,8 +130,9 @@ namespace adaptive
             median_10_record(context,&record);
             std::chrono::nanoseconds diff = record.sink_cycle - record.capture_cycle;
             std::chrono::nanoseconds buffer_size_in_time = record.sink_queue_size * record.capture_cycle;
+            std::chrono::nanoseconds diff_limit = BUFFER_LIMIT / (EVALUATION_INTERVAL / record.sink_cycle);
 
-            if ( buffer_size_in_time > 100ms) {
+            if ( buffer_size_in_time > BUFFER_LIMIT) {
                 /**
                  * @brief 
                  * network condition is bad, 
@@ -143,33 +145,51 @@ namespace adaptive
                  * must ensure all element in queue is poped out during the next interval
                  * find capture delay which
                  * SATISFY
-                 * A> var new_diff = ( sink_cycle - ( native_capture_cycle + capture_delay ))
-                 * B> evaluation_interval / new_diff = -sink_queue_size 
+                 * A> var compensate = ( sink_cycle - ( native_capture_cycle + capture_delay ))
+                 * B> evaluation_interval / compensate = -sink_queue_size 
                  */
-                std::chrono::nanoseconds new_diff = -( EVALUATION_INTERVAL / record.sink_queue_size); 
-                context->capture_delay = ( record.sink_cycle - new_diff ) - record.capture_cycle; 
-            } else if (diff > 10ms ) {
+                std::chrono::nanoseconds compensate = ( EVALUATION_INTERVAL / record.sink_queue_size); 
+                context->capture_delay += diff + compensate; 
+            } else if (diff > diff_limit ) {
                 /**
                  * @brief 
                  * network condition is bad, 
                  * buffered queue might be overloaded
                  */
-                context->capture_delay = diff;
-            } else if (diff < 0ms) {
+                context->capture_delay += diff;
+
+                /**
+                 * @brief Update framerate accordingly
+                 */
+                BUFFER_MALLOC(buf,sizeof(AdaptiveEvent),ptr);
+                AdaptiveEvent* event = (AdaptiveEvent*)ptr;
+                event->code = AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE;
+                event->num_data = 1s / record.sink_cycle;
+                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf);
+                BUFFER_UNREF(buf);
+            } else if (diff > 0ms && diff < diff_limit) {
                 /**
                  * @brief 
-                 * ignore since network condition is good
+                 * network condition is bad, 
+                 * buffered queue might be overloaded
+                 */
+                context->capture_delay += diff;
+            } else if (diff < 0ms && diff > -diff_limit){ // diff < 0ms
+                /**
+                 * @brief 
+                 * network condition is better, 
+                 * lower the delay interval
+                 */
+                context->capture_delay -= 2 * diff;
+            } else {
+                /**
+                 * @brief 
+                 * since network condition is good
                  */
                 if(context->capture_delay != 0ms)
                     code = AdaptiveEventCode::DISABLE_CAPTURE_DELAY_INTERVAL;
                 
                 context->capture_delay = 0ms;
-            } else {
-                /**
-                 * @brief 
-                 * network condition is ok,
-                 * do nothing
-                 */
             }
 
             if (code != AdaptiveEventCode::EVENT_NONE)
@@ -187,18 +207,26 @@ namespace adaptive
         }
     }
 
-    void newAdaptiveControl (util::QueueArray* sink_queue,
+    void newAdaptiveControl (util::QueueArray* shutdown,
+                             util::QueueArray* sink_queue,
                              util::QueueArray* capture_event_in,
                              util::QueueArray* capture_event_out,
                              util::QueueArray* sink_event_in,
                              util::QueueArray* sink_event_out)
     {
         AdaptiveContext context;
+        context.capture_event_in = capture_event_out;
+        context.capture_event_out = capture_event_in;
+        context.sink_event_in = sink_event_out;
+        context.sink_event_out = sink_event_in;
+        context.sink_queue = sink_queue;
+        context.shutdown = shutdown;
 
         std::thread listen { adaptiveThreadListen, &context };
         listen.detach();
         std::thread process { adaptiveThreadProcess, &context };
         process.detach();
+        WAIT_EVENT(context.shutdown);
     }
 }
 

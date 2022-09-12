@@ -15,6 +15,15 @@
 
 namespace adaptive 
 {
+    typedef struct _Record {
+        std::chrono::nanoseconds sink_cycle;
+
+        std::chrono::nanoseconds capture_cycle;
+
+        std::chrono::high_resolution_clock::time_point timestamp;
+
+        uint64 sink_queue_size;
+    }Record;
     typedef struct _AdaptiveContext {
         /**
          * @brief 
@@ -62,28 +71,19 @@ namespace adaptive
         std::chrono::nanoseconds capture_delay;
     }AdaptiveContext;
 
-    typedef struct _Record {
-        std::chrono::nanoseconds sink_cycle;
-
-        std::chrono::nanoseconds capture_cycle;
-
-        std::chrono::high_resolution_clock::time_point timestamp;
-
-        uint64 sink_queue_size;
-    }Record;
 
     typedef enum _AdaptiveEventCode {
-        EVENT_NONE,
+        EVENT_NONE = 0,
 
-        UPDATE_CAPTURE_DELAY_INTERVAL,
-        DISABLE_CAPTURE_DELAY_INTERVAL,
+        UPDATE_CAPTURE_DELAY_INTERVAL = 2,
+        DISABLE_CAPTURE_DELAY_INTERVAL = 4,
 
-        SINK_LATENCY_REPORT,
-        CAPTURE_CYCLE_REPORT,
-        CAPTURE_TIMEOUT,
+        SINK_CYCLE_REPORT = 8,
+        CAPTURE_CYCLE_REPORT = 16,
+        CAPTURE_TIMEOUT = 32,
 
-        AVCODEC_BITRATE_CHANGE,
-        AVCODEC_FRAMERATE_CHANGE,
+        AVCODEC_BITRATE_CHANGE = 64,
+        AVCODEC_FRAMERATE_CHANGE = 128,
     }AdaptiveEventCode;
 
     typedef struct _AdaptiveEvent {
@@ -98,11 +98,13 @@ namespace adaptive
 
 
 
-    void newAdaptiveControl (util::QueueArray* sink_queue,
+    void newAdaptiveControl (util::QueueArray* shutdown,
+                             util::QueueArray* sink_queue,
                              util::QueueArray* capture_event_in,
                              util::QueueArray* capture_event_out,
                              util::QueueArray* sink_event_in,
-                             util::QueueArray* sink_event_out);
+                             util::QueueArray* sink_event_out
+                             );
 }
 
 

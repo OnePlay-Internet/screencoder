@@ -18,16 +18,20 @@ int GoHandleAVPacket(void* appsink_ptr,
                      int* size, 
                      int* duration);
 
-void GoUnrefAVPacket(void* buf);
+void GoUnrefAVPacket(void* appsink,
+                     void* buf);
 
 void StartScreencodeThread(void* app_sink,
                     void* shutdown,
                     char* encoder_name,
-                    char* display_name);
+                    char* display_name,
+                    void* sink_event_in,
+                    void* sink_event_out);
 
 char* QueryDisplay (int index);
 
-void* AllocateAppSink     ();
+void* AllocateAppSink(void* sink_event_in,
+                      void* sink_event_out);
 
 void  StopAppSink     (void* data);
 

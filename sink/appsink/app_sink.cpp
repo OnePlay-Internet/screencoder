@@ -16,6 +16,7 @@
 #include <display_base.h>
 
 #include <encoder_datatype.h>
+#include <screencoder_adaptive.h>
 
 
 #include <thread>
@@ -62,7 +63,8 @@ namespace appsink
     }
 
     sink::GenericSink*    
-    new_app_sink()
+    new_app_sink(util::QueueArray* sink_event_out,
+                 util::QueueArray* sink_event_in)
     {
         AppSink* sink = (AppSink*)malloc(sizeof(AppSink));
         
@@ -74,6 +76,8 @@ namespace appsink
         sink->base.start     = appsink_start;
         sink->base.stop      = appsink_stop;
 
+        sink->sink_event_in = sink_event_in;
+        sink->sink_event_out = sink_event_out;
         sink->out = QUEUE_ARRAY_CLASS->init();
         return (sink::GenericSink*)sink;
     }
@@ -126,7 +130,11 @@ GoUnrefAVPacket(void* appsink_ptr,
     std::chrono::nanoseconds delta = sink->this_pkt_sent - sink->prev_pkt_sent;
     sink->prev_pkt_sent = sink->this_pkt_sent;
 
-    
+    BUFFER_MALLOC(evebuf,sizeof(adaptive::AdaptiveEvent),ptr);
+    adaptive::AdaptiveEvent* eve = (adaptive::AdaptiveEvent*)ptr;
+    eve->code == adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
+    eve->time_data = delta;
+    QUEUE_ARRAY_CLASS->push(sink->sink_event_out,evebuf);
 
     util::Buffer* buffer = (util::Buffer*)buf;
     BUFFER_UNREF(buffer);
@@ -134,9 +142,12 @@ GoUnrefAVPacket(void* appsink_ptr,
 
 
 void*
-AllocateAppSink() 
+AllocateAppSink(void* sink_event_in,
+                void* sink_event_out) 
 {
-    return (void*)appsink::new_app_sink();
+    return (void*)appsink::new_app_sink(
+        (util::QueueArray*)sink_event_out,
+        (util::QueueArray*)sink_event_in);
 }
 
 void
@@ -176,7 +187,9 @@ void
 StartScreencodeThread(void* app_sink,
                 void* shutdown,
                 char* encoder_name,
-                char* display_name)
+                char* display_name,
+                void* sink_event_in,
+                void* sink_event_out)
 {
     encoder::Encoder encoder;
     if (string_compare(encoder_name,"nvenc_hevc")) {
@@ -205,6 +218,8 @@ StartScreencodeThread(void* app_sink,
     return; 
 start:
     session::start_session(display,&encoder,
+        (util::QueueArray*) sink_event_in,
+        (util::QueueArray*) sink_event_out,
         (util::Broadcaster*)shutdown,
         (sink::GenericSink*)app_sink);
 }
