@@ -109,9 +109,7 @@ namespace encoder
     Capabilities
     validate_encoder(Encoder* encoder) 
     {
-        Config config = {0};
-        config.bitrate = 1000;
-
+        Config config;
         encoder->codec_config->capabilities.set().flip(); // assume all capabilities is not meet
 
         { // basic test case

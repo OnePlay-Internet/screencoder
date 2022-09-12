@@ -29,7 +29,7 @@ namespace encoder
      * @return EncodeContext* 
      */
     EncodeContext*            make_encode_context           (Encoder* encoder, Config* config,
-                                                            int width, int height, int framerate,
+                                                            int width, int height, int framerate, 
                                                             platf::Device* hwdevice); 
 
     

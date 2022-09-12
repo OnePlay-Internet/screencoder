@@ -110,7 +110,7 @@ namespace encoder
     EncodeContext*
     make_encode_context(Encoder* encoder, 
                         Config* config,
-                        int width, int height, int framerate,
+                        int width, int height, int framerate, 
                         platf::Device* device) 
     {
         CodecConfig* video_format = encoder->codec_config;
@@ -225,11 +225,11 @@ namespace encoder
         {
             AVDictionary *options = NULL;
             handle_options(&options,video_format->options);
-            if(video_format->capabilities[FrameFlags::CBR] && config->bitrate) {
-                ctx->rc_max_rate    = config->bitrate;
-                ctx->rc_buffer_size = config->bitrate / framerate;
-                ctx->bit_rate       = config->bitrate;
-                ctx->rc_min_rate    = config->bitrate;
+            if(video_format->capabilities[FrameFlags::CBR]) {
+                ctx->rc_max_rate    = DEFAULT_BITRATE ;
+                ctx->rc_buffer_size = DEFAULT_BITRATE / framerate;
+                ctx->bit_rate       = DEFAULT_BITRATE ;
+                ctx->rc_min_rate    = DEFAULT_BITRATE ;
             } else {
                 av_dict_set_int(&options,"qp",50,0);
             }

@@ -19,6 +19,7 @@
 #include <display_base.h>
 #include <generic_sink.h>
 
+#include <screencoder_adaptive.h>
 
 extern "C" {
 #include <libswscale/swscale.h>
@@ -38,7 +39,11 @@ using namespace std::literals;
 namespace encoder {
     struct _EncodeThreadContext {
         int frame_nr;
+        std::chrono::high_resolution_clock::time_point prev;
+
         bool reinit;
+        bool enable_delay;
+        std::chrono::nanoseconds delay;
 
         util::Broadcaster* shutdown_event;
         util::QueueArray* packet_queue;
@@ -50,6 +55,9 @@ namespace encoder {
         sink::GenericSink* sink;
 
         Config* config;
+
+        util::QueueArray* capture_event_in;
+        util::QueueArray* capture_event_out;
     };
 
 
@@ -109,8 +117,6 @@ namespace encoder {
     void 
     captureThread(EncodeThreadContext* ctx) 
     {
-        ctx->reinit = false;
-
         // allocate display image and intialize with dummy data
         util::Buffer* imgBuf = ctx->display->klass->alloc_img(ctx->display);
 
@@ -141,8 +147,57 @@ namespace encoder {
         // run image capture in while loop, 
         while (!IS_INVOKED(ctx->shutdown_event))
         {
-            platf::Capture ret;
+            while(QUEUE_ARRAY_CLASS->peek(ctx->capture_event_in))
+            {
+                util::Buffer* buf = NULL;
+                adaptive::AdaptiveEvent* event =  (adaptive::AdaptiveEvent*)QUEUE_ARRAY_CLASS->pop(ctx->capture_event_in,&buf,NULL);
+                switch (event->code)
+                {
+                case adaptive::AdaptiveEventCode::DISABLE_CAPTURE_DELAY_INTERVAL:
+                    ctx->enable_delay = false;
+                    break;
+                case adaptive::AdaptiveEventCode::UPDATE_CAPTURE_DELAY_INTERVAL:
+                    ctx->enable_delay = true;
+                    ctx->delay = event->time_data;
+                    break;
+                case adaptive::AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE:
+                    EncodeContext* session0 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
+                    session0->context->time_base = AVRational { 1, event->num_data };
+                    session0->context->framerate = AVRational { event->num_data , 1 };
+                    session0->context->rc_buffer_size = session0->context->bit_rate / event->num_data;
+                    BUFFER_UNREF(ctxBuf);
+                    break;
+                case adaptive::AdaptiveEventCode::AVCODEC_BITRATE_CHANGE:
+                    EncodeContext* session1 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
+                    session1->context->rc_max_rate    = event->num_data ;
+                    session1->context->rc_buffer_size = event->num_data / session1->context->framerate.den;
+                    session1->context->bit_rate       = event->num_data ;
+                    session1->context->rc_min_rate    = event->num_data ;
+                    BUFFER_UNREF(ctxBuf);
+                    break;
+                }
 
+                BUFFER_UNREF(buf);
+            }
+
+            if (ctx->enable_delay)
+                std::this_thread::sleep_for(ctx->delay);
+            
+
+            {
+                std::chrono::nanoseconds diff = std::chrono::high_resolution_clock::now() - ctx->prev;
+                ctx->prev += diff;
+
+                BUFFER_MALLOC(buf,sizeof(adaptive::AdaptiveEvent),ptr);
+                adaptive::AdaptiveEvent* event = (adaptive::AdaptiveEvent*)ptr;
+                event->code = adaptive::AdaptiveEventCode::CAPTURE_CYCLE_REPORT;
+                event->time_data = diff;
+                QUEUE_ARRAY_CLASS->push(ctx->capture_event_out,buf);
+                BUFFER_UNREF(buf);
+            }
+
+
+            platf::Capture ret;
             platf::Image* img2 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
             ret = ctx->display->klass->capture(ctx->display, img2, FALSE);
             BUFFER_UNREF(imgBuf);
@@ -229,6 +284,7 @@ namespace encoder {
         ss_ctx.packet_queue = packet_queue;
         ss_ctx.frame_nr = 1;
         ss_ctx.reinit = true;
+        ss_ctx.prev = std::chrono::high_resolution_clock::now();
 
         ss_ctx.display = capture;
         ss_ctx.encoder = encoder;
@@ -239,6 +295,7 @@ namespace encoder {
         int count = 0;
         while (ss_ctx.reinit)
         {
+            ss_ctx.reinit = false;
             captureThread(&ss_ctx);
             std::this_thread::sleep_for(200ms);
             ss_ctx.display->klass->free_resources(ss_ctx.display);

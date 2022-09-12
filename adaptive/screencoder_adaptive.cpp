@@ -14,6 +14,9 @@
 #include <thread>
 using namespace std::literals;
 
+
+#define EVALUATION_INTERVAL 3s
+
 namespace adaptive 
 {
 
@@ -46,7 +49,8 @@ namespace adaptive
         record->timestamp = std::chrono::high_resolution_clock::now();
     }
 
-    void adaptiveThread(AdaptiveContext* context)
+    void 
+    adaptiveThreadListen(AdaptiveContext* context)
     {
         while (!IS_INVOKED(context->shutdown))
         {
@@ -114,18 +118,87 @@ namespace adaptive
         }
     }
 
-    void adaptiveThreadWatch(AdaptiveContext* context)
+    void 
+    adaptiveThreadProcess(AdaptiveContext* context)
     {
         while (!IS_INVOKED(context->shutdown))
         {
-            std::this_thread::sleep_for(3s);
-
+            AdaptiveEventCode code = AdaptiveEventCode::EVENT_NONE;
 
             Record record;
             median_10_record(context,&record);
+            std::chrono::nanoseconds diff = record.sink_cycle - record.capture_cycle;
+            std::chrono::nanoseconds buffer_size_in_time = record.sink_queue_size * record.capture_cycle;
 
-            
+            if ( buffer_size_in_time > 100ms) {
+                /**
+                 * @brief 
+                 * network condition is bad, 
+                 * buffered queue already been overloaded
+                 */
+
+                /**
+                 * @brief 
+                 * ASSUME that sink_cycle and capture_cycle is constant
+                 * must ensure all element in queue is poped out during the next interval
+                 * find capture delay which
+                 * SATISFY
+                 * A> var new_diff = ( sink_cycle - ( native_capture_cycle + capture_delay ))
+                 * B> evaluation_interval / new_diff = -sink_queue_size 
+                 */
+                std::chrono::nanoseconds new_diff = -( EVALUATION_INTERVAL / record.sink_queue_size); 
+                context->capture_delay = ( record.sink_cycle - new_diff ) - record.capture_cycle; 
+            } else if (diff > 10ms ) {
+                /**
+                 * @brief 
+                 * network condition is bad, 
+                 * buffered queue might be overloaded
+                 */
+                context->capture_delay = diff;
+            } else if (diff < 0ms) {
+                /**
+                 * @brief 
+                 * ignore since network condition is good
+                 */
+                if(context->capture_delay != 0ms)
+                    code = AdaptiveEventCode::DISABLE_CAPTURE_DELAY_INTERVAL;
+                
+                context->capture_delay = 0ms;
+            } else {
+                /**
+                 * @brief 
+                 * network condition is ok,
+                 * do nothing
+                 */
+            }
+
+            if (code != AdaptiveEventCode::EVENT_NONE)
+            {
+                BUFFER_MALLOC(buf,sizeof(AdaptiveEvent),ptr);
+                AdaptiveEvent* event = (AdaptiveEvent*)ptr;
+                event->code = code;
+
+
+                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf);
+                BUFFER_UNREF(buf);
+            }
+
+            std::this_thread::sleep_for(EVALUATION_INTERVAL);
         }
+    }
+
+    void newAdaptiveControl (util::QueueArray* sink_queue,
+                             util::QueueArray* capture_event_in,
+                             util::QueueArray* capture_event_out,
+                             util::QueueArray* sink_event_in,
+                             util::QueueArray* sink_event_out)
+    {
+        AdaptiveContext context;
+
+        std::thread listen { adaptiveThreadListen, &context };
+        listen.detach();
+        std::thread process { adaptiveThreadProcess, &context };
+        process.detach();
     }
 }
 

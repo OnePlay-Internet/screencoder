@@ -40,10 +40,26 @@ namespace adaptive
          */
         util::QueueArray* sink_event_out;
 
+        /**
+         * @brief 
+         * don't touch this
+         */
         util::QueueArray* sink_queue;
         util::Broadcaster* shutdown;
 
+        /**
+         * @brief 
+         * store metric as record
+         */
         Record records[100];
+
+
+
+        /**
+         * @brief 
+         * RAW processed data
+         */
+        std::chrono::nanoseconds capture_delay;
     }AdaptiveContext;
 
     typedef struct _Record {
@@ -57,6 +73,8 @@ namespace adaptive
     }Record;
 
     typedef enum _AdaptiveEventCode {
+        EVENT_NONE,
+
         UPDATE_CAPTURE_DELAY_INTERVAL,
         DISABLE_CAPTURE_DELAY_INTERVAL,
 
@@ -75,7 +93,7 @@ namespace adaptive
         int size;
 
         std::chrono::nanoseconds time_data;
-        int64 num_data;
+        int num_data;
     }AdaptiveEvent;
 
 

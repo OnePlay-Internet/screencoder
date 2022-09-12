@@ -12,6 +12,7 @@
 #define __SUNSHINE_MACRO_H__
 #include <screencoder_log.h>
 
+#define DEFAULT_BITRATE ( 1000 * 1000 * 30 )
 
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 

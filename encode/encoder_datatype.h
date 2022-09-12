@@ -23,6 +23,8 @@ namespace encoder
 
         platf::Device* device;
 
+        int relative_framerate;
+
         int sws_color_space;
 
         int dev_type;
@@ -60,8 +62,6 @@ namespace encoder
     };
 
     struct _Config{
-        int bitrate;
-
         SlicePerFrame slicesPerFrame;
         DynamicRange dynamicRangeOption;
         AVColorRange avcolor;
