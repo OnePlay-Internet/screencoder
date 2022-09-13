@@ -193,6 +193,7 @@ namespace duplication
             pool->texture[i].status = platf::Capture::NOT_READY;
             pool->texture[i].mutex = PTHREAD_MUTEX_INITIALIZER;
         }
+        return pool;
     }
 
 
@@ -233,6 +234,7 @@ namespace duplication
         pthread_mutex_lock(&dup->pool->texture[pos].mutex);
         texture = &dup->pool->texture[pos].texture;
         *mutex = &dup->pool->texture[pos].mutex;
+        return platf::Capture::OK;
     }
 
     HRESULT
@@ -258,6 +260,7 @@ namespace duplication
         static DuplicationClass klass = {0};
         RETURN_PTR_ONCE(klass);
 
+        klass.init           =  duplication_init;
         klass.next_frame     =   duplication_accquire_frame_from_pool;
         klass.get_cursor_buf=   duplication_get_availabe_frame_shape;
         klass.finalize       =   duplication_finalize;

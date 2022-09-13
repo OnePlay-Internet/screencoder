@@ -11,9 +11,9 @@
 #ifndef __SUNSHINE_DUPLICATION_H__
 #define __SUNSHINE_DUPLICATION_H__
 #include <platform_common.h>
-#include <duplication.h>
 #include <d3d11_datatype.h>
 
+#include <pthread.h>
 
 #define DUPLICATION_CLASS           duplication::duplication_class_init()
     
