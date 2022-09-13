@@ -69,6 +69,9 @@ namespace platf {
         int32 row_pitch;
     }Image;
 
+    typedef struct _Cursor{
+    }Cursor;
+
     typedef struct _HWDeviceClass DeviceClass;
 
     typedef struct _DisplayClass DisplayClass;
@@ -142,8 +145,14 @@ namespace platf {
                                                     PixelFormat pix_fmt);
         
         Capture                (*capture)          (Display* self,
-                                                    Image* img, 
-                                                    bool cursor);
+                                                    Image* img);
+
+        util::Buffer*          (*allocate_cursor)  (Display* self,
+                                                    Image* img);
+
+        Capture                (*draw_cursor)       (Display* self,
+                                                    Image* img,
+                                                    Cursor* cursor);
     };
 
 

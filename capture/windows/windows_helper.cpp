@@ -95,12 +95,14 @@ namespace helper
 
 
 
-    util::Buffer*
-    make_cursor_image(util::Buffer* img_obj, 
-                      DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info) 
+    uint8*
+    make_cursor_image(uint8* buffer,
+                      int buffer_size,
+                      DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info,
+                      int* out_size) 
     {
       int size;
-      uint32* img_data = (uint32*)BUFFER_REF(img_obj,&size);
+      uint32* img_data = (uint32*)buffer;
       const uint32 black       = 0xFF000000;
       const uint32 white       = 0xFFFFFFFF;
       const uint32 transparent = 0;
@@ -115,19 +117,22 @@ namespace helper
             }
           }
         case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
-          BUFFER_UNREF(img_obj);
-          return BUFFER_CLASS->duplicate(img_obj);
+          uint8* ret = (uint8*)malloc(buffer_size);
+          memcpy(ret,buffer,buffer_size);
+          *out_size = buffer_size;
+          return ret;
         default:
           break;
       }
 
       shape_info.Height /= 2;
 
-      BUFFER_MALLOC(ret,shape_info.Width * shape_info.Height * 4,cursor_img);
+      *out_size = shape_info.Width * shape_info.Height * 4;
+      uint8* ret = (uint8*)malloc(*out_size);
 
       auto bytes       = shape_info.Pitch * shape_info.Height;
 
-      auto pixel_begin = (uint32 *)cursor_img;
+      auto pixel_begin = (uint32 *)ret;
       auto pixel_data  = pixel_begin;
 
       auto and_mask    = img_data;
@@ -168,7 +173,7 @@ namespace helper
               *left_p = black;
             }
 
-            if(bottom_p < (uint32*)(cursor_img)) {
+            if(bottom_p < (uint32*)(ret)) {
               *bottom_p = black;
             }
 
@@ -185,7 +190,6 @@ namespace helper
         ++xor_mask;
       }
 
-      BUFFER_UNREF(img_obj);
       return ret;
     }
 

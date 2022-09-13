@@ -12,23 +12,23 @@
 #define __GPU_CURSOR_H__
 
 #include <d3d11_datatype.h>
+#include <platform_common.h>
 
 #define GPU_CURSOR_CLASS        gpu::gpu_cursor_class_init()
 
 namespace gpu
 {    
     typedef struct _GpuCursor {
+        platf::Cursor base;
         d3d11::Texture2D texture;
         d3d11::ShaderResourceView input_res;
         D3D11_VIEWPORT cursor_view;
-        bool visible;
     }GpuCursor;
 
     typedef struct _GpuCursorClass {
         void (*set_pos)     (GpuCursor* cursor,
                              LONG rel_x, 
-                             LONG rel_y, 
-                             bool visible);
+                             LONG rel_y);
 
         void (*set_texture) (GpuCursor* cursor,
                              LONG width, 

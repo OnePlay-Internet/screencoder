@@ -21,7 +21,6 @@ namespace gpu
 {
     typedef struct _DisplayVram{
         display::DisplayBase base;
-        GpuCursor cursor;
 
         d3d11::SamplerState sampler_linear;
 

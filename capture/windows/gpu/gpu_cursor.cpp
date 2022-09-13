@@ -20,12 +20,10 @@ namespace gpu
   void 
   cursor_set_pos(GpuCursor* self,
                  LONG rel_x, 
-                 LONG rel_y, 
-                 bool visible) 
+                 LONG rel_y) 
   {
       self->cursor_view.TopLeftX = rel_x;
       self->cursor_view.TopLeftY = rel_y;
-      self->visible = visible;
   }
 
   void 

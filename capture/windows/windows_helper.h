@@ -24,8 +24,10 @@ namespace helper
     d3d11::BlendState make_blend       (d3d11::Device device, 
                                                  bool enable);
 
-    util::Buffer*           make_cursor_image   (util::Buffer* img_data, 
-                                                 DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info);
+    uint8*           make_cursor_image   (uint8* buffer, 
+                                          int buffer_size,
+                                          DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info,
+                                          int* outsize);
         
 
 

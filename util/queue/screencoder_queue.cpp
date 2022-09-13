@@ -95,7 +95,7 @@ namespace util {
     queue_array_wait(QueueArray* queue)
     {
         while(!queue->first) {
-            std::this_thread::sleep_for(5ms); // decrease sleep interval cause cpu consumption ramp up
+            std::this_thread::sleep_for(1ms); // decrease sleep interval cause cpu consumption ramp up
         }
     }
 

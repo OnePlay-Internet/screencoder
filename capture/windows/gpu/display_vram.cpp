@@ -35,6 +35,120 @@ using namespace std::literals;
 namespace gpu {
 
 
+    void
+    free_cursor(void* data)
+    {
+        GpuCursor* cursor = (GpuCursor*)data;
+        if (cursor->texture) { cursor->texture->Release(); }
+        if (cursor->input_res ) { cursor->input_res->Release(); }
+        free(data);
+    }
+
+    util::Buffer*
+    display_vram_prepare_cursor_texture(platf::Display* disp)
+    {
+        HRESULT status;
+        DisplayVram* self = (DisplayVram*) disp; 
+        display::DisplayBase* base = (display::DisplayBase*) disp; 
+
+        GpuCursor* cursor = (GpuCursor*)malloc(sizeof(GpuCursor));
+        int shape_size = base->dup.frame_info.PointerShapeBufferSize;
+
+
+        UINT dummy;
+        DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
+        uint8* shape_pointer = (uint8*)malloc(shape_size);
+        status = base->dup.dup->GetFramePointerShape(shape_size, shape_pointer, &dummy, &shape_info);
+        if(FAILED(status)) {
+            LOG_ERROR("Failed to get new pointer shape");
+            free((pointer)cursor);
+            NEW_ERROR(error::Error::ALLOC_IMG_ERR);
+        }
+
+
+        int cursor_buff_size = 0;
+        // color conversion
+        uint8* cursor_buf = helper::make_cursor_image(shape_pointer, shape_size, shape_info,&cursor_buff_size);
+
+        D3D11_SUBRESOURCE_DATA data {
+            cursor_buf,
+            4 * shape_info.Width,
+            0
+        };
+
+        // Create texture for cursor
+        D3D11_TEXTURE2D_DESC t {};
+        t.Width            = shape_info.Width;
+
+        t.Height           = cursor_buff_size / data.SysMemPitch;
+        t.MipLevels        = 1;
+        t.ArraySize        = 1;
+        t.SampleDesc.Count = 1;
+        t.Usage            = D3D11_USAGE_DEFAULT;
+        t.Format           = DXGI_FORMAT_B8G8R8A8_UNORM;
+        t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
+
+        d3d11::Texture2D texture;
+        auto status = base->device->CreateTexture2D(&t, &data, &texture);
+        if(FAILED(status)) {
+            LOG_ERROR("Failed to create mouse texture");
+            free((pointer)cursor);
+            NEW_ERROR(error::Error::ALLOC_IMG_ERR);
+        }
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC desc {
+            DXGI_FORMAT_B8G8R8A8_UNORM,
+            D3D11_SRV_DIMENSION_TEXTURE2D
+        };
+        desc.Texture2D.MipLevels = 1;
+
+        // TODO
+        // Free resources before allocating on the next line.
+        status = base->device->CreateShaderResourceView(texture, &desc, &cursor->input_res);
+        if(FAILED(status)) {
+            LOG_ERROR("Failed to create cursor shader resource view");
+            free((pointer)cursor);
+            NEW_ERROR(error::Error::ALLOC_IMG_ERR);
+        }
+
+        GPU_CURSOR_CLASS->set_texture(cursor,
+                                    t.Width, 
+                                    t.Height, 
+                                    texture);
+        
+        return BUFFER_INIT(cursor,sizeof(GpuCursor),free_cursor);
+    }
+
+
+
+    void
+    display_vram_draw_cursor_texture(platf::Display* disp,
+                                     gpu::ImageGpu* img,
+                                     platf::Cursor* cursor
+                                     )
+    {
+        GpuCursor* cursorGpu = (GpuCursor*)cursor;
+        DisplayVram* self = (DisplayVram*) disp; 
+        display::DisplayBase* base = (display::DisplayBase*) disp; 
+        D3D11_VIEWPORT view {
+            0.0f, 0.0f,
+            (float)disp->width, 
+            (float)disp->height,
+            0.0f, 1.0f
+        };
+
+        base->device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
+        base->device_ctx->PSSetShader(self->scene_ps, nullptr, 0);
+        base->device_ctx->RSSetViewports(1, &view);
+        base->device_ctx->OMSetRenderTargets(1, &img->scene_rt, nullptr);
+        base->device_ctx->PSSetShaderResources(0, 1, &cursorGpu->input_res);
+        base->device_ctx->OMSetBlendState(self->blend_enable, nullptr, 0xFFFFFFFFu);
+        base->device_ctx->RSSetViewports(1, &cursorGpu->cursor_view);
+        base->device_ctx->Draw(3, 0);
+        base->device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
+
+    }
+
 
     /**
      * @brief 
@@ -42,145 +156,40 @@ namespace gpu {
      * and render cursor texture2D to image
      * @param disp 
      * @param img_base 
-     * @param timeout 
-     * @param cursor_visible 
      * @return platf::Capture 
      */
     platf::Capture 
     display_vram_capture(platf::Display* disp,
-                          platf::Image *img_base, 
-                          bool cursor_visible) 
+                          platf::Image *img_base) 
     {
+        HRESULT status;
         DisplayVram* self = (DisplayVram*) disp; 
         display::DisplayBase* base = (display::DisplayBase*) disp; 
-
         gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
 
-        HRESULT status;
-        DXGI_OUTDUPL_FRAME_INFO frame_info = {0};
-
         dxgi::Resource res;
-        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&base->dup,&frame_info, CAPTURE_TIMEOUT, &res);
-
-        if(capture_status != platf::Capture::ok) {
+        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&base->dup,CAPTURE_TIMEOUT, &res);
+        if(capture_status != platf::Capture::ok) 
             return capture_status;
-        }
-
-        const bool mouse_update_flag = frame_info.LastMouseUpdateTime.QuadPart != 0 || frame_info.PointerShapeBufferSize > 0;
-        const bool frame_update_flag = frame_info.AccumulatedFrames != 0 || frame_info.LastPresentTime.QuadPart != 0;
+        
+        const bool mouse_update_flag = base->dup.frame_info.LastMouseUpdateTime.QuadPart != 0 || base->dup.frame_info.PointerShapeBufferSize > 0;
+        const bool frame_update_flag = base->dup.frame_info.AccumulatedFrames != 0 || base->dup.frame_info.LastPresentTime.QuadPart != 0;
         const bool update_flag       = mouse_update_flag || frame_update_flag;
 
-        if(!update_flag) {
+        if(!update_flag) 
             return platf::Capture::timeout;
-        }
 
-        // TODO serverity high
-        if(FALSE) {
-            DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
-            BUFFER_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
-
-            UINT dummy;
-            status = base->dup.dup->GetFramePointerShape(frame_info.PointerShapeBufferSize, img_ptr, &dummy, &shape_info);
-            if(FAILED(status)) {
-                _com_error err(status);
-                LPCTSTR errMsg = err.ErrorMessage();
-                LOG_ERROR("Failed to get new pointer shape");
-                return platf::Capture::error;
-            }
-
-            int cursor_size;
-            util::Buffer* cursor_buf = helper::make_cursor_image(img_object, shape_info);
-            BUFFER_UNREF(img_object);
-
-            void* cursor_img = BUFFER_REF(cursor_buf,&cursor_size);
-            D3D11_SUBRESOURCE_DATA data {
-                cursor_img,
-                4 * shape_info.Width,
-                0
-            };
-
-            // Create texture for cursor
-            D3D11_TEXTURE2D_DESC t {};
-            t.Width            = shape_info.Width;
-
-            t.Height           = cursor_size / data.SysMemPitch;
-            t.MipLevels        = 1;
-            t.ArraySize        = 1;
-            t.SampleDesc.Count = 1;
-            t.Usage            = D3D11_USAGE_DEFAULT;
-            t.Format           = DXGI_FORMAT_B8G8R8A8_UNORM;
-            t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
-
-            d3d11::Texture2D texture;
-            auto status = base->device->CreateTexture2D(&t, &data, &texture);
-            if(FAILED(status)) {
-                LOG_ERROR("Failed to create mouse texture");
-                return platf::Capture::error;
-            }
-
-            D3D11_SHADER_RESOURCE_VIEW_DESC desc {
-                DXGI_FORMAT_B8G8R8A8_UNORM,
-                D3D11_SRV_DIMENSION_TEXTURE2D
-            };
-            desc.Texture2D.MipLevels = 1;
-
-            // TODO
-            // Free resources before allocating on the next line.
-            if(self->cursor.input_res)
-                self->cursor.input_res->Release();
-
-            self->cursor.input_res = NULL;
-            status = base->device->CreateShaderResourceView(texture, &desc, &self->cursor.input_res);
-            if(FAILED(status)) {
-                LOG_ERROR("Failed to create cursor shader resource view");
-                return platf::Capture::error;
-            }
-
-            GPU_CURSOR_CLASS->set_texture(&self->cursor,
-                                        t.Width, 
-                                        t.Height, 
-                                        texture);
-            
-            BUFFER_UNREF(cursor_buf);
-        }
-
-        if(frame_info.LastMouseUpdateTime.QuadPart) {
-            GPU_CURSOR_CLASS->set_pos(&self->cursor,
-                                    frame_info.PointerPosition.Position.x, 
-                                    frame_info.PointerPosition.Position.y, 
-                                    frame_info.PointerPosition.Visible && cursor_visible);
-        }
 
         if(frame_update_flag) {
-            // self->src->Release(); // uncomment will cause segfault, goodluck
             status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
             if(FAILED(status)) {
-                LOG_ERROR("Couldn't query interface");
+                LOG_ERROR("Couldn't copy dxgi resource to texture");
                 return platf::Capture::error;
             }
         }
 
         // copy texture from display to image
         base->device_ctx->CopyResource(img->texture, self->src);
-        if(self->cursor.visible) {
-            D3D11_VIEWPORT view {
-                0.0f, 0.0f,
-                (float)disp->width, 
-                (float)disp->height,
-                0.0f, 1.0f
-            };
-
-            base->device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
-            base->device_ctx->PSSetShader(self->scene_ps, nullptr, 0);
-            base->device_ctx->RSSetViewports(1, &view);
-            base->device_ctx->OMSetRenderTargets(1, &img->scene_rt, nullptr);
-            base->device_ctx->PSSetShaderResources(0, 1, &self->cursor.input_res);
-            base->device_ctx->OMSetBlendState(self->blend_enable, nullptr, 0xFFFFFFFFu);
-            base->device_ctx->RSSetViewports(1, &self->cursor.cursor_view);
-            base->device_ctx->Draw(3, 0);
-            base->device_ctx->OMSetBlendState(self->blend_disable, nullptr, 0xFFFFFFFFu);
-        }
-
         return platf::Capture::ok;
     }    
 
@@ -269,8 +278,6 @@ namespace gpu {
         if(self->scene_vs) { self->scene_vs->Release(); }
         if(self->src) { self->src->Release(); }
         if(self->sampler_linear) { self->sampler_linear->Release(); }
-        if(self->cursor.input_res) { self->cursor.input_res->Release(); }
-        if(self->cursor.texture) { self->cursor.texture->Release(); }
 
         if(base->factory) { base->factory->Release(); }
         if(base->adapter) { base->adapter->Release(); }
@@ -462,12 +469,13 @@ namespace gpu {
         static DisplayVramClass klass;
         RETURN_PTR_ONCE(klass);
         
-        klass.base.init          = display_vram_init;
-        klass.base.free_resources= display_vram_free_resources;
-        klass.base.alloc_img     = display_vram_alloc_img;
-        klass.base.dummy_img     = display_vram_dummy_img;
-        klass.base.make_hwdevice = display_vram_make_hwdevice;
-        klass.base.capture       = display_vram_capture;
+        klass.base.init             = display_vram_init;
+        klass.base.free_resources   = display_vram_free_resources;
+        klass.base.alloc_img        = display_vram_alloc_img;
+        klass.base.dummy_img        = display_vram_dummy_img;
+        klass.base.make_hwdevice    = display_vram_make_hwdevice;
+        klass.base.capture          = display_vram_capture;
+        klass.base.allocate_cursor  = display_vram_prepare_cursor_texture;
         return &klass;
     }
 } // namespace platf::dxgi

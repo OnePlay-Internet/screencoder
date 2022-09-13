@@ -22,36 +22,37 @@ namespace duplication
 
     platf::Capture 
     duplication_get_next_frame(Duplication* dup,
-                              DXGI_OUTDUPL_FRAME_INFO* frame_info, 
                               std::chrono::milliseconds timeout, 
                               dxgi::Resource *res_p) 
     {
-      platf::Capture capture_status = duplication_release_frame(dup);
-      if(capture_status != platf::Capture::ok) {
-        return capture_status;
-      }
+        DXGI_OUTDUPL_FRAME_INFO* frame_info = &dup->frame_info; 
 
-      if(dup->use_dwmflush) {
-        DwmFlush();
-      }
+        platf::Capture capture_status = duplication_release_frame(dup);
+        if(capture_status != platf::Capture::ok) {
+          return capture_status;
+        }
 
-      HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), frame_info, res_p);
+        if(dup->use_dwmflush) {
+          DwmFlush();
+        }
 
-      switch(status) {
-      case S_OK:
-        dup->has_frame = true;
-        return platf::Capture::ok;
-      case DXGI_ERROR_WAIT_TIMEOUT:
-        return platf::Capture::timeout;
-      case WAIT_ABANDONED:
-      case DXGI_ERROR_ACCESS_LOST:
-      case DXGI_ERROR_ACCESS_DENIED:
-        dup->has_frame = false;
-        return platf::Capture::reinit;
-      default:
-        LOG_ERROR("Couldn't acquire next frame");
-        return platf::Capture::error;
-      }
+        HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), frame_info, res_p);
+
+        switch(status) {
+        case S_OK:
+          dup->has_frame = true;
+          return platf::Capture::ok;
+        case DXGI_ERROR_WAIT_TIMEOUT:
+          return platf::Capture::timeout;
+        case WAIT_ABANDONED:
+        case DXGI_ERROR_ACCESS_LOST:
+        case DXGI_ERROR_ACCESS_DENIED:
+          dup->has_frame = false;
+          return platf::Capture::reinit;
+        default:
+          LOG_ERROR("Couldn't acquire next frame");
+          return platf::Capture::error;
+        }
     }
 
 
@@ -91,12 +92,12 @@ namespace duplication
     DuplicationClass*
     duplication_class_init()
     {
-      static DuplicationClass klass = {0};
-      RETURN_PTR_ONCE(klass);
+        static DuplicationClass klass = {0};
+        RETURN_PTR_ONCE(klass);
 
-      klass.next_frame    =   duplication_get_next_frame;
-      klass.finalize      =   duplication_finalize;
-      return &klass;
+        klass.next_frame    =   duplication_get_next_frame;
+        klass.finalize      =   duplication_finalize;
+        return &klass;
     }
   
 } // namespace duplication
