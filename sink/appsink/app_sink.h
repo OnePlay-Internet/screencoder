@@ -32,8 +32,7 @@ namespace appsink
     };
 
 
-    sink::GenericSink*    new_app_sink      (util::QueueArray* sink_event_out,
-                                             util::QueueArray* sink_event_in);
+    sink::GenericSink*    new_app_sink      ();
 } // namespace rtp
 
 

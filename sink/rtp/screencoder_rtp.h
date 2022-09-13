@@ -14,7 +14,7 @@
 #include <generic_sink.h>
 #include <chrono>
 
-#define RTP_SINK(in,out)       rtp::new_rtp_sink(in,out)
+#define RTP_SINK       rtp::new_rtp_sink()
 
 
 namespace rtp
@@ -39,8 +39,7 @@ namespace rtp
     };
 
 
-    sink::GenericSink*  new_rtp_sink   (util::QueueArray* sink_event_in,
-                                        util::QueueArray* sink_event_out);
+    sink::GenericSink*  new_rtp_sink   ();
 
 
 

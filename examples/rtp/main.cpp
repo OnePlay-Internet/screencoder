@@ -86,11 +86,6 @@ start:
     // std::thread wait10s {wait_shutdown,shutdown};
     // wait10s.detach();
     
-    util::QueueArray* sink_in = QUEUE_ARRAY_CLASS->init();
-    util::QueueArray* sink_out = QUEUE_ARRAY_CLASS->init();
-    session::start_session(display,&encoder,
-        sink_in,
-        sink_out,
-        shutdown,RTP_SINK(sink_in,sink_out));
+    session::start_session(display,&encoder,shutdown,RTP_SINK);
     return 0;
 }

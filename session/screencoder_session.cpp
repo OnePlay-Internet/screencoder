@@ -50,8 +50,6 @@ namespace session {
     start_session(platf::Display* disp,
                   encoder::Encoder* encoder,
                   util::Broadcaster* shutdown,
-                  util::QueueArray* sink_event_in,
-                  util::QueueArray* sink_event_out,
                   sink::GenericSink* sink)
     {
         Session session;
@@ -69,8 +67,8 @@ namespace session {
 
         session.capture_event_in = QUEUE_ARRAY_CLASS->init();
         session.capture_event_out = QUEUE_ARRAY_CLASS->init();
-        session.sink_event_in = sink_event_in;
-        session.sink_event_out = sink_event_out;
+        session.sink_event_in = sink->get_input_eve(sink);
+        session.sink_event_out = sink->get_output_eve(sink);
 
 
 

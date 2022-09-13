@@ -39,6 +39,10 @@ namespace sink
 
         void  (*handle)     (GenericSink* sink,
                             util::Buffer* pkt);
+
+        util::QueueArray* (*get_input_eve) (GenericSink* sink);
+
+        util::QueueArray* (*get_output_eve)(GenericSink* sink);
     };
 
     typedef struct _BroadcastContext {

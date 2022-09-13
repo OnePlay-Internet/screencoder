@@ -62,9 +62,20 @@ namespace appsink
         return ;
     }
 
+    util::QueueArray*
+    get_input_event(sink::GenericSink* gen)
+    {
+        return ((AppSink*)gen)->sink_event_in;
+    }
+
+    util::QueueArray*
+    get_output_event(sink::GenericSink* gen)
+    {
+        return ((AppSink*)gen)->sink_event_out;
+    }
+
     sink::GenericSink*    
-    new_app_sink(util::QueueArray* sink_event_out,
-                 util::QueueArray* sink_event_in)
+    new_app_sink()
     {
         AppSink* sink = (AppSink*)malloc(sizeof(AppSink));
         
@@ -75,9 +86,11 @@ namespace appsink
         sink->base.describe  = appsink_describe;
         sink->base.start     = appsink_start;
         sink->base.stop      = appsink_stop;
+        sink->base.get_input_eve = get_input_event;
+        sink->base.get_output_eve = get_output_event;
 
-        sink->sink_event_in = sink_event_in;
-        sink->sink_event_out = sink_event_out;
+        sink->sink_event_in = QUEUE_ARRAY_CLASS->init();;
+        sink->sink_event_out = QUEUE_ARRAY_CLASS->init();
         sink->out = QUEUE_ARRAY_CLASS->init();
         return (sink::GenericSink*)sink;
     }
@@ -142,12 +155,9 @@ GoUnrefAVPacket(void* appsink_ptr,
 
 
 void*
-AllocateAppSink(void* sink_event_in,
-                void* sink_event_out) 
+AllocateAppSink() 
 {
-    return (void*)appsink::new_app_sink(
-        (util::QueueArray*)sink_event_out,
-        (util::QueueArray*)sink_event_in);
+    return (void*)appsink::new_app_sink();
 }
 
 void
@@ -187,9 +197,7 @@ void
 StartScreencodeThread(void* app_sink,
                 void* shutdown,
                 char* encoder_name,
-                char* display_name,
-                void* sink_event_in,
-                void* sink_event_out)
+                char* display_name)
 {
     encoder::Encoder encoder;
     if (string_compare(encoder_name,"nvenc_hevc")) {
@@ -218,8 +226,6 @@ StartScreencodeThread(void* app_sink,
     return; 
 start:
     session::start_session(display,&encoder,
-        (util::QueueArray*) sink_event_in,
-        (util::QueueArray*) sink_event_out,
         (util::Broadcaster*)shutdown,
         (sink::GenericSink*)app_sink);
 }

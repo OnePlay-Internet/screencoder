@@ -24,14 +24,11 @@ void GoUnrefAVPacket(void* appsink,
 void StartScreencodeThread(void* app_sink,
                     void* shutdown,
                     char* encoder_name,
-                    char* display_name,
-                    void* sink_event_in,
-                    void* sink_event_out);
+                    char* display_name);
 
 char* QueryDisplay (int index);
 
-void* AllocateAppSink(void* sink_event_in,
-                      void* sink_event_out);
+void* AllocateAppSink();
 
 void  StopAppSink     (void* data);
 

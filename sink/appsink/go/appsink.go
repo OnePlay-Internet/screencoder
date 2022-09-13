@@ -108,9 +108,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 		return nil
 	}
 
-	queue_in := C.NewEvent();
-	queue_out := C.NewEvent();
-	app.sink = C.AllocateAppSink(queue_in,queue_out);
+	app.sink = C.AllocateAppSink();
 	if app.sink == nil {
 		return nil
 	}
@@ -119,7 +117,7 @@ func (app *Appsink) Open() *config.ListenerConfig {
 	go func ()  {
 		C.StartScreencodeThread(app.sink, app.shutdown,
 			C.CString(app.encoder),
-			C.CString(app.display),queue_in,queue_out);
+			C.CString(app.display));
 	
 		fmt.Printf("screencode thread terminated\n");
 	}()

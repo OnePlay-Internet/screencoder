@@ -119,13 +119,27 @@ namespace rtp
         }
     }
 
+    util::QueueArray*
+    get_input_event(sink::GenericSink* gen)
+    {
+        return ((RtpSink*)gen)->sink_event_in;
+    }
+
+    util::QueueArray*
+    get_output_event(sink::GenericSink* gen)
+    {
+        return ((RtpSink*)gen)->sink_event_out;
+    }
+
 
     sink::GenericSink*    
-    new_rtp_sink(util::QueueArray* sink_event_out,
-                 util::QueueArray* sink_event_in)
+    new_rtp_sink()
     {
         static RtpSink sink = {0};
         RETURN_ONCE((sink::GenericSink*)&sink);
+
+        sink.sink_event_in = QUEUE_ARRAY_CLASS->init();
+        sink.sink_event_out =QUEUE_ARRAY_CLASS->init();
 
         sink.base.name = "rtp";
         sink.base.options = util::new_keyvalue_pairs(2);
@@ -136,6 +150,8 @@ namespace rtp
         sink.base.preset    = rtpsink_preset;
         sink.base.start     = rtpsink_start;
         sink.base.handle    = rtpsink_handle;
+        sink.base.get_input_eve = get_input_event;
+        sink.base.get_output_eve = get_output_event;
 
         config_rtpsink(&sink);
         return (sink::GenericSink*)&sink;

@@ -22,8 +22,6 @@ namespace session
 {
     void        start_session       (platf::Display* disp,
                                     encoder::Encoder* encoder,
-                                    util::QueueArray* sink_event_in,
-                                    util::QueueArray* sink_event_out,
                                     util::Broadcaster* shutdown,
                                     sink::GenericSink* sink);
 } // namespace singleton
