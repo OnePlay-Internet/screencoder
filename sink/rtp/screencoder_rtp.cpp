@@ -96,9 +96,9 @@ namespace rtp
 
         BUFFER_MALLOC(evebuf,sizeof(adaptive::AdaptiveEvent),ptr);
         adaptive::AdaptiveEvent* eve = (adaptive::AdaptiveEvent*)ptr;
-        eve->code == adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
+        eve->code = adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
         eve->time_data = delta;
-        QUEUE_ARRAY_CLASS->push(rtp->sink_event_out,evebuf);
+        QUEUE_ARRAY_CLASS->push(rtp->sink_event_out,evebuf,true);
         BUFFER_UNREF(buf);
     }
 
@@ -140,6 +140,8 @@ namespace rtp
 
         sink.sink_event_in = QUEUE_ARRAY_CLASS->init();
         sink.sink_event_out =QUEUE_ARRAY_CLASS->init();
+        sink.this_pkt_sent = std::chrono::high_resolution_clock::now(); 
+        sink.prev_pkt_sent = std::chrono::high_resolution_clock::now(); 
 
         sink.base.name = "rtp";
         sink.base.options = util::new_keyvalue_pairs(2);

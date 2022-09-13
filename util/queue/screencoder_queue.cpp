@@ -46,16 +46,24 @@ namespace util {
      */
     bool            
     queue_array_push(QueueArray* queue, 
-                     util::Buffer* obj)
+                     util::Buffer* obj,
+                     bool record)
     {
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
+
+        if (record)
+        {
+                
 #ifndef MINGW
-        pointer data = util::object_class_init()->ref(obj,NULL,"\\screencoder_queue.cpp",__LINE__);
+        util::object_class_init()->ref(obj,NULL,"\\screencoder_queue.cpp",__LINE__);
 #else
-        pointer data = util::object_class_init()->ref(obj,NULL,"/screencoder_queue.cpp",__LINE__);
+        util::object_class_init()->ref(obj,NULL,"/screencoder_queue.cpp",__LINE__);
 #endif
+        } else {
+            util::object_class_init()->ref(obj,NULL,"/util/",__LINE__);
+        }
         last->obj  = obj;
         last->next = NULL;
 
@@ -95,7 +103,8 @@ namespace util {
     pointer
     queue_array_pop(QueueArray* queue, 
                     util::Buffer** buf,
-                    int* size)
+                    int* size,
+                    bool record)
     {
         if (!queue_array_peek(queue))
             return NULL;
@@ -106,13 +115,20 @@ namespace util {
         free(container);
 
         *buf = ret;
+        pointer data;
+        if (record)
+        {
 #ifndef MINGW
-        pointer data = util::object_class_init()->ref(ret,size,"\\screencoder_queue.cpp",__LINE__);
+        data = util::object_class_init()->ref(ret,size,"\\screencoder_queue.cpp",__LINE__);
         util::object_class_init()->unref(ret,"\\screencoder_queue.cpp",__LINE__);
 #else
-        pointer data = util::object_class_init()->ref(ret,size,"/screencoder_queue.cpp",__LINE__);
+        data = util::object_class_init()->ref(ret,size,"/screencoder_queue.cpp",__LINE__);
         util::object_class_init()->unref(ret,"/screencoder_queue.cpp",__LINE__);
 #endif
+        } else {
+            data = util::object_class_init()->ref(ret,size,"/util/",__LINE__);
+            util::object_class_init()->unref(ret,"/util/",__LINE__);
+        }
         queue->size--;
         return data;
     }
@@ -134,7 +150,7 @@ namespace util {
         while(queue_array_peek(queue))
         {
             util::Buffer* buf;
-            queue_array_pop(queue,&buf,NULL);
+            queue_array_pop(queue,&buf,NULL,false);
 #ifndef MINGW
         util::object_class_init()->unref(buf,"\\screencoder_queue.cpp",__LINE__);
 #else

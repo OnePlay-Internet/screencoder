@@ -32,7 +32,7 @@ namespace util
     raise_event(Broadcaster* broadcaster)
     {
         Buffer* obj = BUFFER_INIT((pointer)true,sizeof(bool),DO_NOTHING);
-        QUEUE_ARRAY_CLASS->push(broadcaster,obj);
+        QUEUE_ARRAY_CLASS->push(broadcaster,obj,false);
         BUFFER_UNREF(obj);
     }
 

@@ -36,7 +36,7 @@ namespace sink
 
             int size;
             util::Buffer* video_packet_buffer;
-            libav::Packet* av_packet = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(packets,&video_packet_buffer,&size);
+            libav::Packet* av_packet = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(packets,&video_packet_buffer,&size,true);
             if(size != sizeof(libav::Packet)) {
                 LOG_ERROR("wrong datatype");
                 continue;

@@ -150,7 +150,7 @@ namespace encoder {
             while(QUEUE_ARRAY_CLASS->peek(ctx->capture_event_in))
             {
                 util::Buffer* buf = NULL;
-                adaptive::AdaptiveEvent* event =  (adaptive::AdaptiveEvent*)QUEUE_ARRAY_CLASS->pop(ctx->capture_event_in,&buf,NULL);
+                adaptive::AdaptiveEvent* event =  (adaptive::AdaptiveEvent*)QUEUE_ARRAY_CLASS->pop(ctx->capture_event_in,&buf,NULL,true);
                 if( event->code == adaptive::AdaptiveEventCode::UPDATE_CAPTURE_DELAY_INTERVAL) {
                     ctx->enable_delay = true;
                     ctx->delay = event->time_data;
@@ -196,7 +196,7 @@ namespace encoder {
                 adaptive::AdaptiveEvent* event = (adaptive::AdaptiveEvent*)ptr;
                 event->code = adaptive::AdaptiveEventCode::CAPTURE_CYCLE_REPORT;
                 event->time_data = diff;
-                QUEUE_ARRAY_CLASS->push(ctx->capture_event_out,buf);
+                QUEUE_ARRAY_CLASS->push(ctx->capture_event_out,buf,true);
                 BUFFER_UNREF(buf);
             }
 
@@ -256,7 +256,7 @@ namespace encoder {
                 } 
 
 
-                QUEUE_ARRAY_CLASS->push(ctx->packet_queue, avbuf);
+                QUEUE_ARRAY_CLASS->push(ctx->packet_queue, avbuf,true);
                 BUFFER_UNREF(avbuf);
             }
         }

@@ -15,6 +15,7 @@
 using namespace std::literals;
 
 
+#define DISABLE_EVALUATION true
 #define EVALUATION_INTERVAL 3s
 #define BUFFER_LIMIT 3ms
 
@@ -36,7 +37,7 @@ namespace adaptive
     median_10_record(AdaptiveContext* context, 
                      Record* record)
     {
-        std::chrono::nanoseconds median_sink_cycle, median_capture_cycle;
+        std::chrono::nanoseconds median_sink_cycle = 0ns, median_capture_cycle = 0ns;
 
         for (int i = 0; i < 10; i++)
         {
@@ -55,14 +56,15 @@ namespace adaptive
     {
         while (!IS_INVOKED(context->shutdown))
         {
-            Record rec;
+            std::this_thread::sleep_for(10ms);
+            Record rec; memset(&rec,0,sizeof(Record));
             bool has_sink,has_capture = false;
 
             std::this_thread::sleep_for(10ms);
             if (QUEUE_ARRAY_CLASS->peek(context->sink_event_in))
             {
                 util::Buffer* buf = NULL;
-                AdaptiveEvent* event = (AdaptiveEvent*) QUEUE_ARRAY_CLASS->pop(context->sink_event_in,&buf,NULL);
+                AdaptiveEvent* event = (AdaptiveEvent*) QUEUE_ARRAY_CLASS->pop(context->sink_event_in,&buf,NULL,true);
 
                 switch (event->code)
                 {
@@ -83,7 +85,7 @@ namespace adaptive
             if (QUEUE_ARRAY_CLASS->peek(context->capture_event_in))
             {
                 util::Buffer* buf = NULL;
-                AdaptiveEvent* event = (AdaptiveEvent*) QUEUE_ARRAY_CLASS->pop(context->capture_event_in,&buf,NULL);
+                AdaptiveEvent* event = (AdaptiveEvent*) QUEUE_ARRAY_CLASS->pop(context->capture_event_in,&buf,NULL,true);
 
                 switch (event->code)
                 {
@@ -114,7 +116,9 @@ namespace adaptive
                 if(!has_capture) 
                     rec.capture_cycle = context->records[0].capture_cycle;
 
+                rec.sink_queue_size = QUEUE_ARRAY_CLASS->size(context->sink_queue);
                 push_record(context,&rec);
+                context->record_count++;
             }
         }
     }
@@ -124,10 +128,28 @@ namespace adaptive
     {
         while (!IS_INVOKED(context->shutdown))
         {
+            if (context->record_count < 100) {
+               std::this_thread::sleep_for(EVALUATION_INTERVAL); 
+               continue;
+            }
+            
             AdaptiveEventCode code = AdaptiveEventCode::EVENT_NONE;
 
             Record record;
             median_10_record(context,&record);
+
+            if (DISABLE_EVALUATION) {
+                char log[100] = {0};
+                int64 cap_mili =      std::chrono::duration_cast<std::chrono::milliseconds>(record.capture_cycle).count() %1000 %1000;
+                int64 cap_micro =     std::chrono::duration_cast<std::chrono::microseconds>(record.capture_cycle).count() % 1000;
+                int64 sink_mili =     std::chrono::duration_cast<std::chrono::milliseconds>(record.sink_cycle).count() % 1000 % 1000;
+                int64 sink_micro =    std::chrono::duration_cast<std::chrono::microseconds>(record.sink_cycle).count() % 1000;
+                snprintf(log,100,"capture cycle %dms,%dus | sink sycle %dms,%dus | buffer in queue %d",cap_mili,cap_micro,sink_mili,sink_micro,record.sink_queue_size);
+                LOG_INFO(log);
+                std::this_thread::sleep_for(EVALUATION_INTERVAL); 
+                continue;;
+            }
+            
             std::chrono::nanoseconds diff = record.sink_cycle - record.capture_cycle;
             std::chrono::nanoseconds buffer_size_in_time = record.sink_queue_size * record.capture_cycle;
             std::chrono::nanoseconds diff_limit = BUFFER_LIMIT / (EVALUATION_INTERVAL / record.sink_cycle);
@@ -165,7 +187,7 @@ namespace adaptive
                 AdaptiveEvent* event = (AdaptiveEvent*)ptr;
                 event->code = AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE;
                 event->num_data = 1s / record.sink_cycle;
-                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf);
+                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf,true);
                 BUFFER_UNREF(buf);
             } else if (diff > 0ms && diff < diff_limit) {
                 /**
@@ -199,7 +221,7 @@ namespace adaptive
                 event->code = code;
 
 
-                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf);
+                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf,true);
                 BUFFER_UNREF(buf);
             }
 
@@ -215,10 +237,12 @@ namespace adaptive
                              util::QueueArray* sink_event_out)
     {
         AdaptiveContext context;
+        memset(&context,0,sizeof(AdaptiveContext));
         context.capture_event_in = capture_event_out;
         context.capture_event_out = capture_event_in;
         context.sink_event_in = sink_event_out;
         context.sink_event_out = sink_event_in;
+        context.record_count=0;
         context.sink_queue = sink_queue;
         context.shutdown = shutdown;
 

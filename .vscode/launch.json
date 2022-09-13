@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
 
+
         {
             "name": "Attach to Process",
             "type": "go",
@@ -53,10 +54,10 @@
             "name": "NVIDIA launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/screencoder.exe",
+            "program": "${workspaceFolder}/bin/screencoder.exe",
             "args": ["nvidia"],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build",
+            "cwd": "${workspaceFolder}/bin",
             "environment": [],
             "externalConsole": true,
             "MIMode": "gdb",

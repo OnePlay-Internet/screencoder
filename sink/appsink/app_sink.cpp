@@ -31,7 +31,7 @@ namespace appsink
                    util::Buffer* buf)
     {
         appsink::AppSink* app = (appsink::AppSink*)sink;
-        QUEUE_ARRAY_CLASS->push(app->out,buf);
+        QUEUE_ARRAY_CLASS->push(app->out,buf,true);
     }
 
     static char*
@@ -91,6 +91,8 @@ namespace appsink
 
         sink->sink_event_in = QUEUE_ARRAY_CLASS->init();;
         sink->sink_event_out = QUEUE_ARRAY_CLASS->init();
+        sink->prev_pkt_sent = std::chrono::high_resolution_clock::now();
+        sink->this_pkt_sent = std::chrono::high_resolution_clock::now();
         sink->out = QUEUE_ARRAY_CLASS->init();
         return (sink::GenericSink*)sink;
     }
@@ -121,7 +123,7 @@ GoHandleAVPacket(void* appsink_ptr,
     
     QUEUE_ARRAY_CLASS->wait(sink->out);
 
-    libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size);
+    libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size,true);
     int64 current = BUFFER_CLASS->created((util::Buffer*)*buf);
 
     *data = pkt->data;
@@ -147,7 +149,7 @@ GoUnrefAVPacket(void* appsink_ptr,
     adaptive::AdaptiveEvent* eve = (adaptive::AdaptiveEvent*)ptr;
     eve->code == adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
     eve->time_data = delta;
-    QUEUE_ARRAY_CLASS->push(sink->sink_event_out,evebuf);
+    QUEUE_ARRAY_CLASS->push(sink->sink_event_out,evebuf,true);
 
     util::Buffer* buffer = (util::Buffer*)buf;
     BUFFER_UNREF(buffer);

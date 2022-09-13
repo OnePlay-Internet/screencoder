@@ -74,8 +74,8 @@ namespace gpu {
             return platf::Capture::timeout;
         }
 
-        // todo
-        if(frame_info.PointerShapeBufferSize > 0) {
+        // TODO serverity high
+        if(FALSE) {
             DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
             BUFFER_MALLOC(img_object,frame_info.PointerShapeBufferSize,img_ptr);
 

@@ -78,7 +78,7 @@ namespace error
 
 
             util::Buffer* buf;
-            Err* err = (Err*)QUEUE_ARRAY_CLASS->pop(array,&buf,NULL);
+            Err* err = (Err*)QUEUE_ARRAY_CLASS->pop(array,&buf,NULL,false);
 
             char file_log[36] = {" "};
             file_log[35] = 0;
@@ -148,7 +148,7 @@ namespace error
         int64 sec =      std::chrono::duration_cast<std::chrono::seconds>(time).count() %1000 %1000 % 1000 % 1000;
         int64 mili =     std::chrono::duration_cast<std::chrono::milliseconds>(time).count() %1000 % 1000 % 1000;
         int64 micro =    std::chrono::duration_cast<std::chrono::microseconds>(time).count() %1000 % 1000;
-        int64 nano =     std::chrono::duration_cast<std::chrono::microseconds>(time).count() %1000;
+        int64 nano =     std::chrono::duration_cast<std::chrono::nanoseconds>(time).count() %1000;
         snprintf(*string,100,"(min:%d|sec:%d|mili:%d|micro:%d|nano:%d)",min,sec,mili,micro,nano);
     }
 
@@ -181,7 +181,7 @@ namespace error
         memcpy(((Err*)ptr)->time,timestr,strlen(timestr));
         ((Err*)ptr)->line = line;
         ((Err*)ptr)->file = file;
-        QUEUE_ARRAY_CLASS->push(LOG_QUEUE,buf);
+        QUEUE_ARRAY_CLASS->push(LOG_QUEUE,buf,false);
         BUFFER_UNREF(buf);
         return;
     }

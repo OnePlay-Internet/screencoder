@@ -61,6 +61,7 @@ namespace adaptive
          * store metric as record
          */
         Record records[100];
+        int record_count;
 
 
 
