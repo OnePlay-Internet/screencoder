@@ -33,8 +33,10 @@ namespace duplication
                                          d3d11::Texture2D* texture,
                                          pthread_mutex_t** mutex);
 
-        void          (*get_frame_info) (Duplication* dup,
-                                         DXGI_OUTDUPL_FRAME_INFO* info);
+        HRESULT       (*get_cursor_buf) (Duplication* dup,
+                                         uint8** pointer_shape_buffer,
+                                         int* pointer_shape_buffer_size,
+                                         DXGI_OUTDUPL_POINTER_SHAPE_INFO *pointer_shape_info);
 
         void          (*finalize)       (Duplication* dup);
 

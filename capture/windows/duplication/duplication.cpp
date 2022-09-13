@@ -47,7 +47,10 @@ namespace duplication
         if(dup->use_dwmflush) 
             DwmFlush();
 
+        pthread_mutex_lock(&texture->mutex);
         HRESULT status = dup->dup->AcquireNextFrame(DEFAULT_TIMEOUT, &texture->frame_info, &texture->resource);
+        pthread_mutex_unlock(&texture->mutex);
+
         if(status == S_OK) {
             return_status = platf::Capture::OK;
         } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
@@ -223,12 +226,21 @@ namespace duplication
         *mutex = &dup->pool->texture[pos].mutex;
     }
 
-    void          
-    duplication_get_availabe_frame_info (Duplication* dup,
-                                        DXGI_OUTDUPL_FRAME_INFO* info)
-    {
+    HRESULT
+    duplication_get_availabe_frame_shape (Duplication* dup,
+                                         uint8** pointer_shape_buffer,
+                                         int* pointer_shape_buffer_size,
+                                         DXGI_OUTDUPL_POINTER_SHAPE_INFO *pointer_shape_info)
+    { 
         int pos = seek_available_texture(dup);
-        memcpy(info,(pointer)&dup->pool->texture[pos].frame_info,sizeof(DXGI_OUTDUPL_FRAME_INFO));
+        DXGI_OUTDUPL_FRAME_INFO* info = &dup->pool->texture[pos].frame_info;
+
+        uint8* shape_pointer = (uint8*)malloc(info->PointerShapeBufferSize);
+        *pointer_shape_buffer = shape_pointer;
+        *pointer_shape_buffer_size = info->PointerShapeBufferSize;
+
+        UINT dummy;
+        return dup->dup->GetFramePointerShape(info->PointerShapeBufferSize, shape_pointer, &dummy, pointer_shape_info);
     }
 
     DuplicationClass*
@@ -238,7 +250,7 @@ namespace duplication
         RETURN_PTR_ONCE(klass);
 
         klass.next_frame     =   duplication_accquire_frame_from_pool;
-        klass.get_frame_info =   duplication_get_availabe_frame_info;
+        klass.get_cursor_buf=   duplication_get_availabe_frame_shape;
         klass.finalize       =   duplication_finalize;
         return &klass;
     }

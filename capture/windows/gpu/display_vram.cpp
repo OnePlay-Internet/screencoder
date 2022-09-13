@@ -52,14 +52,12 @@ namespace gpu {
         display::DisplayBase* base = (display::DisplayBase*) disp; 
 
         DXGI_OUTDUPL_FRAME_INFO info;
-        DUPLICATION_CLASS->get_frame_info(base->dup,&info);
-        int shape_size = info.PointerShapeBufferSize;
 
 
-        UINT dummy;
         DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
-        uint8* shape_pointer = (uint8*)malloc(shape_size);
-        status = base->dup->dup->GetFramePointerShape(shape_size, shape_pointer, &dummy, &shape_info);
+        int shape_size = 0;
+        uint8* shape_pointer = NULL;
+        status = DUPLICATION_CLASS->get_cursor_buf(base->dup,&shape_pointer,&shape_size,&shape_info);
         if(FAILED(status)) {
             LOG_ERROR("Failed to get new pointer shape");
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
