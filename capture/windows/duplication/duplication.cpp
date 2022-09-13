@@ -124,6 +124,9 @@ namespace duplication
     bool
     pool_check(TexturePool* pool)
     {
+        if (pool->overall_status == platf::Capture::STOPED)
+            return false;
+
         for (int i = 0; i < TEXTURE_SIZE; i++)
         {
             platf::Capture status = pool->texture[i].status;
@@ -208,8 +211,14 @@ namespace duplication
 
     void
     duplication_finalize(Duplication* dup) {
+        dup->pool->overall_status = platf::Capture::STOPED;
         duplication_release_frame(dup);
         if (dup->dup) { dup->dup->Release(); }
+        for (int i = 0; i < TEXTURE_SIZE; i++) {
+            if ( dup->pool->texture[i].texture ) 
+                dup->pool->texture[i].texture->Release();
+        }
+
     }
 
     platf::Capture

@@ -57,6 +57,7 @@ namespace platf {
         TIMEOUT,
 
         ERR,
+        STOPED,
         REINIT
     }Capture;
 
