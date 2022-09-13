@@ -19,19 +19,26 @@
     
 namespace duplication
 {
+    typedef struct _TexturePool TexturePool;
+
     typedef struct _Duplication {
         dxgi::OutputDuplication dup;
-        bool has_frame;
         bool use_dwmflush;
-        DXGI_OUTDUPL_FRAME_INFO frame_info;
+        bool ready;
+        TexturePool* pool;
     }Duplication;
 
     typedef struct _DuplicationClass {
         platf::Capture(*next_frame)     (Duplication* dup,
-                                         std::chrono::milliseconds timeout, 
-                                         dxgi::Resource* res_p);
+                                         d3d11::Texture2D* texture,
+                                         pthread_mutex_t** mutex);
+
+        void          (*get_frame_info) (Duplication* dup,
+                                         DXGI_OUTDUPL_FRAME_INFO* info);
 
         void          (*finalize)       (Duplication* dup);
+
+        Duplication*  (*init)           ();
     }DuplicationClass;
 
 

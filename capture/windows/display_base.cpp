@@ -239,7 +239,7 @@ namespace display{
 
 
         // Enable DwmFlush() only if the current refresh rate can match the client framerate.
-        self->dup.use_dwmflush = SCREENCODER_CONSTANT->dwmflush;
+        self->dup = DUPLICATION_CLASS->init();
         
         {
             DWM_TIMING_INFO timing_info;
@@ -324,8 +324,9 @@ namespace display{
 
             // We try this twice, in case we still get an error on reinitialization
             for(int x = 0; x < 2; ++x) {
-                status = output1->DuplicateOutput((IUnknown *)self->device, &self->dup.dup);
+                status = output1->DuplicateOutput((IUnknown *)self->device, &self->dup->dup);
                 if(SUCCEEDED(status)) {
+                    self->dup->ready = true;
                     break;
                 }
                 std::this_thread::sleep_for(200ms);
@@ -339,7 +340,7 @@ namespace display{
         }
 
         DXGI_OUTDUPL_DESC dup_desc;
-        self->dup.dup->GetDesc(&dup_desc);
+        self->dup->dup->GetDesc(&dup_desc);
         self->format = dup_desc.ModeDesc.Format;
         return 0;
     }

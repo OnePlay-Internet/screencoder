@@ -13,35 +13,48 @@
 
 
 #include <platform_common.h>
+#include <d3d11_datatype.h>
 
+#include <chrono>
+#include <thread>
+#include <screencoder_config.h>
+using namespace std::literals;
 
+#define TEXTURE_SIZE 10
+#define DEFAULT_TIMEOUT ((std::chrono::microseconds)100ms).count()
 
 namespace duplication
 {
-    platf::Capture    duplication_release_frame   (Duplication* dup) ;
+    typedef struct _Texture{
+        dxgi::Resource resource;
+        d3d11::Texture2D texture;
+        std::chrono::high_resolution_clock::time_point produced;
+        DXGI_OUTDUPL_FRAME_INFO frame_info;
+        pthread_mutex_t mutex;
+        platf::Capture status;
+    }Texture;
+
+    struct _TexturePool {
+        Texture texture[TEXTURE_SIZE];
+        platf::Capture overall_status;
+    };
 
     platf::Capture 
     duplication_get_next_frame(Duplication* dup,
-                              std::chrono::milliseconds timeout, 
-                              dxgi::Resource *res_p) 
+                              Texture* texture) 
     {
-        platf::Capture return_status = duplication_release_frame(dup);
-        if(return_status != platf::Capture::OK) 
-            return return_status;
-        
+        platf::Capture return_status;
         if(dup->use_dwmflush) 
             DwmFlush();
 
-        HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), &dup->frame_info, res_p);
+        HRESULT status = dup->dup->AcquireNextFrame(DEFAULT_TIMEOUT, &texture->frame_info, &texture->resource);
         if(status == S_OK) {
-            dup->has_frame = true;
             return_status = platf::Capture::OK;
         } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
             return_status = platf::Capture::TIMEOUT;
         } else if (status == WAIT_ABANDONED ||
                    status == DXGI_ERROR_ACCESS_LOST ||
                    status == DXGI_ERROR_ACCESS_DENIED) {
-            dup->has_frame = false;
             return platf::Capture::REINIT;
         } else {
             return_status = platf::Capture::ERR;
@@ -53,21 +66,15 @@ namespace duplication
     platf::Capture 
     duplication_release_frame(Duplication* dup) 
     {
-        if(!dup->has_frame) 
-            return platf::Capture::OK;
-        
-
         platf::Capture return_status;
         auto status = dup->dup->ReleaseFrame();
         if(status == S_OK) {
-            dup->has_frame = false;
             return_status = platf::Capture::OK;
         } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
             return_status = platf::Capture::TIMEOUT;
         } else if (status == WAIT_ABANDONED ||
                    status == DXGI_ERROR_ACCESS_LOST ||
                    status == DXGI_ERROR_ACCESS_DENIED) {
-            dup->has_frame = false;
             return platf::Capture::REINIT;
         } else {
             LOG_ERROR("Couldn't release frame");
@@ -76,13 +83,153 @@ namespace duplication
         return return_status;
     }
 
-    void
-    duplication_finalize(Duplication* dup) {
-      duplication_release_frame(dup);
-      if (dup->dup) { dup->dup->Release(); }
-      
+
+
+    int 
+    seek_available_texture(Duplication* dup)
+    {
+        int value;
+        TexturePool* pool = dup->pool;
+        while(true)
+        {
+            std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+            std::chrono::nanoseconds diff[TEXTURE_SIZE] = {0ns};
+            for(int i = 0; i < TEXTURE_SIZE; i++)
+            {
+                if (pool->texture[i].status == platf::Capture::OK) {
+                    diff[i] = now - pool->texture[i].produced;
+                }
+            }
+
+            std::chrono::nanoseconds min = 0ns;
+            for(int i = 0; i < TEXTURE_SIZE; i++)
+            {
+                if (diff[i] > min)
+                {
+                    min = diff[i];
+                    value = i;
+                    goto take;
+                }
+            }
+            std::this_thread::sleep_for(1ms);
+        }
+        take:
+        return value;
     }
 
+
+    bool
+    pool_check(TexturePool* pool)
+    {
+        for (int i = 0; i < TEXTURE_SIZE; i++)
+        {
+            platf::Capture status = pool->texture[i].status;
+            if (status == platf::Capture::REINIT ||
+                status == platf::Capture::ERR) {
+                pool->overall_status = status;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void
+    frame_produce_thread(Duplication* dup)
+    {
+        int count = 0;
+        TexturePool* pool = dup->pool;
+        while(pool_check(pool))
+        {
+            if (!dup->ready) {
+                std::this_thread::sleep_for(50ms);
+                continue;
+            }
+
+
+            Texture* texture = &pool->texture[count];
+            texture->status = duplication_get_next_frame(dup,texture);
+            if (texture->status != platf::Capture::OK)
+                continue;
+            
+            texture->produced = std::chrono::high_resolution_clock::now();
+
+            bool mouse_update_flag = texture->frame_info.LastMouseUpdateTime.QuadPart != 0 || texture->frame_info.PointerShapeBufferSize > 0;
+            bool frame_update_flag = texture->frame_info.AccumulatedFrames != 0 || texture->frame_info.LastPresentTime.QuadPart != 0;
+            bool update_flag       = mouse_update_flag || frame_update_flag;
+
+            if(!update_flag) 
+                texture->status = platf::Capture::TIMEOUT;
+
+            if(frame_update_flag) {
+                HRESULT result = texture->resource->QueryInterface(IID_ID3D11Texture2D, (void **)&texture->texture);
+                if(FAILED(result)) {
+                    LOG_ERROR("Couldn't copy dxgi resource to texture");
+                    texture->status = platf::Capture::ERR;
+                }
+            }
+
+            texture->status = duplication_release_frame(dup);
+            if (texture->status != platf::Capture::OK)
+                continue;
+
+            count = (count == (TEXTURE_SIZE - 1)) ? 0 : count + 1;
+        }
+    }
+
+
+    TexturePool*
+    init_texture_pool()
+    {
+        TexturePool* pool = (TexturePool*) malloc (sizeof(TexturePool));
+        memset(pool,0,sizeof(TexturePool));
+        pool->overall_status = platf::Capture::OK;
+        for (int i = 0; i < TEXTURE_SIZE; i++) {
+            pool->texture[i].status = platf::Capture::NOT_READY;
+            pool->texture[i].mutex = PTHREAD_MUTEX_INITIALIZER;
+        }
+    }
+
+
+    Duplication*
+    duplication_init()
+    {
+        Duplication* dup = (Duplication*) malloc (sizeof(Duplication));
+        memset(dup,0,sizeof(Duplication));
+        dup->use_dwmflush = SCREENCODER_CONSTANT->dwmflush;
+        dup->pool = init_texture_pool();
+        std::thread thread {frame_produce_thread,dup};
+        thread.detach();
+        return dup;
+    }
+
+
+    void
+    duplication_finalize(Duplication* dup) {
+        duplication_release_frame(dup);
+        if (dup->dup) { dup->dup->Release(); }
+    }
+
+    platf::Capture
+    duplication_accquire_frame_from_pool (Duplication* dup,
+                                          d3d11::Texture2D* texture,
+                                          pthread_mutex_t** mutex)
+    {
+        int pos = seek_available_texture(dup);
+        if (dup->pool->overall_status != platf::Capture::OK)
+            return dup->pool->overall_status;
+        
+        pthread_mutex_lock(&dup->pool->texture[pos].mutex);
+        texture = &dup->pool->texture[pos].texture;
+        *mutex = &dup->pool->texture[pos].mutex;
+    }
+
+    void          
+    duplication_get_availabe_frame_info (Duplication* dup,
+                                        DXGI_OUTDUPL_FRAME_INFO* info)
+    {
+        int pos = seek_available_texture(dup);
+        memcpy(info,(pointer)&dup->pool->texture[pos].frame_info,sizeof(DXGI_OUTDUPL_FRAME_INFO));
+    }
 
     DuplicationClass*
     duplication_class_init()
@@ -90,8 +237,9 @@ namespace duplication
         static DuplicationClass klass = {0};
         RETURN_PTR_ONCE(klass);
 
-        klass.next_frame    =   duplication_get_next_frame;
-        klass.finalize      =   duplication_finalize;
+        klass.next_frame     =   duplication_accquire_frame_from_pool;
+        klass.get_frame_info =   duplication_get_availabe_frame_info;
+        klass.finalize       =   duplication_finalize;
         return &klass;
     }
   

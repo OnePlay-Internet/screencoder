@@ -51,8 +51,11 @@ namespace platf {
     }PixelFormat;
 
     typedef enum _Capture{
+        NOT_READY,
+
         OK,
         TIMEOUT,
+
         ERR,
         REINIT
     }Capture;

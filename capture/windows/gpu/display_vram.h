@@ -29,8 +29,6 @@ namespace gpu
 
         d3d11::PixelShader scene_ps;
         d3d11::VertexShader scene_vs;
-
-        d3d11::Texture2D src;
     }DisplayVram;
 
     typedef struct _DisplayVramClass{

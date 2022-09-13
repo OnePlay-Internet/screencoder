@@ -51,13 +51,15 @@ namespace gpu {
         DisplayVram* self = (DisplayVram*) disp; 
         display::DisplayBase* base = (display::DisplayBase*) disp; 
 
-        int shape_size = base->dup.frame_info.PointerShapeBufferSize;
+        DXGI_OUTDUPL_FRAME_INFO info;
+        DUPLICATION_CLASS->get_frame_info(base->dup,&info);
+        int shape_size = info.PointerShapeBufferSize;
 
 
         UINT dummy;
         DXGI_OUTDUPL_POINTER_SHAPE_INFO shape_info {};
         uint8* shape_pointer = (uint8*)malloc(shape_size);
-        status = base->dup.dup->GetFramePointerShape(shape_size, shape_pointer, &dummy, &shape_info);
+        status = base->dup->dup->GetFramePointerShape(shape_size, shape_pointer, &dummy, &shape_info);
         if(FAILED(status)) {
             LOG_ERROR("Failed to get new pointer shape");
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
@@ -165,28 +167,16 @@ namespace gpu {
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
 
-        dxgi::Resource res;
-        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&base->dup,CAPTURE_TIMEOUT, &res);
+        pthread_mutex_t* mut;
+        d3d11::Texture2D texture;
+        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(base->dup,&texture,&mut);
         if(capture_status != platf::Capture::OK) 
             return capture_status;
         
-        bool mouse_update_flag = base->dup.frame_info.LastMouseUpdateTime.QuadPart != 0 || base->dup.frame_info.PointerShapeBufferSize > 0;
-        bool frame_update_flag = base->dup.frame_info.AccumulatedFrames != 0 || base->dup.frame_info.LastPresentTime.QuadPart != 0;
-        bool update_flag       = mouse_update_flag || frame_update_flag;
-
-        if(!update_flag) 
-            return platf::Capture::TIMEOUT;
-
-        if(frame_update_flag) {
-            status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
-            if(FAILED(status)) {
-                LOG_ERROR("Couldn't copy dxgi resource to texture");
-                return platf::Capture::ERR;
-            }
-        }
 
         // copy texture from display to image
-        base->device_ctx->CopyResource(img->texture, self->src);
+        base->device_ctx->CopyResource(img->texture, texture);
+        pthread_mutex_unlock(mut);
         return platf::Capture::OK;
     }    
 
@@ -273,7 +263,6 @@ namespace gpu {
         if(self->blend_enable) { self->blend_enable->Release(); }
         if(self->scene_ps) { self->scene_ps->Release(); }
         if(self->scene_vs) { self->scene_vs->Release(); }
-        if(self->src) { self->src->Release(); }
         if(self->sampler_linear) { self->sampler_linear->Release(); }
 
         if(base->factory) { base->factory->Release(); }
@@ -281,7 +270,7 @@ namespace gpu {
         if(base->device) { base->device->Release(); }
         if(base->device_ctx) { base->device_ctx->Release(); }
         if(base->output) { base->output->Release(); }
-        DUPLICATION_CLASS->finalize(&base->dup);
+        DUPLICATION_CLASS->finalize(base->dup);
     }
 
 

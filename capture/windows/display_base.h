@@ -30,7 +30,7 @@ namespace display {
         d3d11::Device device;
         d3d11::DeviceContext device_ctx;
 
-        duplication::Duplication dup;
+        duplication::Duplication* dup;
 
         DXGI_FORMAT format;
         D3D_FEATURE_LEVEL feature_level;
