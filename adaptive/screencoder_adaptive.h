@@ -88,10 +88,6 @@ namespace adaptive
 
     typedef struct _AdaptiveEvent {
         AdaptiveEventCode code;
-
-        uint8 data_byte[100];
-        int size;
-
         std::chrono::nanoseconds time_data;
         int num_data;
     }AdaptiveEvent;

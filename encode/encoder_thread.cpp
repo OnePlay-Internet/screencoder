@@ -175,7 +175,9 @@ namespace encoder {
                     session->context->rc_buffer_size = event->num_data / session->context->framerate.den;
                     session->context->bit_rate       = event->num_data ;
                     session->context->rc_min_rate    = event->num_data ;
-                } 
+                } else {
+                    LOG_ERROR("unknown adaptive event");
+                }
                 
 
                 BUFFER_UNREF(ctxBuf);
