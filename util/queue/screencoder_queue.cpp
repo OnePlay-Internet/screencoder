@@ -18,6 +18,9 @@
 #include <string.h>
 using namespace std::literals;
 
+
+#include <pthread.h>
+
 namespace util {
     /**
      * @brief 
@@ -31,6 +34,8 @@ namespace util {
         BufferLL* first;
 
         uint64 size;
+
+        pthread_mutex_t mutex;
     };
 
 
@@ -64,16 +69,22 @@ namespace util {
         } else {
             util::object_class_init()->ref(obj,NULL,"/util/",__LINE__);
         }
-        last->obj  = obj;
-        last->next = NULL;
 
-        if(!queue->first) {
-            queue->first = last;
-        } else {
-            BufferLL* container = queue->first;
-            while (container->next) { container = container->next; }
-            container->next = last;
+        // lock this
+        pthread_mutex_lock(&queue->mutex);
+        {
+            last->obj  = obj;
+            last->next = NULL;
+
+            if(!queue->first) {
+                queue->first = last;
+            } else {
+                BufferLL* container = queue->first;
+                while (container->next) { container = container->next; }
+                container->next = last;
+            }
         }
+        pthread_mutex_unlock(&queue->mutex);
 
         queue->size++;
         return true;
@@ -82,7 +93,7 @@ namespace util {
     bool
     queue_array_peek(QueueArray* queue)
     {
-        return queue->first ? true : false;
+        return queue->size > 0 ? true : false;
     }
 
     uint64
@@ -94,7 +105,7 @@ namespace util {
     void
     queue_array_wait(QueueArray* queue)
     {
-        while(!queue->first) {
+        while(!queue->size) {
             std::this_thread::sleep_for(1ms); // decrease sleep interval cause cpu consumption ramp up
         }
     }
@@ -109,11 +120,19 @@ namespace util {
         if (!queue_array_peek(queue))
             return NULL;
 
-        BufferLL* container = queue->first;
-        Buffer *ret = container->obj;
-        queue->first = container->next;
-        free(container);
+        BufferLL* container;
+        Buffer *ret;
 
+        // lock this
+        pthread_mutex_lock(&queue->mutex);
+        {
+            container = queue->first;
+            ret = container->obj;
+            queue->first = container->next;
+        }
+        pthread_mutex_unlock(&queue->mutex);
+
+        free(container);
         *buf = ret;
         pointer data;
         if (record)
@@ -140,6 +159,7 @@ namespace util {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
         array->first = NULL;
         array->size = 0;
+        array->mutex = PTHREAD_MUTEX_INITIALIZER;
         return array;
     }
 
