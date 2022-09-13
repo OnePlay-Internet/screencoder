@@ -51,7 +51,6 @@ namespace gpu {
         DisplayVram* self = (DisplayVram*) disp; 
         display::DisplayBase* base = (display::DisplayBase*) disp; 
 
-        GpuCursor* cursor = (GpuCursor*)malloc(sizeof(GpuCursor));
         int shape_size = base->dup.frame_info.PointerShapeBufferSize;
 
 
@@ -61,7 +60,6 @@ namespace gpu {
         status = base->dup.dup->GetFramePointerShape(shape_size, shape_pointer, &dummy, &shape_info);
         if(FAILED(status)) {
             LOG_ERROR("Failed to get new pointer shape");
-            free((pointer)cursor);
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
         }
 
@@ -91,7 +89,6 @@ namespace gpu {
         status = base->device->CreateTexture2D(&t, &data, &texture);
         if(FAILED(status)) {
             LOG_ERROR("Failed to create mouse texture");
-            free((pointer)cursor);
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
         }
 
@@ -103,14 +100,16 @@ namespace gpu {
 
         // TODO
         // Free resources before allocating on the next line.
-        status = base->device->CreateShaderResourceView(texture, &desc, &cursor->input_res);
+        d3d11::ShaderResourceView input_res = NULL;
+        status = base->device->CreateShaderResourceView(texture, &desc, &input_res);
         if(FAILED(status)) {
             LOG_ERROR("Failed to create cursor shader resource view");
-            free((pointer)cursor);
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
         }
 
         
+        GpuCursor* cursor = (GpuCursor*)malloc(sizeof(GpuCursor));
+        cursor->input_res = input_res;
         cursor->cursor_view.Width  = t.Width;
         cursor->cursor_view.Height = t.Height;
         cursor->texture = texture;
