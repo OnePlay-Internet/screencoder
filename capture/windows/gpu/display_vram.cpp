@@ -69,7 +69,6 @@ namespace gpu {
         int cursor_buff_size = 0;
         // color conversion
         uint8* cursor_buf = helper::make_cursor_image(shape_pointer, shape_size, shape_info,&cursor_buff_size);
-
         D3D11_SUBRESOURCE_DATA data {
             cursor_buf,
             4 * shape_info.Width,
@@ -89,7 +88,7 @@ namespace gpu {
         t.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
 
         d3d11::Texture2D texture;
-        auto status = base->device->CreateTexture2D(&t, &data, &texture);
+        status = base->device->CreateTexture2D(&t, &data, &texture);
         if(FAILED(status)) {
             LOG_ERROR("Failed to create mouse texture");
             free((pointer)cursor);
@@ -111,11 +110,11 @@ namespace gpu {
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
         }
 
-        GPU_CURSOR_CLASS->set_texture(cursor,
-                                    t.Width, 
-                                    t.Height, 
-                                    texture);
         
+        cursor->cursor_view.Width  = t.Width;
+        cursor->cursor_view.Height = t.Height;
+        cursor->texture = texture;
+        cursor->base.klass = gpu_cursor_class_init();
         return BUFFER_INIT(cursor,sizeof(GpuCursor),free_cursor);
     }
 
@@ -123,12 +122,12 @@ namespace gpu {
 
     void
     display_vram_draw_cursor_texture(platf::Display* disp,
-                                     gpu::ImageGpu* img,
-                                     platf::Cursor* cursor
-                                     )
+                                     platf::Image* img,
+                                     platf::Cursor* cursor)
     {
         GpuCursor* cursorGpu = (GpuCursor*)cursor;
         DisplayVram* self = (DisplayVram*) disp; 
+        gpu::ImageGpu* gpu_img= (gpu::ImageGpu*) img; 
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         D3D11_VIEWPORT view {
             0.0f, 0.0f,
@@ -140,7 +139,7 @@ namespace gpu {
         base->device_ctx->VSSetShader(self->scene_vs, nullptr, 0);
         base->device_ctx->PSSetShader(self->scene_ps, nullptr, 0);
         base->device_ctx->RSSetViewports(1, &view);
-        base->device_ctx->OMSetRenderTargets(1, &img->scene_rt, nullptr);
+        base->device_ctx->OMSetRenderTargets(1, &gpu_img->scene_rt, nullptr);
         base->device_ctx->PSSetShaderResources(0, 1, &cursorGpu->input_res);
         base->device_ctx->OMSetBlendState(self->blend_enable, nullptr, 0xFFFFFFFFu);
         base->device_ctx->RSSetViewports(1, &cursorGpu->cursor_view);
@@ -169,28 +168,27 @@ namespace gpu {
 
         dxgi::Resource res;
         platf::Capture capture_status = DUPLICATION_CLASS->next_frame(&base->dup,CAPTURE_TIMEOUT, &res);
-        if(capture_status != platf::Capture::ok) 
+        if(capture_status != platf::Capture::OK) 
             return capture_status;
         
-        const bool mouse_update_flag = base->dup.frame_info.LastMouseUpdateTime.QuadPart != 0 || base->dup.frame_info.PointerShapeBufferSize > 0;
-        const bool frame_update_flag = base->dup.frame_info.AccumulatedFrames != 0 || base->dup.frame_info.LastPresentTime.QuadPart != 0;
-        const bool update_flag       = mouse_update_flag || frame_update_flag;
+        bool mouse_update_flag = base->dup.frame_info.LastMouseUpdateTime.QuadPart != 0 || base->dup.frame_info.PointerShapeBufferSize > 0;
+        bool frame_update_flag = base->dup.frame_info.AccumulatedFrames != 0 || base->dup.frame_info.LastPresentTime.QuadPart != 0;
+        bool update_flag       = mouse_update_flag || frame_update_flag;
 
         if(!update_flag) 
-            return platf::Capture::timeout;
-
+            return platf::Capture::TIMEOUT;
 
         if(frame_update_flag) {
             status = res->QueryInterface(IID_ID3D11Texture2D, (void **)&self->src);
             if(FAILED(status)) {
                 LOG_ERROR("Couldn't copy dxgi resource to texture");
-                return platf::Capture::error;
+                return platf::Capture::ERR;
             }
         }
 
         // copy texture from display to image
         base->device_ctx->CopyResource(img->texture, self->src);
-        return platf::Capture::ok;
+        return platf::Capture::OK;
     }    
 
 
@@ -476,6 +474,7 @@ namespace gpu {
         klass.base.make_hwdevice    = display_vram_make_hwdevice;
         klass.base.capture          = display_vram_capture;
         klass.base.allocate_cursor  = display_vram_prepare_cursor_texture;
+        klass.base.draw_cursor      = display_vram_draw_cursor_texture;
         return &klass;
     }
 } // namespace platf::dxgi

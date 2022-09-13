@@ -203,16 +203,16 @@ namespace encoder {
 
             platf::Capture ret;
             platf::Image* img2 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
-            ret = ctx->display->klass->capture(ctx->display, img2, FALSE);
+            ret = ctx->display->klass->capture(ctx->display, img2);
             BUFFER_UNREF(imgBuf);
 
-            if (ret == platf::Capture::timeout){
+            if (ret == platf::Capture::TIMEOUT){
                 LOG_ERROR("Capture timeout");
                 continue;
-            } else if (ret == platf::Capture::error) {
+            } else if (ret == platf::Capture::ERR) {
                 LOG_ERROR("Could not encode video packet");
                 break;
-            } else if (ret == platf::Capture::reinit) {
+            } else if (ret == platf::Capture::REINIT) {
                 LOG_INFO("Reinitialize encode thread");
                 ctx->reinit = true;
                 break;

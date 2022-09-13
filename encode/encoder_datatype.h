@@ -13,6 +13,7 @@
 
 #include <screencoder_util.h>
 #include <platform_common.h>
+#include <bitset>
 
 namespace encoder
 {    

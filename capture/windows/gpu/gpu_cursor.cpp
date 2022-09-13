@@ -18,33 +18,22 @@ namespace gpu
 {
 
   void 
-  cursor_set_pos(GpuCursor* self,
+  cursor_set_pos(platf::Cursor* cur,                 
                  LONG rel_x, 
                  LONG rel_y) 
   {
+      GpuCursor* self = (GpuCursor*)cur;
       self->cursor_view.TopLeftX = rel_x;
       self->cursor_view.TopLeftY = rel_y;
   }
 
-  void 
-  cursor_set_texture(GpuCursor* self,
-                     LONG width, 
-                     LONG height, 
-                     d3d11::Texture2D texture) 
-  {
-      self->cursor_view.Width  = width;
-      self->cursor_view.Height = height;
-      self->texture = texture;
-  }
-
-  GpuCursorClass*     
+  platf::CursorClass*     
   gpu_cursor_class_init()
   {
-    static GpuCursorClass klass = {0};
+    static platf::CursorClass klass = {0};
     RETURN_PTR_ONCE(klass);
     
     klass.set_pos = cursor_set_pos;
-    klass.set_texture = cursor_set_texture;
     return &klass;
   }
 

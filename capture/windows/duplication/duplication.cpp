@@ -25,60 +25,55 @@ namespace duplication
                               std::chrono::milliseconds timeout, 
                               dxgi::Resource *res_p) 
     {
-        DXGI_OUTDUPL_FRAME_INFO* frame_info = &dup->frame_info; 
+        platf::Capture return_status = duplication_release_frame(dup);
+        if(return_status != platf::Capture::OK) 
+            return return_status;
+        
+        if(dup->use_dwmflush) 
+            DwmFlush();
 
-        platf::Capture capture_status = duplication_release_frame(dup);
-        if(capture_status != platf::Capture::ok) {
-          return capture_status;
+        HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), &dup->frame_info, res_p);
+        if(status == S_OK) {
+            dup->has_frame = true;
+            return_status = platf::Capture::OK;
+        } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
+            return_status = platf::Capture::TIMEOUT;
+        } else if (status == WAIT_ABANDONED ||
+                   status == DXGI_ERROR_ACCESS_LOST ||
+                   status == DXGI_ERROR_ACCESS_DENIED) {
+            dup->has_frame = false;
+            return platf::Capture::REINIT;
+        } else {
+            return_status = platf::Capture::ERR;
         }
-
-        if(dup->use_dwmflush) {
-          DwmFlush();
-        }
-
-        HRESULT status = dup->dup->AcquireNextFrame(timeout.count(), frame_info, res_p);
-
-        switch(status) {
-        case S_OK:
-          dup->has_frame = true;
-          return platf::Capture::ok;
-        case DXGI_ERROR_WAIT_TIMEOUT:
-          return platf::Capture::timeout;
-        case WAIT_ABANDONED:
-        case DXGI_ERROR_ACCESS_LOST:
-        case DXGI_ERROR_ACCESS_DENIED:
-          dup->has_frame = false;
-          return platf::Capture::reinit;
-        default:
-          LOG_ERROR("Couldn't acquire next frame");
-          return platf::Capture::error;
-        }
+        return return_status;
     }
 
 
     platf::Capture 
     duplication_release_frame(Duplication* dup) 
     {
-        if(!dup->has_frame) {
-          return platf::Capture::ok;
-        }
+        if(!dup->has_frame) 
+            return platf::Capture::OK;
+        
 
+        platf::Capture return_status;
         auto status = dup->dup->ReleaseFrame();
-        switch(status) {
-        case S_OK:
-          dup->has_frame = false;
-          return platf::Capture::ok;
-        case DXGI_ERROR_WAIT_TIMEOUT:
-          return platf::Capture::timeout;
-        case WAIT_ABANDONED:
-        case DXGI_ERROR_ACCESS_LOST:
-        case DXGI_ERROR_ACCESS_DENIED:
-          dup->has_frame = false;
-          return platf::Capture::reinit;
-        default:
-          LOG_ERROR("Couldn't release frame");
-          return platf::Capture::error;
+        if(status == S_OK) {
+            dup->has_frame = false;
+            return_status = platf::Capture::OK;
+        } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
+            return_status = platf::Capture::TIMEOUT;
+        } else if (status == WAIT_ABANDONED ||
+                   status == DXGI_ERROR_ACCESS_LOST ||
+                   status == DXGI_ERROR_ACCESS_DENIED) {
+            dup->has_frame = false;
+            return platf::Capture::REINIT;
+        } else {
+            LOG_ERROR("Couldn't release frame");
+            return_status = platf::Capture::ERR;
         }
+        return return_status;
     }
 
     void

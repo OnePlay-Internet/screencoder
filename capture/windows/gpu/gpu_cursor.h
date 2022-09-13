@@ -14,8 +14,6 @@
 #include <d3d11_datatype.h>
 #include <platform_common.h>
 
-#define GPU_CURSOR_CLASS        gpu::gpu_cursor_class_init()
-
 namespace gpu
 {    
     typedef struct _GpuCursor {
@@ -25,19 +23,8 @@ namespace gpu
         D3D11_VIEWPORT cursor_view;
     }GpuCursor;
 
-    typedef struct _GpuCursorClass {
-        void (*set_pos)     (GpuCursor* cursor,
-                             LONG rel_x, 
-                             LONG rel_y);
 
-        void (*set_texture) (GpuCursor* cursor,
-                             LONG width, 
-                             LONG height, 
-                             d3d11::Texture2D texture);
-    }GpuCursorClass;
-
-    GpuCursorClass*     gpu_cursor_class_init       ();
-    
+    platf::CursorClass*     gpu_cursor_class_init       ();
 } // namespace gpu
 
 

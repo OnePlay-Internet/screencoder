@@ -12,14 +12,8 @@
 #define SUNSHINE_COMMON_H
 #include <screencoder_util.h>
 
-#include <bitset>
-#include <filesystem>
-#include <functional>
-#include <mutex>
-#include <string>
 #include <d3d11_datatype.h>
 
-#include <mutex>
 
 
 using float4 = float[4];
@@ -57,10 +51,10 @@ namespace platf {
     }PixelFormat;
 
     typedef enum _Capture{
-        ok,
-        timeout,
-        error,
-        reinit
+        OK,
+        TIMEOUT,
+        ERR,
+        REINIT
     }Capture;
 
     typedef struct _Image {
@@ -69,8 +63,17 @@ namespace platf {
         int32 row_pitch;
     }Image;
 
-    typedef struct _Cursor{
-    }Cursor;
+    typedef struct _Cursor Cursor;
+
+    typedef struct _CursorClass {
+        void (*set_pos)     (Cursor* cursor,
+                             LONG rel_x, 
+                             LONG rel_y);
+    }CursorClass;
+
+    struct _Cursor{
+        CursorClass* klass;
+    };
 
     typedef struct _HWDeviceClass DeviceClass;
 
@@ -147,14 +150,12 @@ namespace platf {
         Capture                (*capture)          (Display* self,
                                                     Image* img);
 
-        util::Buffer*          (*allocate_cursor)  (Display* self,
-                                                    Image* img);
+        util::Buffer*          (*allocate_cursor)  (Display* self);
 
-        Capture                (*draw_cursor)       (Display* self,
+        void                    (*draw_cursor)       (Display* self,
                                                     Image* img,
                                                     Cursor* cursor);
     };
-
 
     /**
      * display_name --> The name of the monitor that SHOULD be displayed

@@ -107,8 +107,7 @@ namespace helper
       const uint32 white       = 0xFFFFFFFF;
       const uint32 transparent = 0;
 
-      switch(shape_info.Type) {
-        case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR:
+      if (shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR) {
           for (int i = 0; i < size; i++)
           {
             uint32 *pixel = (img_data + i);
@@ -116,13 +115,11 @@ namespace helper
               *pixel = transparent;
             }
           }
-        case DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR:
+      } else if (shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR) {
           uint8* ret = (uint8*)malloc(buffer_size);
           memcpy(ret,buffer,buffer_size);
           *out_size = buffer_size;
           return ret;
-        default:
-          break;
       }
 
       shape_info.Height /= 2;
@@ -317,40 +314,40 @@ namespace platf {
     char**
     display_names(MemoryType type) 
     {
-      static char* ret[10];
-      static char display_names[10][100];
-      memset(display_names,0,sizeof(char)*1000);
+        static char* ret[10];
+        static char display_names[10][100];
+        memset(display_names,0,sizeof(char)*1000);
 
-      HRESULT status;
+        HRESULT status;
 
-      LOG_INFO("Detecting monitors...");
-      dxgi::Factory factory;
-      status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&factory);
-      if(FAILED(status)) {
-        LOG_ERROR("Failed to create DXGIFactory1");
-        return {};
-      }
-
-      dxgi::Adapter adapter;
-      for(int x = 0; factory->EnumAdapters1(x, &adapter) != DXGI_ERROR_NOT_FOUND; ++x) {
-        DXGI_ADAPTER_DESC1 adapter_desc;
-        adapter->GetDesc1(&adapter_desc);
-
-        IDXGIOutput* output = NULL;
-        for(int y = 0; adapter->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
-          DXGI_OUTPUT_DESC desc;
-          output->GetDesc(&desc);
-
-          char name[100] = {0};
-          wcstombs(name, desc.DeviceName, 100);
-          memcpy(display_names[x],name,strlen(name));
+        LOG_INFO("Detecting monitors...");
+        dxgi::Factory factory;
+        status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&factory);
+        if(FAILED(status)) {
+            LOG_ERROR("Failed to create DXGIFactory1");
+            return {};
         }
-      }
 
-      for (int i = 0; i < 10; i++) {
-        ret[i] = display_names[i];
-      }
-      
-      return ret;
+        dxgi::Adapter adapter;
+        for(int x = 0; factory->EnumAdapters1(x, &adapter) != DXGI_ERROR_NOT_FOUND; ++x) {
+            DXGI_ADAPTER_DESC1 adapter_desc;
+            adapter->GetDesc1(&adapter_desc);
+
+            IDXGIOutput* output = NULL;
+            for(int y = 0; adapter->EnumOutputs(y, &output) != DXGI_ERROR_NOT_FOUND; ++y) {
+            DXGI_OUTPUT_DESC desc;
+            output->GetDesc(&desc);
+
+            char name[100] = {0};
+            wcstombs(name, desc.DeviceName, 100);
+            memcpy(display_names[x],name,strlen(name));
+            }
+        }
+
+        for (int i = 0; i < 10; i++) {
+            ret[i] = display_names[i];
+        }
+        
+        return ret;
     }
 } // namespace platf
