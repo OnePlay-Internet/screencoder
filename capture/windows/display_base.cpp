@@ -186,60 +186,60 @@ namespace display{
             return -1;
         }
 
-        D3D_FEATURE_LEVEL featureLevels[] {
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL_10_1,
-            D3D_FEATURE_LEVEL_10_0,
-            D3D_FEATURE_LEVEL_9_3,
-            D3D_FEATURE_LEVEL_9_2,
-            D3D_FEATURE_LEVEL_9_1
-        };
+        {
+            D3D_FEATURE_LEVEL featureLevels[] {
+                D3D_FEATURE_LEVEL_11_1,
+                D3D_FEATURE_LEVEL_11_0,
+                D3D_FEATURE_LEVEL_10_1,
+                D3D_FEATURE_LEVEL_10_0,
+                D3D_FEATURE_LEVEL_9_3,
+                D3D_FEATURE_LEVEL_9_2,
+                D3D_FEATURE_LEVEL_9_1
+            };
 
-        status = self->adapter->QueryInterface(IID_IDXGIAdapter, (void **)&adapter_p);
-        if(FAILED(status)) {
-            LOG_ERROR("Failed to query IDXGIAdapter interface");
-            return -1;
-        }
+            status = self->adapter->QueryInterface(IID_IDXGIAdapter, (void **)&adapter_p);
+            if(FAILED(status)) {
+                LOG_ERROR("Failed to query IDXGIAdapter interface");
+                return -1;
+            }
 
-        status = D3D11CreateDevice(
-            adapter_p,
-            D3D_DRIVER_TYPE_UNKNOWN,
-            nullptr,
+            status = D3D11CreateDevice(
+                adapter_p,
+                D3D_DRIVER_TYPE_UNKNOWN,
+                nullptr,
 #ifdef DIRECTX_DEBUG
-            D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+                D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
 #else
-            D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+                D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
 #endif
-            featureLevels, 
-            sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
-            D3D11_SDK_VERSION,
-            &self->device,
-            &self->feature_level,
-            &self->device_ctx);
+                featureLevels, 
+                sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
+                D3D11_SDK_VERSION,
+                &self->device,
+                &self->feature_level,
+                &self->device_ctx);
 
-        adapter_p->Release();
+            adapter_p->Release();
 
-        if(FAILED(status)) {
-            LOG_ERROR("Failed to create D3D11 device");
-            return -1;
-        }
+            if(FAILED(status)) {
+                LOG_ERROR("Failed to create D3D11 device");
+                return -1;
+            }
         
 #ifdef DIRECTX_DEBUG
-        ID3D11Debug *d3dDebug = nullptr;
-        if( SUCCEEDED( self->device->QueryInterface( __uuidof(ID3D11Debug), (void**)&d3dDebug ) ) )
-        {
-            ID3D11InfoQueue *d3dInfoQueue = nullptr;
-            if( SUCCEEDED( d3dDebug->QueryInterface( __uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue ) ) ) {
-                d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_CORRUPTION, true );
-                d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_ERROR, true );
+            ID3D11Debug *d3dDebug = nullptr;
+            if( SUCCEEDED( self->device->QueryInterface( __uuidof(ID3D11Debug), (void**)&d3dDebug ) ) )
+            {
+                ID3D11InfoQueue *d3dInfoQueue = nullptr;
+                if( SUCCEEDED( d3dDebug->QueryInterface( __uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue ) ) ) {
+                    d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_CORRUPTION, true );
+                    d3dInfoQueue->SetBreakOnSeverity( D3D11_MESSAGE_SEVERITY_ERROR, true );
+                }
             }
-        }
 #endif 
+        }
 
 
-        // Enable DwmFlush() only if the current refresh rate can match the client framerate.
-        self->dup = DUPLICATION_CLASS->init();
         
         {
             DWM_TIMING_INFO timing_info;
@@ -312,36 +312,11 @@ namespace display{
             }
         }
 
-        //FIXME: Duplicate output on RX580 in combination with DOOM (2016) --> BSOD
-        //TODO: Use IDXGIOutput5 for improved performance
-        {
-            dxgi::Output1 output1 = {0};
-            status = self->output->QueryInterface(IID_IDXGIOutput1, (void **)&output1);
-            if(FAILED(status)) {
-                LOG_ERROR("Failed to query IDXGIOutput1 from the output");
-                return -1;
-            }
-
-            // We try this twice, in case we still get an error on reinitialization
-            for(int x = 0; x < 2; ++x) {
-                status = output1->DuplicateOutput((IUnknown *)self->device, &self->dup->dup);
-                if(SUCCEEDED(status)) {
-                    self->dup->ready = true;
-                    break;
-                }
-                std::this_thread::sleep_for(200ms);
-            }
-
-            if(FAILED(status)) {
-                LOG_ERROR("DuplicateOutput Failed");
-                return -1;
-            }
-            output1->Release();
-        }
-
-        DXGI_OUTDUPL_DESC dup_desc;
-        self->dup->dup->GetDesc(&dup_desc);
-        self->format = dup_desc.ModeDesc.Format;
+        self->dup = DUPLICATION_CLASS->init(disp,
+                        self->output,
+                        self->device,
+                        self->device_ctx,
+                        &self->format);
         return 0;
     }
 } // namespace platf::dxgi

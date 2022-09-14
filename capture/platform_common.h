@@ -24,6 +24,11 @@ using float2 = float[2];
 
 namespace platf {    
     
+    typedef struct _HWDeviceClass DeviceClass;
+
+    typedef struct _DisplayClass DisplayClass;
+
+    typedef struct _Display      Display;
     
     typedef struct _Color {
         float4 color_vec_y;
@@ -62,7 +67,7 @@ namespace platf {
     }Capture;
 
     typedef struct _Image {
-        uint8* data;
+        platf::Display* display;
         int32 pixel_pitch;
         int32 row_pitch;
     }Image;
@@ -79,11 +84,6 @@ namespace platf {
         CursorClass* klass;
     };
 
-    typedef struct _HWDeviceClass DeviceClass;
-
-    typedef struct _DisplayClass DisplayClass;
-
-    typedef struct _Display      Display;
 
     typedef struct _HWDevice {
         DeviceClass* klass;

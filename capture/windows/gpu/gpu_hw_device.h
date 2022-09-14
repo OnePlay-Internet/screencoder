@@ -21,7 +21,6 @@ namespace gpu
     typedef struct _ImageD3D {
       platf::Image base;
 
-      platf::Display* display;
 
       d3d11::ShaderResourceView input_res;
       d3d11::RenderTargetView scene_rt;

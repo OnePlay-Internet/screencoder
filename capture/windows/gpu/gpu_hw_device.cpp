@@ -30,7 +30,7 @@ namespace gpu
     hw_device_set_frame(platf::Device* self) 
     {
         GpuDevice* hw = (GpuDevice*)self;
-        platf::Display* disp = (platf::Display*)hw->img.display;
+        platf::Display* disp = (platf::Display*)hw->img.base.display;
         d3d11::Device device = hw->device;
 
         // calculate convert
@@ -64,7 +64,6 @@ namespace gpu
             return -1;
         }
 
-        hw->img.base.data        = (uint8*)hw->img.texture;
         hw->img.base.row_pitch   = disp->width * 4;
         hw->img.base.pixel_pitch = 4;
 
@@ -207,7 +206,7 @@ namespace gpu
             hlsl->convert_UV_vs_hlsl->GetBufferSize(),
             &self->input_layout);
 
-        self->img.display = display;
+        self->img.base.display = display;
 
         // Color the background black, so that the padding for keeping the aspect ratio
         error::Error err = display->klass->dummy_img(display,&self->back_img.base);
@@ -286,7 +285,7 @@ namespace gpu
     {
         GpuDevice* self = (GpuDevice*)dev;
         ImageGpu* img = (ImageGpu*)img_base;
-        platf::Display* disp = (platf::Display*)self->img.display;
+        platf::Display* disp = (platf::Display*)self->img.base.display;
 
         self->device_ctx->IASetInputLayout(self->input_layout);
 
@@ -320,10 +319,10 @@ namespace gpu
             frame->buf[0] = av_buffer_allocz(sizeof(AVD3D11FrameDescriptor));
 
         AVD3D11FrameDescriptor* desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
-        desc->texture = (d3d11::Texture2D)self->img.base.data;
         desc->index   = 0;
 
-        frame->data[0] = self->img.base.data;
+        desc->texture  = self->img.texture;
+        frame->data[0] = (uint8*)self->img.texture;
         frame->data[1] = 0;
 
         frame->linesize[0] = self->img.base.row_pitch;

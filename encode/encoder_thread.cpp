@@ -119,18 +119,6 @@ namespace encoder {
     {
         // allocate display image and intialize with dummy data
         util::Buffer* imgBuf = ctx->display->klass->alloc_img(ctx->display);
-
-        platf::Image* img1 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
-        error::Error err = ctx->display->klass->dummy_img(ctx->display,img1);
-        BUFFER_UNREF(imgBuf);
-
-        if(FILTER_ERROR(err)) {
-            RAISE_EVENT(ctx->shutdown_event);
-            return;
-        }
-
-        
-
         util::Buffer* ctxBuf = make_encode_context_buffer(ctx->encoder, ctx->config,
                                                 ctx->display,
                                                 ctx->sink);
@@ -221,7 +209,7 @@ namespace encoder {
                 platf::Image* img3 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
                 libav::Frame* frame0 = (libav::Frame*)BUFFER_REF(frameBuf,NULL);
                 EncodeContext* session1 = (EncodeContext*)BUFFER_REF(ctxBuf,NULL);
-                err = session1->device->klass->convert(session1->device,img3,frame0);
+                error::Error err = session1->device->klass->convert(session1->device,img3,frame0);
                 BUFFER_UNREF(ctxBuf);
                 BUFFER_UNREF(frameBuf);
                 BUFFER_UNREF(imgBuf);

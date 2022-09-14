@@ -32,6 +32,8 @@ namespace error
 
         ENCODER_ERROR_MAX,
         ERROR_NONE,
+
+        WRONG_ARGUMENT,
     };
 
 

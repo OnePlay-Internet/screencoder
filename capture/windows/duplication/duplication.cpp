@@ -12,8 +12,10 @@
 #include <screencoder_util.h>
 
 
+#include <gpu_hw_device.h>
 #include <platform_common.h>
 #include <d3d11_datatype.h>
+#include <display_base.h>
 
 #include <chrono>
 #include <thread>
@@ -27,11 +29,13 @@ namespace duplication
 {
     typedef struct _Texture{
         dxgi::Resource resource;
-        d3d11::Texture2D texture;
         std::chrono::high_resolution_clock::time_point produced;
         DXGI_OUTDUPL_FRAME_INFO frame_info;
         pthread_mutex_t mutex;
         platf::Capture status;
+
+        d3d11::Texture2D texture_temporary;
+        gpu::ImageGpu img_permanent;
     }Texture;
 
     struct _TexturePool {
@@ -140,18 +144,13 @@ namespace duplication
     }
 
     void
-    frame_produce_thread(Duplication* dup)
+    frame_produce_thread(Duplication* dup,
+                         d3d11::DeviceContext ctx)
     {
         int count = 0;
         TexturePool* pool = dup->pool;
         while(pool_check(pool))
         {
-            if (!dup->ready) {
-                std::this_thread::sleep_for(50ms);
-                continue;
-            }
-
-
             Texture* texture = &pool->texture[count];
             texture->status = duplication_get_next_frame(dup,texture);
             if (texture->status != platf::Capture::OK)
@@ -159,20 +158,27 @@ namespace duplication
             
             texture->produced = std::chrono::high_resolution_clock::now();
 
-            bool mouse_update_flag = texture->frame_info.LastMouseUpdateTime.QuadPart != 0 || texture->frame_info.PointerShapeBufferSize > 0;
-            bool frame_update_flag = texture->frame_info.AccumulatedFrames != 0 || texture->frame_info.LastPresentTime.QuadPart != 0;
+            bool mouse_update_flag = texture->frame_info.LastMouseUpdateTime.QuadPart != 0 || 
+                                     texture->frame_info.PointerShapeBufferSize > 0;
+
+            bool frame_update_flag = texture->frame_info.AccumulatedFrames != 0 || 
+                                     texture->frame_info.LastPresentTime.QuadPart != 0;
+
             bool update_flag       = mouse_update_flag || frame_update_flag;
 
             if(!update_flag) 
                 texture->status = platf::Capture::TIMEOUT;
 
             if(frame_update_flag) {
-                HRESULT result = texture->resource->QueryInterface(IID_ID3D11Texture2D, (void **)&texture->texture);
+                HRESULT result = texture->resource->QueryInterface(IID_ID3D11Texture2D, (void **)&texture->texture_temporary);
                 if(FAILED(result)) {
                     LOG_ERROR("Couldn't copy dxgi resource to texture");
                     texture->status = platf::Capture::ERR;
+                    break;
                 }
             }
+
+            ctx->CopyResource(texture->img_permanent.texture, texture->texture_temporary);
 
             texture->status = duplication_release_frame(dup);
             if (texture->status != platf::Capture::OK)
@@ -184,7 +190,7 @@ namespace duplication
 
 
     TexturePool*
-    init_texture_pool()
+    init_texture_pool(platf::Display* base)
     {
         TexturePool* pool = (TexturePool*) malloc (sizeof(TexturePool));
         memset(pool,0,sizeof(TexturePool));
@@ -192,19 +198,50 @@ namespace duplication
         for (int i = 0; i < TEXTURE_SIZE; i++) {
             pool->texture[i].status = platf::Capture::NOT_READY;
             pool->texture[i].mutex = PTHREAD_MUTEX_INITIALIZER;
+            base->klass->dummy_img(base,(platf::Image*)&pool->texture[i].img_permanent);
         }
         return pool;
     }
 
 
     Duplication*
-    duplication_init()
+    duplication_init(platf::Display* base,
+                     dxgi::Output output, 
+                     d3d11::Device device,
+                     d3d11::DeviceContext device_ctx,
+                     DXGI_FORMAT* format)
     {
         Duplication* dup = (Duplication*) malloc (sizeof(Duplication));
         memset(dup,0,sizeof(Duplication));
         dup->use_dwmflush = SCREENCODER_CONSTANT->dwmflush;
-        dup->pool = init_texture_pool();
-        std::thread thread {frame_produce_thread,dup};
+        dup->device_ctx = device_ctx;
+
+        //FIXME: Duplicate output on RX580 in combination with DOOM (2016) --> BSOD
+        //TODO: Use IDXGIOutput5 for improved performance
+        // Enable DwmFlush() only if the current refresh rate can match the client framerate.
+        {
+            HRESULT status;
+            dxgi::Output1 output1 = {0};
+            status = output->QueryInterface(IID_IDXGIOutput1, (void **)&output1);
+            if(FAILED(status)) {
+                LOG_ERROR("Failed to query IDXGIOutput1 from the output");
+                return NULL;
+            }
+
+            status = output1->DuplicateOutput((IUnknown*)device, &dup->dup);
+            if(FAILED(status)) {
+                LOG_ERROR("DuplicateOutput Failed");
+                return NULL;
+            }
+            output1->Release();
+        }
+
+        DXGI_OUTDUPL_DESC dup_desc;
+        dup->dup->GetDesc(&dup_desc);
+        *format = dup_desc.ModeDesc.Format;
+
+        dup->pool = init_texture_pool(base);
+        std::thread thread {frame_produce_thread,dup,device_ctx};
         thread.detach();
         return dup;
     }
@@ -216,24 +253,26 @@ namespace duplication
         duplication_release_frame(dup);
         if (dup->dup) { dup->dup->Release(); }
         for (int i = 0; i < TEXTURE_SIZE; i++) {
-            if ( dup->pool->texture[i].texture ) 
-                dup->pool->texture[i].texture->Release();
+
         }
 
     }
 
     platf::Capture
     duplication_accquire_frame_from_pool (Duplication* dup,
-                                          d3d11::Texture2D* texture,
-                                          pthread_mutex_t** mutex)
+                                          platf::Image*img)
     {
+        gpu::ImageGpu* output = (gpu::ImageGpu*)img;
+
         int pos = seek_available_texture(dup);
         if (dup->pool->overall_status != platf::Capture::OK)
             return dup->pool->overall_status;
         
-        pthread_mutex_lock(&dup->pool->texture[pos].mutex);
-        texture = &dup->pool->texture[pos].texture;
-        *mutex = &dup->pool->texture[pos].mutex;
+        Texture* text = &dup->pool->texture[pos];
+        pthread_mutex_lock(&text->mutex);
+        dup->device_ctx->CopyResource(text->img_permanent.texture, 
+                                      text->texture_temporary);
+        pthread_mutex_unlock(&text->mutex);
         return platf::Capture::OK;
     }
 
@@ -260,9 +299,9 @@ namespace duplication
         static DuplicationClass klass = {0};
         RETURN_PTR_ONCE(klass);
 
-        klass.init           =  duplication_init;
+        klass.init           =   duplication_init;
         klass.next_frame     =   duplication_accquire_frame_from_pool;
-        klass.get_cursor_buf=   duplication_get_availabe_frame_shape;
+        klass.get_cursor_buf =   duplication_get_availabe_frame_shape;
         klass.finalize       =   duplication_finalize;
         return &klass;
     }

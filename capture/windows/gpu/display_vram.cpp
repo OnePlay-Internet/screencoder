@@ -165,16 +165,10 @@ namespace gpu {
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
 
-        pthread_mutex_t* mut;
-        d3d11::Texture2D texture;
-        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(base->dup,&texture,&mut);
+        platf::Capture capture_status = DUPLICATION_CLASS->next_frame(base->dup,img_base);
         if(capture_status != platf::Capture::OK) 
             return capture_status;
         
-
-        // copy texture from display to image
-        base->device_ctx->CopyResource(img->texture, texture);
-        pthread_mutex_unlock(mut);
         return platf::Capture::OK;
     }    
 
@@ -331,17 +325,17 @@ namespace gpu {
     util::Buffer*
     display_vram_alloc_img(platf::Display* disp) 
     {
-        gpu::ImageGpu* img = (gpu::ImageGpu*)malloc(sizeof(gpu::ImageGpu));
-        platf::Image* img_base = (platf::Image*)img;
-
         display::DisplayBase* display_base = (display::DisplayBase*)disp;
 
-        img_base->pixel_pitch = 4;
+        gpu::ImageGpu* img = (gpu::ImageGpu*)malloc(sizeof(gpu::ImageGpu));
+        platf::Image* img_base = (platf::Image*)img;
+        img_base->pixel_pitch = sizeof(int);
         img_base->row_pitch   = img_base->pixel_pitch * disp->width;
-        img->display     = disp;
+        img_base->display     = disp;
 
-        uint8* dummy_data = (uint8*)malloc(img_base->row_pitch * disp->height * sizeof(uint8));
-        memset(dummy_data,0,img_base->row_pitch * disp->height * sizeof(uint8));
+        int dummy_data_size = img_base->row_pitch * disp->height;
+        uint8* dummy_data = (uint8*)malloc(dummy_data_size);
+        memset(dummy_data,0,dummy_data_size);
         D3D11_SUBRESOURCE_DATA data {
             dummy_data,
             (UINT)img_base->row_pitch
@@ -371,7 +365,6 @@ namespace gpu {
             NEW_ERROR(error::Error::ALLOC_IMG_ERR);
         }
 
-        img_base->data = (uint8*)img->texture;
         return BUFFER_INIT(img,sizeof(gpu::ImageGpu),free_img_vram);
     }
 
@@ -385,22 +378,21 @@ namespace gpu {
     display_vram_dummy_img(platf::Display* disp,
                           platf::Image *img_base) 
     {
+        gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
         display::DisplayBase* base = (display::DisplayBase*) disp; 
         DisplayVram* self = (DisplayVram*) disp; 
-
-        gpu::ImageGpu* img = (gpu::ImageGpu*)img_base;
-
-        if(img->texture) // already have texture
-            return error::Error::ERROR_NONE;
         
-        img_base->row_pitch  = disp->width * 4;
+        img_base->pixel_pitch   = sizeof(int);
+        img_base->row_pitch     = disp->width * img_base->pixel_pitch;
+        img_base->display       = disp;
 
-        int* dummy_data = (int*)malloc(sizeof(int) * (disp->width * disp->height));
+        int img_size = img_base->row_pitch * disp->height;
+        uint8* dummy_data = (uint8*)malloc(img_size);
+        memset((pointer)dummy_data,0, img_size);
         D3D11_SUBRESOURCE_DATA data {
             (pointer)dummy_data,
             (UINT)img_base->row_pitch
         };
-        memset(dummy_data,0, sizeof(int)* (disp->width * disp->height));
 
         D3D11_TEXTURE2D_DESC t {};
         t.Width            = disp->width;
@@ -420,7 +412,6 @@ namespace gpu {
         }
 
         img->texture      = tex;
-        img_base->data    = (uint8*)img->texture;
         return error::Error::ERROR_NONE;
     }
 

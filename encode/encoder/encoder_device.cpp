@@ -56,19 +56,9 @@ namespace encoder
             return FALSE;
 
         util::Buffer* frameBuf = make_avframe_buffer(session);
-        
-        
+
+        error::Error err;
         util::Buffer* imgBuf = disp->klass->alloc_img(disp);
-
-        platf::Image* img1 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
-        error::Error err = disp->klass->dummy_img(disp,img1);
-        BUFFER_UNREF(imgBuf);
-
-        if(FILTER_ERROR(err)) {
-            free_encode_context(session);
-            return FALSE;
-        }
-
         platf::Image* img2 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
         libav::Frame* frame0 = (libav::Frame*)BUFFER_REF(frameBuf,NULL);
         err = device->klass->convert(device,img2,frame0);
