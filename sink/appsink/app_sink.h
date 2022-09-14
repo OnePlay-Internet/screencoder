@@ -22,7 +22,9 @@ namespace appsink
     struct _AppSink {
         sink::GenericSink base;
 
-        util::QueueArray* out;
+        util::Buffer* out;
+        pthread_mutex_t mutex;
+        bool has_pkt;
 
         util::QueueArray* sink_event_out;
         util::QueueArray* sink_event_in;

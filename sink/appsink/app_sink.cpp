@@ -31,7 +31,14 @@ namespace appsink
                    util::Buffer* buf)
     {
         appsink::AppSink* app = (appsink::AppSink*)sink;
-        QUEUE_ARRAY_CLASS->push(app->out,buf,true);
+        
+        while(app->has_pkt)
+            std::this_thread::sleep_for(1ms);
+
+        pthread_mutex_lock(&app->mutex);
+        app->out = buf;
+        app->has_pkt = true;
+        pthread_mutex_unlock(&app->mutex);
     }
 
     static char*
@@ -50,7 +57,6 @@ namespace appsink
     appsink_stop(sink::GenericSink* sink)
     {
         AppSink* app = (AppSink*)sink;
-        QUEUE_ARRAY_CLASS->stop(app->out);
         util::free_keyvalue_pairs(app->base.options);
         free((pointer)sink);
     }
@@ -93,7 +99,8 @@ namespace appsink
         sink->sink_event_out = QUEUE_ARRAY_CLASS->init();
         sink->prev_pkt_sent = std::chrono::high_resolution_clock::now();
         sink->this_pkt_sent = std::chrono::high_resolution_clock::now();
-        sink->out = QUEUE_ARRAY_CLASS->init();
+        sink->mutex = PTHREAD_MUTEX_INITIALIZER;
+        sink->has_pkt = false;
         return (sink::GenericSink*)sink;
     }
     
@@ -120,11 +127,18 @@ GoHandleAVPacket(void* appsink_ptr,
 
     if (!sink)
         return FALSE;
-    
-    QUEUE_ARRAY_CLASS->wait(sink->out);
 
-    libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size,true);
-    int64 current = BUFFER_CLASS->created((util::Buffer*)*buf);
+    while(!sink->has_pkt)
+        std::this_thread::sleep_for(1ms);
+
+    pthread_mutex_lock(&sink->mutex);
+    *buf = (pointer)sink->out;
+    util::Buffer* buffer = sink->out;
+    sink->has_pkt = false;
+    pthread_mutex_unlock(&sink->mutex);
+
+    libav::Packet* pkt = (libav::Packet*)BUFFER_REF(buffer,NULL);
+    int64 current = BUFFER_CLASS->created(buffer);
 
     *data = pkt->data;
     *size = pkt->size;
