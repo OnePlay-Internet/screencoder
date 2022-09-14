@@ -23,18 +23,17 @@
 using namespace std::literals;
 
 #define TEXTURE_SIZE 10
+#define TIME_MAX 100s
 #define DEFAULT_TIMEOUT ((std::chrono::microseconds)100ms).count()
 
 namespace duplication
 {
     typedef struct _Texture{
-        dxgi::Resource resource;
         std::chrono::high_resolution_clock::time_point produced;
         DXGI_OUTDUPL_FRAME_INFO frame_info;
         pthread_mutex_t mutex;
         platf::Capture status;
 
-        d3d11::Texture2D texture_temporary;
         gpu::ImageGpu img_permanent;
     }Texture;
 
@@ -45,13 +44,14 @@ namespace duplication
 
     platf::Capture 
     duplication_get_next_frame(Duplication* dup,
-                              Texture* texture) 
+                              Texture* texture,
+                              dxgi::Resource* res) 
     {
         platf::Capture return_status;
         if(dup->use_dwmflush) 
             DwmFlush();
 
-        HRESULT status = dup->dup->AcquireNextFrame(DEFAULT_TIMEOUT, &texture->frame_info, &texture->resource);
+        HRESULT status = dup->dup->AcquireNextFrame(DEFAULT_TIMEOUT, &texture->frame_info, res);
         if(status == S_OK) {
             return_status = platf::Capture::OK;
         } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
@@ -98,19 +98,21 @@ namespace duplication
             std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
             std::chrono::nanoseconds diff[TEXTURE_SIZE] = {0ns};
             for(int i = 0; i < TEXTURE_SIZE; i++) {
-                if (pool->texture[i].status == platf::Capture::OK) {
-                    diff[i] = now - pool->texture[i].produced;
-                }
+                diff[i] = now - pool->texture[i].produced;
             }
 
+            bool found = false;
             std::chrono::nanoseconds max = 0ns;
             for(int i = 0; i < TEXTURE_SIZE; i++) {
                 if (diff[i] > max) {
                     max = diff[i];
                     value = i;
-                    goto take;
+                    found = true;
                 }
             }
+
+            if(found)
+                goto take;
             std::this_thread::sleep_for(1ms);
         }
         take:
@@ -132,14 +134,18 @@ namespace duplication
                 }
             }
 
-            std::chrono::nanoseconds min = 0ns;
+            bool found = false;
+            std::chrono::nanoseconds min = TIME_MAX;
             for(int i = 0; i < TEXTURE_SIZE; i++) {
                 if (diff[i] < min) {
                     min = diff[i];
                     value = i;
-                    goto take;
+                    found = true;
                 }
             }
+
+            if(found)
+                goto take;
             std::this_thread::sleep_for(1ms);
         }
         take:
@@ -171,12 +177,18 @@ namespace duplication
     {
         TexturePool* pool = dup->pool;
         std::chrono::high_resolution_clock::time_point now,prev = std::chrono::high_resolution_clock::now();
-        while(pool_check(pool)) {
+        while(true) {
+            std::this_thread::sleep_for(10ms);
             int count = seek_oldest_texture(dup);
             Texture* texture = &(pool->texture[count]);
 
+            if (!pool_check(pool))
+                break;
+            
+
             pthread_mutex_lock(&texture->mutex);
-            texture->status = duplication_get_next_frame(dup,texture);
+            dxgi::Resource res;
+            texture->status = duplication_get_next_frame(dup,texture,&res);
             if (texture->status != platf::Capture::OK)
                 continue;
             
@@ -193,8 +205,9 @@ namespace duplication
             if(!update_flag) 
                 texture->status = platf::Capture::TIMEOUT;
 
+            d3d11::Texture2D text;
             if(frame_update_flag) {
-                HRESULT result = texture->resource->QueryInterface(IID_ID3D11Texture2D, (void **)&texture->texture_temporary);
+                HRESULT result = res->QueryInterface(IID_ID3D11Texture2D, (void **)&text);
                 if(FAILED(result)) {
                     LOG_ERROR("Couldn't copy dxgi resource to texture");
                     texture->status = platf::Capture::ERR;
@@ -202,7 +215,7 @@ namespace duplication
                 }
             }
 
-            ctx->CopyResource(texture->img_permanent.texture, texture->texture_temporary);
+            ctx->CopyResource(texture->img_permanent.texture, text);
 
             texture->status = duplication_release_frame(dup);
             if (texture->status != platf::Capture::OK)
@@ -214,6 +227,8 @@ namespace duplication
                 now  = std::chrono::high_resolution_clock::now();
                 dup->cycle = now - prev;
                 prev = now;
+
+                dup->cycle_count++;
             }
         }
     }
@@ -228,6 +243,7 @@ namespace duplication
         for (int i = 0; i < TEXTURE_SIZE; i++) {
             pool->texture[i].status = platf::Capture::NOT_READY;
             pool->texture[i].mutex = PTHREAD_MUTEX_INITIALIZER;
+            pool->texture[i].produced = std::chrono::high_resolution_clock::now();
             base->klass->dummy_img(base,(platf::Image*)&pool->texture[i].img_permanent);
         }
         return pool;
@@ -300,8 +316,8 @@ namespace duplication
         
         Texture* text = &dup->pool->texture[pos];
         pthread_mutex_lock(&text->mutex);
-        dup->device_ctx->CopyResource(text->img_permanent.texture, 
-                                      text->texture_temporary);
+        dup->device_ctx->CopyResource(output->texture, 
+                                      text->img_permanent.texture);
         pthread_mutex_unlock(&text->mutex);
         return platf::Capture::OK;
     }

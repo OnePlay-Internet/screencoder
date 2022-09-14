@@ -28,6 +28,7 @@ namespace duplication
         TexturePool* pool;
 
         std::chrono::nanoseconds cycle;
+        int cycle_count;
     }Duplication;
 
     typedef struct _DuplicationClass {

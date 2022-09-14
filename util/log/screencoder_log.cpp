@@ -72,12 +72,8 @@ namespace error
         outfile.open("./log.txt", std::ios_base::app); // append instead of overwrite
         while(true)
         {
-            while(!QUEUE_ARRAY_CLASS->peek(array)) {
-                std::this_thread::sleep_for(50ms);
-            }
-
-
             util::Buffer* buf;
+            QUEUE_ARRAY_CLASS->wait(array);
             Err* err = (Err*)QUEUE_ARRAY_CLASS->pop(array,&buf,NULL,false);
 
             char file_log[36] = {" "};

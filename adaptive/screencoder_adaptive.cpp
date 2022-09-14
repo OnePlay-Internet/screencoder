@@ -37,16 +37,18 @@ namespace adaptive
     median_10_record(AdaptiveContext* context, 
                      Record* record)
     {
-        std::chrono::nanoseconds median_sink_cycle = 0ns, median_capture_cycle = 0ns;
+        std::chrono::nanoseconds median_encode_cycle = 0ns, median_sink_cycle = 0ns, median_capture_cycle = 0ns;
 
         for (int i = 0; i < 10; i++)
         {
             median_sink_cycle += context->records[i].sink_cycle;
             median_capture_cycle += context->records[i].capture_cycle;
+            median_encode_cycle += context->records[i].encode_cycle;
         }
 
         record->capture_cycle = median_capture_cycle / 10;
         record->sink_cycle = median_sink_cycle / 10;
+        record->encode_cycle = median_encode_cycle / 10;
         record->sink_queue_size = context->records[0].sink_queue_size;
         record->timestamp = std::chrono::high_resolution_clock::now();
     }
@@ -112,10 +114,12 @@ namespace adaptive
                 rec.timestamp = std::chrono::high_resolution_clock::now();
                 rec.sink_queue_size = QUEUE_ARRAY_CLASS->size(context->sink_queue);
 
-                if(!has_sink) 
+                if(!has_sink) {
                     rec.sink_cycle = context->records[0].sink_cycle;
-                if(!has_capture) 
+                } if(!has_capture) {
                     rec.capture_cycle = context->records[0].capture_cycle;
+                    rec.encode_cycle = context->records[0].encode_cycle;
+                }
 
                 rec.sink_queue_size = QUEUE_ARRAY_CLASS->size(context->sink_queue);
                 push_record(context,&rec);

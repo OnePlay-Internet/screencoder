@@ -190,6 +190,8 @@ namespace encoder {
 
             platf::Capture ret;
             platf::Image* img2 = (platf::Image*)BUFFER_REF(imgBuf,NULL);
+
+            //TODO fix this
             ret = ctx->display->klass->capture(ctx->display, img2);
             BUFFER_UNREF(imgBuf);
 
@@ -204,6 +206,8 @@ namespace encoder {
                 ctx->reinit = true;
                 break;
             }
+
+            std::this_thread::sleep_for(3ms);
 
             {
                 // convert image
@@ -242,9 +246,6 @@ namespace encoder {
                     break;
                 } 
 
-
-                if (ctx->enable_delay)
-                    std::this_thread::sleep_for(ctx->delay);
 
                 QUEUE_ARRAY_CLASS->push(ctx->packet_queue, avbuf,true);
                 BUFFER_UNREF(avbuf);
