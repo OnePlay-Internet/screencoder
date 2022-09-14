@@ -138,8 +138,8 @@ namespace rtp
         static RtpSink sink = {0};
         RETURN_ONCE((sink::GenericSink*)&sink);
 
-        sink.sink_event_in = QUEUE_ARRAY_CLASS->init();
-        sink.sink_event_out =QUEUE_ARRAY_CLASS->init();
+        sink.sink_event_in = QUEUE_ARRAY_CLASS->init(1);
+        sink.sink_event_out =QUEUE_ARRAY_CLASS->init(1);
         sink.this_pkt_sent = std::chrono::high_resolution_clock::now(); 
         sink.prev_pkt_sent = std::chrono::high_resolution_clock::now(); 
 

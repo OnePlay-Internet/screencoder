@@ -34,6 +34,7 @@ namespace util {
         BufferLL* first;
 
         uint64 size;
+        uint64 max_size;
 
         pthread_mutex_t mutex;
     };
@@ -57,6 +58,9 @@ namespace util {
         BufferLL* last = (BufferLL*)malloc(sizeof(BufferLL));
         memset(last,0,sizeof(BufferLL));
 
+        while (queue->size >= queue->max_size)
+            std::this_thread::sleep_for(1ms);
+        
 
         if (record)
         {
@@ -154,11 +158,12 @@ namespace util {
 
 
     QueueArray*     
-    queue_array_init()
+    queue_array_init(int max_size)
     {
         QueueArray* array = (QueueArray*)malloc(sizeof(QueueArray));
         array->first = NULL;
         array->size = 0;
+        array->max_size = max_size;
         array->mutex = PTHREAD_MUTEX_INITIALIZER;
         return array;
     }

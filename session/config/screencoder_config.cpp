@@ -76,6 +76,7 @@ namespace config
         encoder.gop_size = 1;
         encoder.gop_size_min = 0;
         encoder.ref_frame_num = 1;
+        encoder.packet_queue_size = 5;
 
         encoder.dwmflush = true;
 

@@ -89,11 +89,11 @@ namespace appsink
         sink->base.get_input_eve = get_input_event;
         sink->base.get_output_eve = get_output_event;
 
-        sink->sink_event_in = QUEUE_ARRAY_CLASS->init();;
-        sink->sink_event_out = QUEUE_ARRAY_CLASS->init();
+        sink->sink_event_in = QUEUE_ARRAY_CLASS->init(1);
+        sink->sink_event_out = QUEUE_ARRAY_CLASS->init(1);
         sink->prev_pkt_sent = std::chrono::high_resolution_clock::now();
         sink->this_pkt_sent = std::chrono::high_resolution_clock::now();
-        sink->out = QUEUE_ARRAY_CLASS->init();
+        sink->out = QUEUE_ARRAY_CLASS->init(1);
         return (sink::GenericSink*)sink;
     }
     

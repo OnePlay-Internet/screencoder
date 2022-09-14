@@ -50,6 +50,7 @@ namespace config
         int gop_size_min;
         int ref_frame_num;
         bool dwmflush;
+        int packet_queue_size;
     }Constant;
 
     Constant*       get_encoder_config       ();

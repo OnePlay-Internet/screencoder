@@ -18,6 +18,7 @@
 
 #define QUEUE_ARRAY_CLASS       util::queue_array_class_init()
 
+
 namespace util
 {
     typedef struct _QueueArray QueueArray;
@@ -33,7 +34,7 @@ namespace util
                               util::Buffer** buf,
                               int* size,
                               bool record);
-        QueueArray* (*init) ();
+        QueueArray* (*init) (int max_size);
 
         uint64 (*size) (QueueArray* queue);
 

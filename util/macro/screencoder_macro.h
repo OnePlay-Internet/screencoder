@@ -13,6 +13,7 @@
 #include <screencoder_log.h>
 
 #define DEFAULT_BITRATE ( 1000 * 1000 * 30 )
+#define INFINITE 100000
 
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 
