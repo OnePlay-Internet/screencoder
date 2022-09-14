@@ -36,6 +36,7 @@ namespace appsink
             std::this_thread::sleep_for(1ms);
 
         pthread_mutex_lock(&app->mutex);
+        BUFFER_REF(buf,NULL);
         app->out = buf;
         app->has_pkt = true;
         pthread_mutex_unlock(&app->mutex);
@@ -100,6 +101,7 @@ namespace appsink
         sink->prev_pkt_sent = std::chrono::high_resolution_clock::now();
         sink->this_pkt_sent = std::chrono::high_resolution_clock::now();
         sink->mutex = PTHREAD_MUTEX_INITIALIZER;
+        sink->out = NULL;
         sink->has_pkt = false;
         return (sink::GenericSink*)sink;
     }
@@ -138,6 +140,8 @@ GoHandleAVPacket(void* appsink_ptr,
     pthread_mutex_unlock(&sink->mutex);
 
     libav::Packet* pkt = (libav::Packet*)BUFFER_REF(buffer,NULL);
+    BUFFER_UNREF(buffer);
+
     int64 current = BUFFER_CLASS->created(buffer);
 
     *data = pkt->data;
