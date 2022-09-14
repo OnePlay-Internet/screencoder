@@ -173,6 +173,11 @@ namespace gpu {
     }    
 
 
+    std::chrono::nanoseconds
+    display_vram_capture_cycle(platf::Display* disp) 
+    {
+        return ((display::DisplayBase*)disp)->dup->cycle;
+    }
 
 
     platf::Display*
@@ -450,6 +455,7 @@ namespace gpu {
         klass.base.dummy_img        = display_vram_dummy_img;
         klass.base.make_hwdevice    = display_vram_make_hwdevice;
         klass.base.capture          = display_vram_capture;
+        klass.base.capture_cycle    = display_vram_capture_cycle;
         klass.base.allocate_cursor  = display_vram_prepare_cursor_texture;
         klass.base.draw_cursor      = display_vram_draw_cursor_texture;
         return &klass;

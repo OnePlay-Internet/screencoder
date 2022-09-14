@@ -20,6 +20,8 @@ namespace adaptive
 
         std::chrono::nanoseconds capture_cycle;
 
+        std::chrono::nanoseconds encode_cycle;
+
         std::chrono::high_resolution_clock::time_point timestamp;
 
         uint64 sink_queue_size;
@@ -89,8 +91,8 @@ namespace adaptive
 
     typedef struct _AdaptiveEvent {
         AdaptiveEventCode code;
-        std::chrono::nanoseconds time_data;
-        int num_data;
+        std::chrono::nanoseconds time_data[10];
+        int num_data[10];
     }AdaptiveEvent;
 
 

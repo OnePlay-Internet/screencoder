@@ -69,7 +69,7 @@ namespace adaptive
                 switch (event->code)
                 {
                 case AdaptiveEventCode::SINK_CYCLE_REPORT:
-                    rec.sink_cycle = event->time_data;
+                    rec.sink_cycle = event->time_data[0];
                     has_sink = true;
                     break;
                 default:
@@ -93,7 +93,8 @@ namespace adaptive
                     /* code */
                     break;
                 case AdaptiveEventCode::CAPTURE_CYCLE_REPORT :
-                    rec.capture_cycle = event->time_data;
+                    rec.capture_cycle = event->time_data[0];
+                    rec.encode_cycle  = event->time_data[1];
                     has_capture = true;
                     break;
                 default:
@@ -142,9 +143,16 @@ namespace adaptive
                 char log[100] = {0};
                 int64 cap_mili =      std::chrono::duration_cast<std::chrono::milliseconds>(record.capture_cycle).count() %1000 %1000;
                 int64 cap_micro =     std::chrono::duration_cast<std::chrono::microseconds>(record.capture_cycle).count() % 1000;
+                int64 encode_mili =   std::chrono::duration_cast<std::chrono::milliseconds>(record.encode_cycle).count() %1000 %1000;
+                int64 encode_micro =  std::chrono::duration_cast<std::chrono::microseconds>(record.encode_cycle).count() % 1000;
                 int64 sink_mili =     std::chrono::duration_cast<std::chrono::milliseconds>(record.sink_cycle).count() % 1000 % 1000;
                 int64 sink_micro =    std::chrono::duration_cast<std::chrono::microseconds>(record.sink_cycle).count() % 1000;
-                snprintf(log,100,"capture cycle %dms,%dus | sink sycle %dms,%dus | buffer in queue %d",cap_mili,cap_micro,sink_mili,sink_micro,record.sink_queue_size);
+                snprintf(log,100,"capture cycle %dms,%dus | encode cycle %dms,%dus | sink sycle %dms,%dus | buffer in queue %d",
+                            cap_mili,cap_micro,
+                            encode_mili,encode_micro,
+                            sink_mili,sink_micro,
+                            record.sink_queue_size);
+                            
                 LOG_INFO(log);
                 std::this_thread::sleep_for(EVALUATION_INTERVAL); 
                 continue;;
@@ -186,7 +194,7 @@ namespace adaptive
                 BUFFER_MALLOC(buf,sizeof(AdaptiveEvent),ptr);
                 AdaptiveEvent* event = (AdaptiveEvent*)ptr;
                 event->code = AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE;
-                event->num_data = 1s / record.sink_cycle;
+                event->num_data[0] = 1s / record.sink_cycle;
                 QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf,true);
                 BUFFER_UNREF(buf);
             } else if (diff > 0ms && diff < diff_limit) {

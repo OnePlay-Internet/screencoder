@@ -148,7 +148,7 @@ GoUnrefAVPacket(void* appsink_ptr,
     BUFFER_MALLOC(evebuf,sizeof(adaptive::AdaptiveEvent),ptr);
     adaptive::AdaptiveEvent* eve = (adaptive::AdaptiveEvent*)ptr;
     eve->code = adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
-    eve->time_data = delta;
+    eve->time_data[0] = delta;
     QUEUE_ARRAY_CLASS->push(sink->sink_event_out,evebuf,true);
 
     util::Buffer* buffer = (util::Buffer*)buf;

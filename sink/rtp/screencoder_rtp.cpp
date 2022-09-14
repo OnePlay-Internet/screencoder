@@ -97,7 +97,7 @@ namespace rtp
         BUFFER_MALLOC(evebuf,sizeof(adaptive::AdaptiveEvent),ptr);
         adaptive::AdaptiveEvent* eve = (adaptive::AdaptiveEvent*)ptr;
         eve->code = adaptive::AdaptiveEventCode::SINK_CYCLE_REPORT;
-        eve->time_data = delta;
+        eve->time_data[0] = delta;
         QUEUE_ARRAY_CLASS->push(rtp->sink_event_out,evebuf,true);
         BUFFER_UNREF(buf);
     }

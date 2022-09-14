@@ -26,6 +26,8 @@ namespace duplication
         d3d11::DeviceContext device_ctx;
         bool use_dwmflush;
         TexturePool* pool;
+
+        std::chrono::nanoseconds cycle;
     }Duplication;
 
     typedef struct _DuplicationClass {

@@ -154,6 +154,8 @@ namespace platf {
         Capture                (*capture)          (Display* self,
                                                     Image* img);
 
+        std::chrono::nanoseconds(*capture_cycle)   (Display* self);
+
         util::Buffer*          (*allocate_cursor)  (Display* self);
 
         void                    (*draw_cursor)       (Display* self,

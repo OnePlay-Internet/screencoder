@@ -141,7 +141,7 @@ namespace encoder {
                 adaptive::AdaptiveEvent* event =  (adaptive::AdaptiveEvent*)QUEUE_ARRAY_CLASS->pop(ctx->capture_event_in,&buf,NULL,true);
                 if( event->code == adaptive::AdaptiveEventCode::UPDATE_CAPTURE_DELAY_INTERVAL) {
                     ctx->enable_delay = true;
-                    ctx->delay = event->time_data;
+                    ctx->delay = event->time_data[0];
                     BUFFER_UNREF(buf);
                     break;
                 }
@@ -154,15 +154,15 @@ namespace encoder {
                     session->context->rc_buffer_size = session->context->bit_rate / ctx->display->framerate;
                     BUFFER_UNREF(ctxBuf);
                 } else if ( event->code == adaptive::AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE) {
-                    session->context->time_base = AVRational { 1, event->num_data };
-                    session->context->framerate = AVRational { event->num_data , 1 };
-                    session->context->rc_buffer_size = session0->context->bit_rate / event->num_data;
+                    session->context->time_base = AVRational { 1, event->num_data[0] };
+                    session->context->framerate = AVRational { event->num_data[0] , 1 };
+                    session->context->rc_buffer_size = session0->context->bit_rate / event->num_data[0];
                     BUFFER_UNREF(ctxBuf);
                 } else if ( event->code == adaptive::AdaptiveEventCode::AVCODEC_BITRATE_CHANGE) {
-                    session->context->rc_max_rate    = event->num_data ;
-                    session->context->rc_buffer_size = event->num_data / session->context->framerate.den;
-                    session->context->bit_rate       = event->num_data ;
-                    session->context->rc_min_rate    = event->num_data ;
+                    session->context->rc_max_rate    = event->num_data[0] ;
+                    session->context->rc_buffer_size = event->num_data[0] / session->context->framerate.den;
+                    session->context->bit_rate       = event->num_data[0] ;
+                    session->context->rc_min_rate    = event->num_data[0] ;
                 } else {
                     LOG_ERROR("unknown adaptive event");
                 }
@@ -181,7 +181,8 @@ namespace encoder {
                 BUFFER_MALLOC(buf,sizeof(adaptive::AdaptiveEvent),ptr);
                 adaptive::AdaptiveEvent* event = (adaptive::AdaptiveEvent*)ptr;
                 event->code = adaptive::AdaptiveEventCode::CAPTURE_CYCLE_REPORT;
-                event->time_data = diff;
+                event->time_data[0] = ctx->display->klass->capture_cycle(ctx->display);
+                event->time_data[1] = diff;
                 QUEUE_ARRAY_CLASS->push(ctx->capture_event_out,buf,true);
                 BUFFER_UNREF(buf);
             }

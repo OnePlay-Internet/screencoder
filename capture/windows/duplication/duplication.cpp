@@ -51,10 +51,7 @@ namespace duplication
         if(dup->use_dwmflush) 
             DwmFlush();
 
-        pthread_mutex_lock(&texture->mutex);
         HRESULT status = dup->dup->AcquireNextFrame(DEFAULT_TIMEOUT, &texture->frame_info, &texture->resource);
-        pthread_mutex_unlock(&texture->mutex);
-
         if(status == S_OK) {
             return_status = platf::Capture::OK;
         } else if (status == DXGI_ERROR_WAIT_TIMEOUT){
@@ -91,9 +88,8 @@ namespace duplication
     }
 
 
-
     int 
-    seek_available_texture(Duplication* dup)
+    seek_oldest_texture(Duplication* dup)
     {
         int value;
         TexturePool* pool = dup->pool;
@@ -101,18 +97,44 @@ namespace duplication
         {
             std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
             std::chrono::nanoseconds diff[TEXTURE_SIZE] = {0ns};
-            for(int i = 0; i < TEXTURE_SIZE; i++)
-            {
+            for(int i = 0; i < TEXTURE_SIZE; i++) {
+                if (pool->texture[i].status == platf::Capture::OK) {
+                    diff[i] = now - pool->texture[i].produced;
+                }
+            }
+
+            std::chrono::nanoseconds max = 0ns;
+            for(int i = 0; i < TEXTURE_SIZE; i++) {
+                if (diff[i] > max) {
+                    max = diff[i];
+                    value = i;
+                    goto take;
+                }
+            }
+            std::this_thread::sleep_for(1ms);
+        }
+        take:
+        return value;
+    }
+
+    int 
+    seek_latest_texture(Duplication* dup)
+    {
+        int value;
+        TexturePool* pool = dup->pool;
+        while(true)
+        {
+            std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+            std::chrono::nanoseconds diff[TEXTURE_SIZE] = {0ns};
+            for(int i = 0; i < TEXTURE_SIZE; i++) {
                 if (pool->texture[i].status == platf::Capture::OK) {
                     diff[i] = now - pool->texture[i].produced;
                 }
             }
 
             std::chrono::nanoseconds min = 0ns;
-            for(int i = 0; i < TEXTURE_SIZE; i++)
-            {
-                if (diff[i] > min)
-                {
+            for(int i = 0; i < TEXTURE_SIZE; i++) {
+                if (diff[i] > min) {
                     min = diff[i];
                     value = i;
                     goto take;
@@ -147,11 +169,14 @@ namespace duplication
     frame_produce_thread(Duplication* dup,
                          d3d11::DeviceContext ctx)
     {
-        int count = 0;
         TexturePool* pool = dup->pool;
-        while(pool_check(pool))
-        {
-            Texture* texture = &pool->texture[count];
+        std::chrono::high_resolution_clock::time_point prev = std::chrono::high_resolution_clock::now();
+        std::chrono::high_resolution_clock::time_point now  = std::chrono::high_resolution_clock::now();
+        while(pool_check(pool)) {
+            int count = seek_oldest_texture(dup);
+            Texture* texture = &(pool->texture[count]);
+
+            pthread_mutex_lock(&texture->mutex);
             texture->status = duplication_get_next_frame(dup,texture);
             if (texture->status != platf::Capture::OK)
                 continue;
@@ -174,7 +199,7 @@ namespace duplication
                 if(FAILED(result)) {
                     LOG_ERROR("Couldn't copy dxgi resource to texture");
                     texture->status = platf::Capture::ERR;
-                    break;
+                    continue;
                 }
             }
 
@@ -184,7 +209,13 @@ namespace duplication
             if (texture->status != platf::Capture::OK)
                 continue;
 
-            count = (count == (TEXTURE_SIZE - 1)) ? 0 : count + 1;
+            pthread_mutex_unlock(&texture->mutex);
+
+            {
+                now  = std::chrono::high_resolution_clock::now();
+                dup->cycle = now - prev;
+                prev = now;
+            }
         }
     }
 
@@ -264,7 +295,7 @@ namespace duplication
     {
         gpu::ImageGpu* output = (gpu::ImageGpu*)img;
 
-        int pos = seek_available_texture(dup);
+        int pos = seek_latest_texture(dup);
         if (dup->pool->overall_status != platf::Capture::OK)
             return dup->pool->overall_status;
         
@@ -282,15 +313,18 @@ namespace duplication
                                          int* pointer_shape_buffer_size,
                                          DXGI_OUTDUPL_POINTER_SHAPE_INFO *pointer_shape_info)
     { 
-        int pos = seek_available_texture(dup);
+        int pos = seek_latest_texture(dup);
         DXGI_OUTDUPL_FRAME_INFO* info = &dup->pool->texture[pos].frame_info;
 
+        pthread_mutex_lock(&dup->pool->texture[pos].mutex);
         uint8* shape_pointer = (uint8*)malloc(info->PointerShapeBufferSize);
         *pointer_shape_buffer = shape_pointer;
         *pointer_shape_buffer_size = info->PointerShapeBufferSize;
 
         UINT dummy;
-        return dup->dup->GetFramePointerShape(info->PointerShapeBufferSize, shape_pointer, &dummy, pointer_shape_info);
+        HRESULT res = dup->dup->GetFramePointerShape(info->PointerShapeBufferSize, shape_pointer, &dummy, pointer_shape_info);
+        pthread_mutex_lock(&dup->pool->texture[pos].mutex);
+        return res;
     }
 
     DuplicationClass*
