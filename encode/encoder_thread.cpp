@@ -184,8 +184,6 @@ namespace encoder {
                 BUFFER_UNREF(buf);
             }
 
-            if (ctx->enable_delay)
-                std::this_thread::sleep_for(ctx->delay);
             
 
             {
@@ -255,6 +253,9 @@ namespace encoder {
                     break;
                 } 
 
+
+                if (ctx->enable_delay)
+                    std::this_thread::sleep_for(ctx->delay);
 
                 QUEUE_ARRAY_CLASS->push(ctx->packet_queue, avbuf,true);
                 BUFFER_UNREF(avbuf);
