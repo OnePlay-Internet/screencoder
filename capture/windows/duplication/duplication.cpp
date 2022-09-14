@@ -134,7 +134,7 @@ namespace duplication
 
             std::chrono::nanoseconds min = 0ns;
             for(int i = 0; i < TEXTURE_SIZE; i++) {
-                if (diff[i] > min) {
+                if (diff[i] < min) {
                     min = diff[i];
                     value = i;
                     goto take;
@@ -170,8 +170,7 @@ namespace duplication
                          d3d11::DeviceContext ctx)
     {
         TexturePool* pool = dup->pool;
-        std::chrono::high_resolution_clock::time_point prev = std::chrono::high_resolution_clock::now();
-        std::chrono::high_resolution_clock::time_point now  = std::chrono::high_resolution_clock::now();
+        std::chrono::high_resolution_clock::time_point now,prev = std::chrono::high_resolution_clock::now();
         while(pool_check(pool)) {
             int count = seek_oldest_texture(dup);
             Texture* texture = &(pool->texture[count]);
