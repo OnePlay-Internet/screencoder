@@ -37,7 +37,7 @@ namespace adaptive
     median_10_record(AdaptiveContext* context, 
                      Record* record)
     {
-        int median_sink_cycle, median_capture_cycle, total_time, diff;
+        int median_sink_cycle, median_capture_cycle, total_time, diff, total_buffer_time;
 
         for (int i = 0; i < RECORD_SIZE; i++) {
             diff = (context->records[i].timestamp - context->prev).count(); //miliseconds
@@ -47,12 +47,13 @@ namespace adaptive
             median_sink_cycle    += context->records[i].sink_cycle.count() * diff;
             median_capture_cycle += context->records[i].capture_cycle.count() * diff;
 
+
             total_time += diff;
         }
 
         record->capture_cycle = (median_capture_cycle / total_time) * 1ns;
         record->sink_cycle =    (median_sink_cycle / total_time) * 1ns;
-        record->sink_queue_size = context->records[0].sink_queue_size;
+
     }
 
     void 
@@ -148,7 +149,9 @@ namespace adaptive
                 int64 cap_micro =     std::chrono::duration_cast<std::chrono::microseconds>(record.capture_cycle).count() % 1000;
                 int64 sink_mili =     std::chrono::duration_cast<std::chrono::milliseconds>(record.sink_cycle).count() % 1000 % 1000;
                 int64 sink_micro =    std::chrono::duration_cast<std::chrono::microseconds>(record.sink_cycle).count() % 1000;
-                snprintf(log,100,"capture cycle %dms,%dus | sink sycle %dms,%dus | buffer in queue %d",cap_mili,cap_micro,sink_mili,sink_micro,record.sink_queue_size);
+                std::chrono::nanoseconds total_buffer_time = context->records[0].sink_queue_size * record.capture_cycle;
+                int64 buffer_time =     std::chrono::duration_cast<std::chrono::milliseconds>(total_buffer_time).count() % 1000 % 1000;
+                snprintf(log,100,"capture cycle %dms,%dus | sink sycle %dms,%dus | total buffer time %dms",cap_mili,cap_micro,sink_mili,sink_micro,buffer_time);
                 LOG_INFO(log);
             }
 
