@@ -22,7 +22,7 @@
 
 #define ATOMIC_SLEEP 100us
 
-#define TRACE_RECORD true
+#define TRACE_RECORD false
 
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 

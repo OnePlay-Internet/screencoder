@@ -63,7 +63,6 @@ namespace util {
 
         if (record)
         {
-                
 #ifndef MINGW
         util::object_class_init()->ref(obj,NULL,"\\screencoder_queue.cpp",__LINE__);
 #else
@@ -74,20 +73,21 @@ namespace util {
         }
 
         // lock this
-        pthread_mutex_lock(&queue->mutex);
-        {
-            last->obj  = obj;
-            last->next = NULL;
+        last->obj  = obj;
+        last->next = NULL;
 
+        {
+            BufferLL* container;
+            pthread_mutex_lock(&queue->mutex);
             if(!queue->first) {
                 queue->first = last;
             } else {
-                BufferLL* container = queue->first;
+                container = queue->first;
                 while (container->next) { container = container->next; }
                 container->next = last;
             }
+            pthread_mutex_unlock(&queue->mutex);
         }
-        pthread_mutex_unlock(&queue->mutex);
 
         queue->size++;
         return true;
@@ -117,17 +117,18 @@ namespace util {
         Buffer *ret;
 
         // lock this
-        retry:
-        if (!queue->first || !queue->size) {
+        while(!queue->first || !queue->size) 
             std::this_thread::sleep_for(ATOMIC_SLEEP);
-            goto retry;
-        } else {
+        
+
+        {
             pthread_mutex_lock(&queue->mutex);
             container = queue->first;
             ret = queue->first->obj;
             queue->first = queue->first->next;
             pthread_mutex_unlock(&queue->mutex);
         }
+
 
         free(container);
         *buf = ret;
