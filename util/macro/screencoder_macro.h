@@ -16,7 +16,11 @@
 
 #define INFINITE 10000
 
-#define RECORD_SIZE 1000
+#define RECORD_SIZE 200
+
+#define PACKET_QUEUE_SIZE 2
+
+#define ATOMIC_SLEEP 100us
 
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 

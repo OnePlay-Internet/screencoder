@@ -40,7 +40,7 @@ namespace util
     wait_event(Broadcaster* broadcaster)
     {
         while (!QUEUE_ARRAY_CLASS->peek(broadcaster)) { 
-            std::this_thread::sleep_for(1s); 
+            std::this_thread::sleep_for(10s); 
         }
         return true;
     }

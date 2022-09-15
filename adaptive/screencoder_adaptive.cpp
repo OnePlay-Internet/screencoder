@@ -37,7 +37,7 @@ namespace adaptive
     median_10_record(AdaptiveContext* context, 
                      Record* record)
     {
-        int median_sink_cycle, median_capture_cycle, total_time, diff, total_buffer_time;
+        float median_sink_cycle, median_capture_cycle, total_time, diff, total_buffer_time = 0;
 
         for (int i = 0; i < RECORD_SIZE; i++) {
             diff = (context->records[i].timestamp - context->prev).count(); //miliseconds
@@ -51,8 +51,8 @@ namespace adaptive
             total_time += diff;
         }
 
-        record->capture_cycle = (median_capture_cycle / total_time) * 1ns;
-        record->sink_cycle =    (median_sink_cycle / total_time) * 1ns;
+        record->capture_cycle = ((int)(median_capture_cycle / total_time)) * 1ns;
+        record->sink_cycle =    ((int)(median_sink_cycle / total_time)) * 1ns;
 
     }
 
@@ -61,7 +61,6 @@ namespace adaptive
     {
         while (!IS_INVOKED(context->shutdown))
         {
-            std::this_thread::sleep_for(10ms);
             Record rec; memset(&rec,0,sizeof(Record));
             bool has_sink,has_capture = false;
 
@@ -169,6 +168,7 @@ namespace adaptive
     {
         AdaptiveContext context;
         memset(&context,0,sizeof(AdaptiveContext));
+        context.prev = std::chrono::high_resolution_clock::now();
         context.capture_event_in = capture_event_out;
         context.capture_event_out = capture_event_in;
         context.sink_event_in = sink_event_out;

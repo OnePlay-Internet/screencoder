@@ -57,7 +57,7 @@ namespace session {
         session.display = disp;
         session.shutdown_event = shutdown;
         session.sink = sink;
-        session.packet_queue = QUEUE_ARRAY_CLASS->init(3);
+        session.packet_queue = QUEUE_ARRAY_CLASS->init(PACKET_QUEUE_SIZE);
         session.config = {
             encoder::SlicePerFrame::TWO,
             encoder::DynamicRange::DISABLE,
