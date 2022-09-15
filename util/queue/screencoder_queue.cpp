@@ -121,18 +121,17 @@ namespace util {
                     int* size,
                     bool record)
     {
-        if (!queue_array_peek(queue))
-            return NULL;
-
         BufferLL* container;
         Buffer *ret;
 
         // lock this
         pthread_mutex_lock(&queue->mutex);
-        {
+        if (!queue->first && queue->size) {
+            return NULL;
+        } else {
             container = queue->first;
-            ret = container->obj;
-            queue->first = container->next;
+            ret = queue->first->obj;
+            queue->first = queue->first->next;
         }
         pthread_mutex_unlock(&queue->mutex);
 

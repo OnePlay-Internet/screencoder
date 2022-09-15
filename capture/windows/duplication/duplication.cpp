@@ -94,24 +94,15 @@ namespace duplication
     {
         int value;
         TexturePool* pool = dup->pool;
-        while(true)
-        {
-            bool found = false;
-            int min = pool->texture[0].order;
-            for(int i = 0; i < TEXTURE_SIZE; i++) {
-                int y = pool->texture[i].order;
-                if (y < min && y != 0) {
-                    min = y;
-                    value = i;
-                    found = true;
-                }
+        int min = pool->texture[0].order;
+        for(int i = 0; i < TEXTURE_SIZE; i++) {
+            int y = pool->texture[i].order;
+            if (y < min) {
+                min = y;
+                value = i;
             }
-
-            if(found)
-                goto take;
-            std::this_thread::sleep_for(1ms);
         }
-        take:
+
         return value;
     }
 
@@ -123,15 +114,15 @@ namespace duplication
         while(true)
         {
             bool found = false;
-            int min = pool->texture[0].order;
+            int max = pool->texture[0].order;
             for(int i = 0; i < TEXTURE_SIZE; i++) {
                 int y =                 pool->texture[i].order;
                 platf::Capture status = pool->texture[i].status;
 
-                if (y < min && y != 0 && 
+                if (y > max && y != 0 && 
                     status == platf::Capture::OK) 
                 {
-                    min = y;
+                    max = y;
                     value = i;
                     found = true;
                 }
@@ -171,7 +162,7 @@ namespace duplication
         TexturePool* pool = dup->pool;
         std::chrono::high_resolution_clock::time_point now,prev = std::chrono::high_resolution_clock::now();
 
-        int count = -1;
+        int count = 0;
         while(true) {
             count++;
 
@@ -285,7 +276,7 @@ namespace duplication
 
         dup->pool = init_texture_pool(base);
         std::thread thread {frame_produce_thread,dup,device_ctx};
-        thread.join();
+        thread.detach();
         return dup;
     }
 
