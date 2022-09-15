@@ -60,8 +60,9 @@ namespace adaptive
          * @brief 
          * store metric as record
          */
-        Record records[100];
+        Record records[1000];
         int record_count;
+        std::chrono::high_resolution_clock::time_point prev;
 
 
 

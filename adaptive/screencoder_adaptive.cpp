@@ -26,7 +26,7 @@ namespace adaptive
     push_record(AdaptiveContext* context, 
                 Record* record)
     {
-        for (int i = 1; i < 100; i++)
+        for (int i = 1; i < RECORD_SIZE; i++)
         {
             context->records[i] = context->records[i-1];
         }
@@ -37,18 +37,22 @@ namespace adaptive
     median_10_record(AdaptiveContext* context, 
                      Record* record)
     {
-        std::chrono::nanoseconds median_sink_cycle = 0ns, median_capture_cycle = 0ns;
+        int median_sink_cycle, median_capture_cycle, total_time, diff;
 
-        for (int i = 0; i < 10; i++)
-        {
-            median_sink_cycle += context->records[i].sink_cycle;
-            median_capture_cycle += context->records[i].capture_cycle;
+        for (int i = 0; i < RECORD_SIZE; i++) {
+            diff = (context->records[i].timestamp - context->prev).count(); //miliseconds
+            if (diff < 0)
+                continue;
+            
+            median_sink_cycle    += context->records[i].sink_cycle.count() * diff;
+            median_capture_cycle += context->records[i].capture_cycle.count() * diff;
+
+            total_time += diff;
         }
 
-        record->capture_cycle = median_capture_cycle / 10;
-        record->sink_cycle = median_sink_cycle / 10;
+        record->capture_cycle = (median_capture_cycle / total_time) * 1ns;
+        record->sink_cycle =    (median_sink_cycle / total_time) * 1ns;
         record->sink_queue_size = context->records[0].sink_queue_size;
-        record->timestamp = std::chrono::high_resolution_clock::now();
     }
 
     void 
@@ -128,7 +132,7 @@ namespace adaptive
     {
         while (!IS_INVOKED(context->shutdown))
         {
-            if (context->record_count < 100) {
+            if (context->record_count < RECORD_SIZE) {
                std::this_thread::sleep_for(EVALUATION_INTERVAL); 
                continue;
             }
@@ -146,85 +150,9 @@ namespace adaptive
                 int64 sink_micro =    std::chrono::duration_cast<std::chrono::microseconds>(record.sink_cycle).count() % 1000;
                 snprintf(log,100,"capture cycle %dms,%dus | sink sycle %dms,%dus | buffer in queue %d",cap_mili,cap_micro,sink_mili,sink_micro,record.sink_queue_size);
                 LOG_INFO(log);
-                std::this_thread::sleep_for(EVALUATION_INTERVAL); 
-                continue;;
-            }
-            
-            std::chrono::nanoseconds diff = record.sink_cycle - record.capture_cycle;
-            std::chrono::nanoseconds buffer_size_in_time = record.sink_queue_size * record.capture_cycle;
-            std::chrono::nanoseconds diff_limit = BUFFER_LIMIT / (EVALUATION_INTERVAL / record.sink_cycle);
-
-            if ( buffer_size_in_time > BUFFER_LIMIT) {
-                /**
-                 * @brief 
-                 * network condition is bad, 
-                 * buffered queue already been overloaded
-                 */
-
-                /**
-                 * @brief 
-                 * ASSUME that sink_cycle and capture_cycle is constant
-                 * must ensure all element in queue is poped out during the next interval
-                 * find capture delay which
-                 * SATISFY
-                 * A> var compensate = ( sink_cycle - ( native_capture_cycle + capture_delay ))
-                 * B> evaluation_interval / compensate = -sink_queue_size 
-                 */
-                std::chrono::nanoseconds compensate = ( EVALUATION_INTERVAL / record.sink_queue_size); 
-                context->capture_delay += diff + compensate; 
-            } else if (diff > diff_limit ) {
-                /**
-                 * @brief 
-                 * network condition is bad, 
-                 * buffered queue might be overloaded
-                 */
-                context->capture_delay += diff;
-
-                /**
-                 * @brief Update framerate accordingly
-                 */
-                BUFFER_MALLOC(buf,sizeof(AdaptiveEvent),ptr);
-                AdaptiveEvent* event = (AdaptiveEvent*)ptr;
-                event->code = AdaptiveEventCode::AVCODEC_FRAMERATE_CHANGE;
-                event->num_data = 1s / record.sink_cycle;
-                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf,true);
-                BUFFER_UNREF(buf);
-            } else if (diff > 0ms && diff < diff_limit) {
-                /**
-                 * @brief 
-                 * network condition is bad, 
-                 * buffered queue might be overloaded
-                 */
-                context->capture_delay += diff;
-            } else if (diff < 0ms && diff > -diff_limit){ // diff < 0ms
-                /**
-                 * @brief 
-                 * network condition is better, 
-                 * lower the delay interval
-                 */
-                context->capture_delay -= 2 * diff;
-            } else {
-                /**
-                 * @brief 
-                 * since network condition is good
-                 */
-                if(context->capture_delay != 0ms)
-                    code = AdaptiveEventCode::DISABLE_CAPTURE_DELAY_INTERVAL;
-                
-                context->capture_delay = 0ms;
             }
 
-            if (code != AdaptiveEventCode::EVENT_NONE)
-            {
-                BUFFER_MALLOC(buf,sizeof(AdaptiveEvent),ptr);
-                AdaptiveEvent* event = (AdaptiveEvent*)ptr;
-                event->code = code;
-
-
-                QUEUE_ARRAY_CLASS->push(context->capture_event_out,buf,true);
-                BUFFER_UNREF(buf);
-            }
-
+            context->prev = std::chrono::high_resolution_clock::now();
             std::this_thread::sleep_for(EVALUATION_INTERVAL);
         }
     }

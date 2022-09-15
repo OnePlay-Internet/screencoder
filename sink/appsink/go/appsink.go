@@ -54,7 +54,7 @@ func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 	app := &Appsink{}
 	app.conf = conf
 	app.packetizer = h264.NewH264Payloader()
-	app.channel = make(chan *rtp.Packet)
+	app.channel = make(chan *rtp.Packet,5)
 	app.pktchannel = make(chan *GoPacket)
 	app.displays = make([]string, 0);
 	app.encoder = "nvenc_h264"

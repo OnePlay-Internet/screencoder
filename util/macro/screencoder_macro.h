@@ -16,6 +16,8 @@
 
 #define INFINITE 10000
 
+#define RECORD_SIZE 1000
+
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 
 #define LOG_WARNING(content)  error::log(__FILE__,__LINE__,"warning",content)
