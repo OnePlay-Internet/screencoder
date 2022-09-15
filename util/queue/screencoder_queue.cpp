@@ -59,7 +59,7 @@ namespace util {
         memset(last,0,sizeof(BufferLL));
 
         while (queue->size >= queue->max_size)
-            std::this_thread::sleep_for(1ms);
+            std::this_thread::sleep_for(ATOMIC_SLEEP);
 
         if (record)
         {
@@ -119,7 +119,7 @@ namespace util {
         // lock this
         retry:
         if (!queue->first || !queue->size) {
-            std::this_thread::sleep_for(1ms);
+            std::this_thread::sleep_for(ATOMIC_SLEEP);
             goto retry;
         } else {
             pthread_mutex_lock(&queue->mutex);

@@ -7,6 +7,7 @@
 
 
 
+
         {
             "name": "Attach to Process",
             "type": "go",
@@ -30,7 +31,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}/examples/go_webrtc/main.go",
             "cwd": "${workspaceFolder}/bin",
-            "args": [ "--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MTY2MzEyMjIwMjk3MSwiaWF0IjoxNjYzMjEzOTc0fQ.iQK2IPji1YRQtx0lSLQrtuPtuBx_xezqL3KDpWpNkmI"]
+            "args": [ "--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MTY2MzEyMjIwMjk3MSwiaWF0IjoxNjYzMjI4NzA0fQ.Csdk9h5isUlVulm9QcwCWNgfnjefKkEicpowhQALzws"]
         },
         {
             "name": "appsink",
