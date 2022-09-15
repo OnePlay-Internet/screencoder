@@ -102,13 +102,6 @@ namespace util {
         return queue->size;
     }
 
-    void
-    queue_array_wait(QueueArray* queue)
-    {
-        while(!queue->size) {
-            std::this_thread::sleep_for(1ms); // decrease sleep interval cause cpu consumption ramp up
-        }
-    }
 
 
     pointer
@@ -117,20 +110,21 @@ namespace util {
                     int* size,
                     bool record)
     {
-        if (!queue_array_peek(queue))
-            return NULL;
-
         BufferLL* container;
         Buffer *ret;
 
         // lock this
-        pthread_mutex_lock(&queue->mutex);
-        {
+        retry:
+        if (!queue->first && queue->size) {
+            std::this_thread::sleep_for(1ms);
+            goto retry;
+        } else {
+            pthread_mutex_lock(&queue->mutex);
             container = queue->first;
-            ret = container->obj;
-            queue->first = container->next;
+            ret = queue->first->obj;
+            queue->first = queue->first->next;
+            pthread_mutex_unlock(&queue->mutex);
         }
-        pthread_mutex_unlock(&queue->mutex);
 
         free(container);
         *buf = ret;
@@ -194,7 +188,6 @@ namespace util {
 
         klass.init = queue_array_init;
         klass.size = queue_array_size;
-        klass.wait = queue_array_wait;
         klass.peek = queue_array_peek;
         klass.pop  = queue_array_pop;
         klass.push = queue_array_push;

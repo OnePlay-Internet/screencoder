@@ -32,7 +32,6 @@ namespace sink
 
 
         while(!IS_INVOKED(shutdown_event)) {
-            QUEUE_ARRAY_CLASS->wait(packets);
 
             int size;
             util::Buffer* video_packet_buffer;
