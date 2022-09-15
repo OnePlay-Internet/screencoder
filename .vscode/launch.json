@@ -6,6 +6,7 @@
     "configurations": [
 
 
+
         {
             "name": "Attach to Process",
             "type": "go",
@@ -24,11 +25,12 @@
         {
             "name": "webrtc example",
             "type": "go",
+            "stopOnEntry": true,
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/examples/go_webrtc/main.go",
-            "cwd": "${workspaceFolder}/build",
-            "args": [ "--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MCwiaWF0IjoxNjYxOTMwNDU2fQ.I8mIf9Ps3zzHxxwViZgPMkk6AU2RdLl7-mrb80_SRaI"]
+            "cwd": "${workspaceFolder}/bin",
+            "args": [ "--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MTY2MzEyMjIwMjk3MSwiaWF0IjoxNjYzMjEzOTc0fQ.iQK2IPji1YRQtx0lSLQrtuPtuBx_xezqL3KDpWpNkmI"]
         },
         {
             "name": "appsink",

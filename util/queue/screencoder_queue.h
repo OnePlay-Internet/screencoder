@@ -31,7 +31,7 @@ namespace util
                               util::Buffer** buf,
                               int* size,
                               bool record);
-        QueueArray* (*init) ();
+        QueueArray* (*init) (int size);
 
         uint64 (*size) (QueueArray* queue);
 

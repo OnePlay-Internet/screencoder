@@ -14,6 +14,8 @@
 
 #define DEFAULT_BITRATE ( 1000 * 1000 * 30 )
 
+#define INFINITE 10000
+
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 
 #define LOG_WARNING(content)  error::log(__FILE__,__LINE__,"warning",content)

@@ -57,7 +57,7 @@ namespace session {
         session.display = disp;
         session.shutdown_event = shutdown;
         session.sink = sink;
-        session.packet_queue = QUEUE_ARRAY_CLASS->init();
+        session.packet_queue = QUEUE_ARRAY_CLASS->init(3);
         session.config = {
             encoder::SlicePerFrame::TWO,
             encoder::DynamicRange::DISABLE,
@@ -65,8 +65,8 @@ namespace session {
             encoder::LibscaleColor::REC_601
         };
 
-        session.capture_event_in = QUEUE_ARRAY_CLASS->init();
-        session.capture_event_out = QUEUE_ARRAY_CLASS->init();
+        session.capture_event_in = QUEUE_ARRAY_CLASS->init(INFINITE);
+        session.capture_event_out = QUEUE_ARRAY_CLASS->init(INFINITE);
         session.sink_event_in = sink->get_input_eve(sink);
         session.sink_event_out = sink->get_output_eve(sink);
 

@@ -9,7 +9,6 @@ import (
 	"github.com/OnePlay-Internet/webrtc-proxy/listener"
 	appsink "github.com/Oneplay-Internet/screencoder/sink/appsink/go"
 
-	"github.com/OnePlay-Internet/webrtc-proxy/listener/audio"
 	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
 	"github.com/pion/webrtc/v3"
 )
@@ -77,8 +76,8 @@ func main() {
 		var Lis listener.Listener
 		if lis_conf.MediaType == "video" {
 			Lis,err =  appsink.NewAppsink(lis_conf)
-		} else if lis_conf.MediaType == "audio" {
-			Lis = audio.CreatePipeline(lis_conf)
+		// } else if lis_conf.MediaType == "audio" {
+		// 	Lis = audio.CreatePipeline(lis_conf)
 		} else {
 			err = fmt.Errorf("unimplemented listener")
 		}

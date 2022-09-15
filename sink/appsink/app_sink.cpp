@@ -31,15 +31,7 @@ namespace appsink
                    util::Buffer* buf)
     {
         appsink::AppSink* app = (appsink::AppSink*)sink;
-        
-        while(app->has_pkt)
-            std::this_thread::sleep_for(1ms);
-
-        pthread_mutex_lock(&app->mutex);
-        BUFFER_REF(buf,NULL);
-        app->out = buf;
-        app->has_pkt = true;
-        pthread_mutex_unlock(&app->mutex);
+        QUEUE_ARRAY_CLASS->push(app->out,buf,true);
     }
 
     static char*
@@ -58,6 +50,7 @@ namespace appsink
     appsink_stop(sink::GenericSink* sink)
     {
         AppSink* app = (AppSink*)sink;
+        QUEUE_ARRAY_CLASS->stop(app->out);
         util::free_keyvalue_pairs(app->base.options);
         free((pointer)sink);
     }
@@ -96,13 +89,11 @@ namespace appsink
         sink->base.get_input_eve = get_input_event;
         sink->base.get_output_eve = get_output_event;
 
-        sink->sink_event_in = QUEUE_ARRAY_CLASS->init();;
-        sink->sink_event_out = QUEUE_ARRAY_CLASS->init();
+        sink->sink_event_in = QUEUE_ARRAY_CLASS->init(INFINITE);;
+        sink->sink_event_out = QUEUE_ARRAY_CLASS->init(INFINITE);
         sink->prev_pkt_sent = std::chrono::high_resolution_clock::now();
         sink->this_pkt_sent = std::chrono::high_resolution_clock::now();
-        sink->mutex = PTHREAD_MUTEX_INITIALIZER;
-        sink->out = NULL;
-        sink->has_pkt = false;
+        sink->out = QUEUE_ARRAY_CLASS->init(1);
         return (sink::GenericSink*)sink;
     }
     
@@ -130,19 +121,8 @@ GoHandleAVPacket(void* appsink_ptr,
     if (!sink)
         return FALSE;
 
-    while(!sink->has_pkt)
-        std::this_thread::sleep_for(1ms);
-
-    pthread_mutex_lock(&sink->mutex);
-    *buf = (pointer)sink->out;
-    util::Buffer* buffer = sink->out;
-    sink->has_pkt = false;
-    pthread_mutex_unlock(&sink->mutex);
-
-    libav::Packet* pkt = (libav::Packet*)BUFFER_REF(buffer,NULL);
-    BUFFER_UNREF(buffer);
-
-    int64 current = BUFFER_CLASS->created(buffer);
+    libav::Packet* pkt = (libav::Packet*)QUEUE_ARRAY_CLASS->pop(sink->out,(util::Buffer**)buf,size,true);
+    int64 current = BUFFER_CLASS->created((util::Buffer*)*buf);
 
     *data = pkt->data;
     *size = pkt->size;
