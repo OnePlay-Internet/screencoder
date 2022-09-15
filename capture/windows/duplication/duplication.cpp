@@ -29,6 +29,7 @@ using namespace std::literals;
 namespace duplication
 {
     typedef struct _Texture{
+        int order;
         std::chrono::high_resolution_clock::time_point produced;
         DXGI_OUTDUPL_FRAME_INFO frame_info;
         pthread_mutex_t mutex;
@@ -95,17 +96,12 @@ namespace duplication
         TexturePool* pool = dup->pool;
         while(true)
         {
-            std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-            std::chrono::nanoseconds diff[TEXTURE_SIZE] = {0ns};
-            for(int i = 0; i < TEXTURE_SIZE; i++) {
-                diff[i] = now - pool->texture[i].produced;
-            }
-
             bool found = false;
-            std::chrono::nanoseconds max = 0ns;
+            int min = pool->texture[0].order;
             for(int i = 0; i < TEXTURE_SIZE; i++) {
-                if (diff[i] > max) {
-                    max = diff[i];
+                int y = pool->texture[i].order;
+                if (y < min && y != 0) {
+                    min = y;
                     value = i;
                     found = true;
                 }
@@ -126,19 +122,16 @@ namespace duplication
         TexturePool* pool = dup->pool;
         while(true)
         {
-            std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-            std::chrono::nanoseconds diff[TEXTURE_SIZE] = {0ns};
-            for(int i = 0; i < TEXTURE_SIZE; i++) {
-                if (pool->texture[i].status == platf::Capture::OK) {
-                    diff[i] = now - pool->texture[i].produced;
-                }
-            }
-
             bool found = false;
-            std::chrono::nanoseconds min = TIME_MAX;
+            int min = pool->texture[0].order;
             for(int i = 0; i < TEXTURE_SIZE; i++) {
-                if (diff[i] < min) {
-                    min = diff[i];
+                int y =                 pool->texture[i].order;
+                platf::Capture status = pool->texture[i].status;
+
+                if (y < min && y != 0 && 
+                    status == platf::Capture::OK) 
+                {
+                    min = y;
                     value = i;
                     found = true;
                 }
@@ -177,16 +170,19 @@ namespace duplication
     {
         TexturePool* pool = dup->pool;
         std::chrono::high_resolution_clock::time_point now,prev = std::chrono::high_resolution_clock::now();
+
+        int count = -1;
         while(true) {
+            count++;
+
             std::this_thread::sleep_for(10ms);
-            int count = seek_oldest_texture(dup);
-            Texture* texture = &(pool->texture[count]);
+            Texture* texture = &(pool->texture[seek_oldest_texture(dup)]);
 
             if (!pool_check(pool))
                 break;
-            
 
             pthread_mutex_lock(&texture->mutex);
+
             dxgi::Resource res;
             texture->status = duplication_get_next_frame(dup,texture,&res);
             if (texture->status != platf::Capture::OK)
@@ -221,6 +217,7 @@ namespace duplication
             if (texture->status != platf::Capture::OK)
                 continue;
 
+            texture->order = count;
             pthread_mutex_unlock(&texture->mutex);
 
             {
@@ -288,7 +285,7 @@ namespace duplication
 
         dup->pool = init_texture_pool(base);
         std::thread thread {frame_produce_thread,dup,device_ctx};
-        thread.detach();
+        thread.join();
         return dup;
     }
 
