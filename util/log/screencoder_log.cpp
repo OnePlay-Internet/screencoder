@@ -212,9 +212,12 @@ namespace error
                     char* file,
                     BufferEventType type)
     {
-        int64 createTime = std::chrono::duration_cast<std::chrono::milliseconds>(created.time_since_epoch()).count() % 10000;
-        char str[100] = {0};
-        snprintf(str, 100, "buffer id %d contain %s : %s",createTime,log->dataType,map_event(type));
-        error::log(file,line,"trace",str);
+        if (TRACE_RECORD) {
+            int64 createTime = std::chrono::duration_cast<std::chrono::milliseconds>(created.time_since_epoch()).count() % 10000;
+            char str[100] = {0};
+            snprintf(str, 100, "buffer id %d contain %s : %s",createTime,log->dataType,map_event(type));
+            error::log(file,line,"trace",str);
+        }
+        
     }
 } // namespace error

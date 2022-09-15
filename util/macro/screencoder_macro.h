@@ -18,6 +18,8 @@
 
 #define RECORD_SIZE 1000
 
+#define TRACE_RECORD true
+
 #define LOG_ERROR(content)  error::log(__FILE__,__LINE__,"error",content)
 
 #define LOG_WARNING(content)  error::log(__FILE__,__LINE__,"warning",content)

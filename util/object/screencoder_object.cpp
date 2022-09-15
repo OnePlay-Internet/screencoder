@@ -144,10 +144,6 @@ namespace util
                 char* file,
                 int line)
     {
-
-        if(FILTER_ERROR(obj))
-            return NULL;
-
         error::log_buffer(&obj->log,obj->created,line,file,error::BufferEventType::REF);
 
         obj->ref_count++;
@@ -162,10 +158,8 @@ namespace util
                  char* file,
                  int line)
     {
-        if(FILTER_ERROR(obj))
-            return;
-
         error::log_buffer(&obj->log,obj->created,line,file,error::BufferEventType::UNREF);
+        
         obj->ref_count--;
         if (!obj->ref_count) {
             error::log_buffer(&obj->log,obj->created,line,file,error::BufferEventType::FREE);
