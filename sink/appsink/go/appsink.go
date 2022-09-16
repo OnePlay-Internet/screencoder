@@ -72,6 +72,10 @@ func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 		}
 	}
 
+	if app.encoder == "" {
+		return nil, fmt.Errorf("no available encoder");
+	}
+
 	fmt.Printf("Starting screencoder engine with display : %s on adapter %s\n", app.display,conf.VideoSource.Adapter);
 	return app, nil
 }

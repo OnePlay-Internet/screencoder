@@ -21,34 +21,42 @@ func main() {
 	var err error
 	var token string
 	args := os.Args[1:]
-	URL := "localhost:5000"
+	HIDURL := "localhost:5000"
+
 	signaling := "54.169.49.176"
 	Port :=      30000;
+
 	Stun :=		"stun:workstation.thinkmay.net:3478";
 	Turn :=		"turn:workstation.thinkmay.net:3478";
-	TurnUser 	 :=		"thinkmay";
-	TurnPassword :=		"thinkmayvantue";
+
+	TurnUser 	 :=		"oneplay";
+	TurnPassword :=		"oneplay";
 	engine 		 :=		"screencoder";
 
 
 	qr := tool.GetDevice()
+	if len(qr.Soundcards) == 0{
+		fmt.Printf("no display available");
+		return;
+	}
+
 	for i, arg := range args {
 		if arg == "--token" {
 			token = args[i+1]
 		} else if arg == "--hid" {
-			URL = args[i+1]
-		} else if arg == "--hid" {
-			URL = args[i+1]
-		} else if arg == "--hid" {
-			URL = args[i+1]
-		} else if arg == "--hid" {
-			URL = args[i+1]
+			HIDURL = args[i+1]
+		} else if arg == "--grpc" {
+			signaling = args[i+1]
 		} else if arg == "--grpcport" {
 			Port,err = strconv.Atoi(args[i+1])
-			if err != nil {
-				fmt.Printf("invalid argument (grpcport) : %s\n",err.Error());
-				return
-			}
+		} else if arg == "--turn" {
+			Turn = args[i+1]
+		} else if arg == "--turnuser" {
+			TurnUser = args[i+1]
+		} else if arg == "--turnpassword" {
+			TurnPassword = args[i+1]
+		} else if arg == "--engine" {
+			engine = args[i+1]
 		} else if arg == "--device" {
 				fmt.Printf("=======================================================================\n")
 				fmt.Printf("MONITOR DEVICE\n")
@@ -87,7 +95,9 @@ func main() {
 		}
 	}
 
-	if token == "" {
+	if token == "" { err = fmt.Errorf("no available token"); }
+	if err != nil {
+		fmt.Printf("invalid argument : %s\n",err.Error());
 		return
 	}
 
@@ -130,8 +140,10 @@ func main() {
 		MediaType: "video",
 		Name:      "videoGstreamer",
 		Codec:     webrtc.MimeTypeH264,
-	},
-	{
+	}, }
+
+	if len(qr.Soundcards) > 0{
+		lis = append(lis, &config.ListenerConfig{
 		AudioSource: qr.Soundcards[0],
 
 		DataType: "sample",
@@ -139,7 +151,7 @@ func main() {
 		MediaType: "audio",
 		Name:      "audioGstreamer",
 		Codec:     webrtc.MimeTypeOpus,
-	}}
+	})}
 	
 
 	Lists := make([]listener.Listener, 0)
@@ -158,6 +170,8 @@ func main() {
 		}else if engine == "screencoder" {
 			if conf.MediaType == "video" && conf.DataType == "rtp"{
 				Lis,err =  appsink.NewAppsink(conf)
+			// } else if conf.MediaType == "audio" && conf.DataType == "sample"{
+			// 	Lis,err     =  audio.CreatePipeline(conf);
 			}
 		} else {
 			err = fmt.Errorf("unimplemented listener")
@@ -165,7 +179,7 @@ func main() {
 
 		if err != nil {
 			fmt.Printf("%s\n",err.Error());
-		} else {
+		} else if (Lis != nil) {
 			Lists = append(Lists, Lis)
 		}
 	}
@@ -185,7 +199,7 @@ func main() {
 		},
 	}
 
-	_hid := hid.NewHIDSingleton(URL)
+	_hid := hid.NewHIDSingleton(HIDURL)
 	go func() {
 		for {
 			channel := chans.Confs["hid"]

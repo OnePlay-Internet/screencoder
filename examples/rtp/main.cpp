@@ -51,7 +51,7 @@ main(int argc, char ** argv)
 
     encoder::Encoder encoder;
     int result_nvidia = QueryEncoder("nvenc_h264");
-    int result_amd    = QueryEncoder("nvenc_h264");
+    int result_amd    = QueryEncoder("amf_h264");
 
     if (result_nvidia) 
         encoder = NVENC("h264");
