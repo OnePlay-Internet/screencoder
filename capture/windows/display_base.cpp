@@ -31,57 +31,6 @@ using namespace std::literals;
 
 
 namespace display{
-    // display selection
-    platf::Display**
-    get_all_display(encoder::Encoder* encoder)
-    {
-        static platf::Display* displays[10] = {0};
-        char** display_names  = platf::display_names(helper::map_dev_type(encoder->dev_type));
-
-        int count = 0;
-        static char blacklist[10][100] = {0};
-        while (*(display_names+count)) {
-            platf::Display* display = NULL;
-            char* name = *(display_names+count);
-
-            if(!strlen(name))
-              break;
-
-            int y = 0;
-            while (displays[y]) { // filter displays that already exist
-                if (string_compare(displays[y]->name,name))
-                  goto next;
-                y++;
-            }
-
-            for(int z = 0; z< 10; z++) { // filter display that already fail to create resources
-                if (string_compare(blacklist[z],name))
-                    goto next;
-            }
-
-            // get display by name if its name does not exist in display list
-            display = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type), name);
-            if(!display) {
-                LOG_ERROR("unable to create display");
-                for(int z = 0; z< 10; z++) { // add display name to black list
-                    if (!strlen(blacklist[z])) {
-                        memcpy(blacklist[z],name,strlen(name));
-                        break;
-                    }
-                }
-            } else {
-                y=0;
-                while(displays[y]) { y++; } 
-                displays[y] = display;
-            }
-        next:
-            count++;
-        }
-
-        return displays;
-    }
-
-
     typedef enum _D3DKMT_SCHEDULINGPRIORITYCLASS {
         D3DKMT_SCHEDULINGPRIORITYCLASS_IDLE,
         D3DKMT_SCHEDULINGPRIORITYCLASS_BELOW_NORMAL,
@@ -282,7 +231,8 @@ namespace display{
                 if(fn) {
                     status = fn(GetCurrentProcess(), D3DKMT_SCHEDULINGPRIORITYCLASS_REALTIME);
                     if(FAILED(status)) {
-                    LOG_WARNING("Failed to set realtime GPU priority. Please run application as administrator for optimal performance.");
+                    LOG_WARNING("Failed to set realtime GPU priority.");
+                    LOG_WARNING("Please run application as administrator.");
                     }
                 }
             }

@@ -26,7 +26,7 @@ void StartScreencodeThread(void* app_sink,
                     char* encoder_name,
                     char* display_name);
 
-char* QueryDisplay (int index);
+int QueryEncoder(char* encoder_name);
 
 void* AllocateAppSink();
 

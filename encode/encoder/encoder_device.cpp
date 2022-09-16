@@ -17,7 +17,7 @@
 
 #include <encoder_session.h>
 #include <encoder_thread.h>
-#include <screencoder_rtp.h>
+#include <platform_common.h>
 
 #include <display_base.h>
 
@@ -28,16 +28,9 @@ namespace encoder
 {
     bool
     validate_config(Encoder* encoder,
+                    platf::Display* disp,
                     Config config) 
     {
-        platf::Display** disps = display::get_all_display(encoder);
-        platf::Display* disp = *(disps);
-
-        if(!disp)
-            return FALSE;
-
-        
-
         platf::PixelFormat pix_fmt  = config.dynamicRangeOption == DynamicRange::ENABLE? 
                                         platf::map_pix_fmt(encoder->dynamic_pix_fmt):
                                         platf::map_pix_fmt(encoder->static_pix_fmt);
@@ -111,6 +104,7 @@ namespace encoder
     {
         Config config;
         encoder->codec_config->capabilities.set().flip(); // assume all capabilities is not meet
+        platf::Display* disp = platf::get_display_by_name(encoder,NULL);
 
         { // basic test case
             encoder->codec_config->capabilities[FrameFlags::PASSED] = TRUE;
@@ -118,7 +112,7 @@ namespace encoder
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;
             config.slicesPerFrame = SlicePerFrame::ONE;
-            bool result = validate_config(encoder,config);
+            bool result = validate_config(encoder,disp,config);
             if (!result) {
                 encoder->codec_config->capabilities[FrameFlags::PASSED] = FALSE;
                 goto done;
@@ -131,7 +125,7 @@ namespace encoder
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;
             config.slicesPerFrame = SlicePerFrame::ONE;
-            bool result = validate_config(encoder,config);
+            bool result = validate_config(encoder,disp,config);
             if (!result) {
                 encoder->codec_config->capabilities[FrameFlags::CBR] = FALSE;
             }
@@ -143,7 +137,7 @@ namespace encoder
             config.scalecolor = encoder::LibscaleColor::REC_2020;
             config.dynamicRangeOption = DynamicRange::ENABLE;
             config.slicesPerFrame = SlicePerFrame::ONE;
-            bool result = validate_config(encoder,config);
+            bool result = validate_config(encoder,disp,config);
             if (!result) {
                 encoder->codec_config->capabilities[FrameFlags::DYNAMIC_RANGE] = FALSE;
             }
@@ -155,13 +149,16 @@ namespace encoder
             config.scalecolor = encoder::LibscaleColor::REC_601;
             config.dynamicRangeOption = DynamicRange::DISABLE;
             config.slicesPerFrame = SlicePerFrame::TWO;
-            bool result = validate_config(encoder,config);
+            bool result = validate_config(encoder,disp,config);
             if (!result) {
                 encoder->codec_config->capabilities[FrameFlags::SLICE] = FALSE;
             }
         }
 
     done:
+        disp->klass->free_resources(disp);
+        free((pointer)disp);
+
         return encoder->codec_config->capabilities;
     }
 }

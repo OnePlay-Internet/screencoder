@@ -12,6 +12,7 @@
 #include <d3d11_datatype.h>
 #include <display_vram.h>
 #include <screencoder_util.h>
+#include <encoder_device.h>
 
 #include <d3dcompiler.h>
 #include <directxmath.h>
@@ -294,14 +295,17 @@ namespace helper
 
 
 namespace platf {
-
-
-
-  
     Display* 
-    get_display_by_name(MemoryType hwdevice_type, 
+    get_display_by_name(encoder::Encoder* enc, 
                         char* display_name) 
     {
+        if (!display_name) {
+            char** display_names  = platf::display_names(helper::map_dev_type(enc->dev_type));
+            display_name = *display_names;
+        }
+        
+
+        platf::MemoryType hwdevice_type = helper::map_dev_type(enc->dev_type);
         if(hwdevice_type == MemoryType::dxgi) 
             return ((platf::DisplayClass*)DISPLAY_VRAM_CLASS)->init(display_name);
         
@@ -320,7 +324,6 @@ namespace platf {
 
         HRESULT status;
 
-        LOG_INFO("Detecting monitors...");
         dxgi::Factory factory;
         status = CreateDXGIFactory1(IID_IDXGIFactory1, (void **)&factory);
         if(FAILED(status)) {

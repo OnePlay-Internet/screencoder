@@ -309,7 +309,7 @@ namespace encoder {
             std::this_thread::sleep_for(200ms);
             ss_ctx.display->klass->free_resources(ss_ctx.display);
 
-            platf::Display* replace = platf::get_display_by_name(helper::map_dev_type(encoder->dev_type),ss_ctx.display->name);
+            platf::Display* replace = platf::get_display_by_name(encoder,ss_ctx.display->name);
             if (!replace) {
                 LOG_ERROR("DISPLAY is unavailable");
                 break;

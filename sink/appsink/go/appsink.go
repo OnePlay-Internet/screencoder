@@ -2,7 +2,6 @@ package appsink
 
 import (
 	"fmt"
-	"strings"
 	"unsafe"
 
 	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
@@ -41,10 +40,9 @@ type Appsink struct {
 
 	sink     unsafe.Pointer
 	shutdown unsafe.Pointer
+	
 	encoder  string
-
 	display  string
-	displays []string
 
 	channel chan *rtp.Packet
 	pktchannel chan *GoPacket
@@ -56,32 +54,25 @@ func NewAppsink(conf *config.ListenerConfig) (*Appsink, error) {
 	app.packetizer = h264.NewH264Payloader()
 	app.channel = make(chan *rtp.Packet)
 	app.pktchannel = make(chan *GoPacket)
-	app.displays = make([]string, 0);
-	app.encoder = "nvenc_h264"
-	app.display = "";
 
-	i := 0
-	for {
-		c_str := C.QueryDisplay(C.int(i))
-		display := string(C.GoBytes(unsafe.Pointer(c_str), C.StringLength(c_str)))
-		if display == "out of range" {
-			break;
-		}
-		app.displays = append(app.displays, display);
-		i++
-	}
+	app.display = conf.VideoSource.DeviceName
 
-	for _,disp := range app.displays {
-		if strings.Contains(strings.ToLower(disp),strings.ToLower(conf.Source)) {
-			app.display = disp;	
+
+	enginesupport := []string{"nvenc_h264","nvenc_hevc","amf_h264","amf_h265"};
+	clientsupport := []string{"nvenc_h264","amf_h264"};
+
+	for _,codec := range enginesupport{
+		for _,client := range clientsupport{
+			if codec == client {
+				available := C.QueryEncoder(C.CString(codec));
+				if available == 1{
+					app.encoder = codec
+				}
+			}
 		}
 	}
 
-	if app.display == "" {
-		return nil,fmt.Errorf("no display found");	
-	}
-
-	fmt.Printf("display name: %s\n", app.display)
+	fmt.Printf("Starting screencoder engine with display : %s on adapter %s\n", app.display,conf.VideoSource.Adapter);
 	return app, nil
 }
 

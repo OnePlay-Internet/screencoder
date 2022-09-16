@@ -50,38 +50,24 @@ main(int argc, char ** argv)
     } };
 
     encoder::Encoder encoder;
-    if (string_compare(*(argv+1),"nvidia")) 
+    int result_nvidia = QueryEncoder("nvenc_h264");
+    int result_amd    = QueryEncoder("nvenc_h264");
+
+    if (result_nvidia) 
         encoder = NVENC("h264");
-    else if (string_compare(*(argv+1),"amd"))
+    else if (result_amd)
         encoder = AMD("h264");
-    else 
+
+    if (!result_amd && !result_nvidia) {
+        LOG_ERROR("no supported encoder");
         return 0;
+    }
     
 
 
    
-    
-    char* display_name = QueryDisplay(0);
 
-    if(!encoder.codec_config->capabilities[encoder::FrameFlags::PASSED]) {
-        LOG_ERROR("NVENC encoder is not ready");
-        return 0;
-    }
-
-    platf::Display** displays = display::get_all_display(&encoder);
-
-    int i =0;
-    platf::Display* display;
-    while (*(displays+i)) {
-        if (string_compare((*(displays+i))->name,display_name)) {
-            display = *(displays+i);
-            goto start;
-        }
-        i++;
-    }
-    LOG_INFO("no match display");
-    return 0; 
-start:
+    platf::Display* display = platf::get_display_by_name(&encoder,NULL);
     util::Broadcaster* shutdown = NEW_EVENT;
     // std::thread wait10s {wait_shutdown,shutdown};
     // wait10s.detach();

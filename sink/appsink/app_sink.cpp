@@ -179,16 +179,23 @@ RaiseEvent(void* event)
     RAISE_EVENT((util::Broadcaster*)event);
 }
 
-char* 
-QueryDisplay(int index)
+int
+QueryEncoder(char* encoder_name)
 {
-    encoder::Encoder encoder = NVENC("h264");
-    platf::Display** displays = display::get_all_display(&encoder);
-    if (*(displays+index)) {
-        return (*(displays+index))->name;
+    encoder::Encoder encoder;
+    if (string_compare(encoder_name,"nvenc_hevc")) {
+        encoder = NVENC("h265");
+    } else if (string_compare(encoder_name,"nvenc_h264")) {
+        encoder = NVENC("h264");
+    } else if (string_compare(encoder_name,"amf_h264")) {
+        encoder = AMD("h264");
+    } else if (string_compare(encoder_name,"amf_h265")) {
+        encoder = AMD("h265");
     } else {
-        return "out of range";
+        return 0;
     }
+
+    return encoder.codec_config->capabilities[encoder::FrameFlags::PASSED];
 }
 
 
@@ -204,6 +211,12 @@ StartScreencodeThread(void* app_sink,
         encoder = NVENC("h265");
     } else if (string_compare(encoder_name,"nvenc_h264")) {
         encoder = NVENC("h264");
+    } else if (string_compare(encoder_name,"amf_h264")) {
+        encoder = AMD("h264");
+    } else if (string_compare(encoder_name,"amf_h265")) {
+        encoder = AMD("h265");
+    } else {
+        LOG_ERROR("No available encoder");
     }
     
     if(!encoder.codec_config->capabilities[encoder::FrameFlags::PASSED]) {
@@ -211,20 +224,7 @@ StartScreencodeThread(void* app_sink,
         return;
     }
 
-    platf::Display** displays = display::get_all_display(&encoder);
-
-    int i =0;
-    platf::Display* display;
-    while (*(displays+i)) {
-        if (string_compare((*(displays+i))->name,display_name)) {
-            display = *(displays+i);
-            goto start;
-        }
-        i++;
-    }
-    LOG_INFO("no match display");
-    return; 
-start:
+    platf::Display* display = platf::get_display_by_name(&encoder,display_name);
     session::start_session(display,&encoder,
         (util::Broadcaster*)shutdown,
         (sink::GenericSink*)app_sink);

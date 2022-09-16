@@ -162,7 +162,7 @@ namespace platf {
      * 
      * Returns Display based on hwdevice_type
      */
-    Display*                get_display_by_name       (MemoryType hwdevice_type , 
+    Display*                get_display_by_name       (encoder::Encoder* enc, 
                                                        char* display_name);
 
 

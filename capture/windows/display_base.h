@@ -37,9 +37,6 @@ namespace display {
     }DisplayBase;
 
 
-    // display selection
-    platf::Display** get_all_display(encoder::Encoder* encoder);
-
 
     /**
      * @brief 
