@@ -35,7 +35,7 @@ func main() {
 
 
 	qr := tool.GetDevice()
-	if len(qr.Soundcards) == 0{
+	if len(qr.Monitors) == 0{
 		fmt.Printf("no display available");
 		return;
 	}
