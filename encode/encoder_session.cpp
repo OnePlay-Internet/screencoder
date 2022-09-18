@@ -125,7 +125,9 @@ namespace encoder
             return NULL;
         }
 
-        LOG_INFO(video_format->name);
+        char log[50] = {0};
+        snprintf(log,50,"starting with encoder %s",video_format->name);
+        LOG_INFO(log);
         EncodeContext* encode_ctx = alloc_encode_context(device,video_format->name);
         encode_ctx->dev_type = encoder->dev_type;
 
