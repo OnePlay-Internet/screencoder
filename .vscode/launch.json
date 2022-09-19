@@ -4,6 +4,16 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+    
+        
+
+        {
+            "name": "Attach to Process",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": 0
+        },
 
 
         {
@@ -13,7 +23,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}/examples/go_webrtc/main.go",
             "cwd": "C:/Program Files (x86)/Oneplay/WebRTC/bin",
-            "args": [ "--engine","gstreamer","--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MTY2MzQ5Njg0MzMyOSwiaWF0IjoxNjYzNTAwNDk1fQ.v8gOssGKAQrUV6I15ZD-h1_90e1mfeBFVnT5OofUEvw"]
+            "args": [ "--engine","gstreamer","--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MTY2MzU1NzEzNzY0OSwiaWF0IjoxNjYzNTU5ODQyfQ.aT8fwr5eUI968IwM3AZybIP_Lla877LQ-cEA2RkiJLI"]
         },
         {
             "name": "go rtp udp port 6000",

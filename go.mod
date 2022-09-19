@@ -3,7 +3,7 @@ module github.com/Oneplay-Internet/screencoder
 go 1.18
 
 require (
-	github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220916024725-d77f11b2cb8a
+	github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220919155424-720e3f2f611f
 	github.com/pion/randutil v0.1.0
 	github.com/pion/rtp v1.7.13
 	github.com/pion/webrtc/v3 v3.1.43
