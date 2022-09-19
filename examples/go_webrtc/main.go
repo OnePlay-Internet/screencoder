@@ -199,7 +199,7 @@ func main() {
 		},
 	}
 
-	_hid := hid.NewHIDSingleton(HIDURL)
+	_hid := hid.NewHIDSingleton(fmt.Sprintf("http://%s",HIDURL))
 	go func() {
 		for {
 			channel := chans.Confs["hid"]
