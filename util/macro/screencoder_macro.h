@@ -20,7 +20,7 @@
 
 #define PACKET_QUEUE_SIZE 2
 
-#define ATOMIC_SLEEP 100us
+#define ATOMIC_SLEEP 1ms
 
 #define TRACE_RECORD false
 
