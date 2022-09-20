@@ -33,6 +33,14 @@ github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920073552-a0b15a5007eb h
 github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920073552-a0b15a5007eb/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
 github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920075713-525a721d7a5a h1:f4x52xoEW6QtERBY+Ev3DSdY9FFDYcPJqvDRTYu5FqE=
 github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920075713-525a721d7a5a/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920094623-14052dcfef44 h1:c3nGtuV6DIfhJHeLDmiA5FvHHqerDIlSmKKpAhP+yeM=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920094623-14052dcfef44/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920095208-984d432db31b h1:L6ue8FyMbqxlPYFYm4AwFVTA+QXNXiVOwNeZMLdYwEU=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920095208-984d432db31b/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920100105-8fb80f2e6898 h1:rA7RvJ3t7zij21oA8LZsZDVZaRlu/1AAboEUhwR7NKE=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920100105-8fb80f2e6898/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920124931-bc94237116a6 h1:OEESnIM3wUHhZtzRUb5dYrdWB0N/BLFPuX9gPObwFlk=
+github.com/OnePlay-Internet/webrtc-proxy v1.0.10-0.20220920124931-bc94237116a6/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=

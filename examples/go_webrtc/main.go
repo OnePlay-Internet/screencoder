@@ -22,6 +22,7 @@ func main() {
 	var token string
 	args := os.Args[1:]
 	HIDURL := "localhost:5000"
+	MonitorOrder := -1;
 
 	signaling := "54.169.49.176"
 	Port :=      30000;
@@ -43,6 +44,8 @@ func main() {
 	for i, arg := range args {
 		if arg == "--token" {
 			token = args[i+1]
+		} else if arg == "--monitor" {
+			MonitorOrder,err = strconv.Atoi(args[i+1])
 		} else if arg == "--hid" {
 			HIDURL = args[i+1]
 		} else if arg == "--grpc" {
@@ -124,8 +127,20 @@ func main() {
 	}
 
 	br  := []*config.BroadcasterConfig{}
+
+	var selection tool.Monitor
+	if MonitorOrder == -1 {
+		for _,i := range qr.Monitors {
+			if i.IsPrimary {
+				selection =  i;
+			}
+		}
+	} else {
+		selection = qr.Monitors[MonitorOrder];
+	}
+
 	lis := []*config.ListenerConfig{{
-		VideoSource: qr.Monitors[0],
+		VideoSource: selection,
 
 		DataType:  "rtp",
 		MediaType: "video",
@@ -133,7 +148,7 @@ func main() {
 		Codec:     webrtc.MimeTypeH264,
 	},
 	{
-		VideoSource: qr.Monitors[0],
+		VideoSource: selection,
 
 		DataType: "sample",
 
@@ -145,7 +160,7 @@ func main() {
 
 	if len(qr.Soundcards) > 0{
 		lis = append(lis, &config.ListenerConfig{
-		AudioSource: qr.Soundcards[0],
+		AudioSource: qr.Soundcards,
 
 		DataType: "sample",
 
@@ -164,7 +179,7 @@ func main() {
 		if engine == "gstreamer" {
 			if conf.MediaType == "video" && conf.DataType == "sample"{
 				Lis,err     =  video.CreatePipeline(conf);
-			} else if conf.MediaType == "audio" {
+			} else if conf.MediaType == "audio" && conf.DataType == "sample"{
 				Lis,err     =  audio.CreatePipeline(conf);
 			} else {
 				err = fmt.Errorf("unimplemented listener")
@@ -172,8 +187,8 @@ func main() {
 		}else if engine == "screencoder" {
 			if conf.MediaType == "video" && conf.DataType == "rtp"{
 				Lis,err =  appsink.NewAppsink(conf)
-			// } else if conf.MediaType == "audio" && conf.DataType == "sample"{
-			// 	Lis,err     =  audio.CreatePipeline(conf);
+			} else if conf.MediaType == "audio" && conf.DataType == "sample"{
+				Lis,err     =  audio.CreatePipeline(conf);
 			}
 		} else {
 			err = fmt.Errorf("unimplemented listener")
