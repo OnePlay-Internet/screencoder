@@ -4,6 +4,9 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
+
+
 
     
         
@@ -17,6 +20,15 @@
         },
 
 
+        {
+            "name": "webrtc exec",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/go_webrtc.exe",
+            "cwd": "C:/Program Files (x86)/Oneplay/WebRTC/bin",
+            "args": [ "--engine","gstreamer","--token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2ZXJJRCI6MTY2MzU1NzEzNzY0OSwiaWF0IjoxNjYzNjUxMjMwfQ.lR28xKbABzUrcBsriqLV6gK76cZE3iPUb1DO1Mmwtbk"]
+        },
         {
             "name": "webrtc",
             "type": "go",
