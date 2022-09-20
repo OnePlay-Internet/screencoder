@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	proxy "github.com/OnePlay-Internet/webrtc-proxy"
-	"github.com/OnePlay-Internet/webrtc-proxy/cmd/tool"
+	"github.com/OnePlay-Internet/webrtc-proxy/util/tool"
 	"github.com/OnePlay-Internet/webrtc-proxy/hid"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/audio"
@@ -137,6 +137,7 @@ func main() {
 
 		DataType: "sample",
 
+		Bitrate: 3000,
 		MediaType: "video",
 		Name:      "videoGstreamer",
 		Codec:     webrtc.MimeTypeH264,
@@ -148,6 +149,7 @@ func main() {
 
 		DataType: "sample",
 
+		Bitrate: 128000,
 		MediaType: "audio",
 		Name:      "audioGstreamer",
 		Codec:     webrtc.MimeTypeOpus,
