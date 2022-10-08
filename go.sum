@@ -11,6 +11,8 @@ github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20220921084657-2fed9d7263ec h1
 github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20220921084657-2fed9d7263ec/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
 github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20220921085703-51ca743ed4da h1:/Ct22MEttNg6lYZ8lRXugEPuehEJtE39/8GZiPjgdeA=
 github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20220921085703-51ca743ed4da/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
+github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20221008112635-da9238e4c606 h1:n0FXzXC5fsX3PIRu2DqebsrViS/3948rAL8yw7V0fcs=
+github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20221008112635-da9238e4c606/go.mod h1:WyN8vk6g/JoaZY+zpfZsDDMCq0g1AWo/BxtHVSrhSxY=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=

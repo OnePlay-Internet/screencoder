@@ -11,7 +11,6 @@ import (
 	"github.com/OnePlay-Internet/webrtc-proxy/listener"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/audio"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/video"
-	appsink "github.com/Oneplay-Internet/screencoder/sink/appsink/go"
 
 	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
 	"github.com/pion/webrtc/v3"
@@ -22,7 +21,6 @@ func main() {
 	var token string
 	args := os.Args[1:]
 	HIDURL := "localhost:5000"
-	MonitorOrder := -1;
 
 	signaling := "54.169.49.176"
 	Port :=      30000;
@@ -44,8 +42,6 @@ func main() {
 	for i, arg := range args {
 		if arg == "--token" {
 			token = args[i+1]
-		} else if arg == "--monitor" {
-			MonitorOrder,err = strconv.Atoi(args[i+1])
 		} else if arg == "--hid" {
 			HIDURL = args[i+1]
 		} else if arg == "--grpc" {
@@ -127,40 +123,8 @@ func main() {
 	}
 
 	br  := []*config.BroadcasterConfig{}
-
-	var selection tool.Monitor
-	if MonitorOrder == -1 {
-		for _,i := range qr.Monitors {
-			if i.IsPrimary {
-				selection =  i;
-			}
-		}
-	} else {
-		selection = qr.Monitors[MonitorOrder];
-	}
-
 	lis := []*config.ListenerConfig{{
-		VideoSource: selection,
-
-		DataType:  "rtp",
-		MediaType: "video",
-		Name:      "Screencapture",
-		Codec:     webrtc.MimeTypeH264,
-	},
-	{
-		VideoSource: selection,
-
-		DataType: "sample",
-
-		Bitrate: 3000,
-		MediaType: "video",
-		Name:      "videoGstreamer",
-		Codec:     webrtc.MimeTypeH264,
-	}, }
-
-	if len(qr.Soundcards) > 0{
-		lis = append(lis, &config.ListenerConfig{
-		AudioSource: qr.Soundcards,
+		AudioSource: tool.Soundcard{},
 
 		DataType: "sample",
 
@@ -168,7 +132,17 @@ func main() {
 		MediaType: "audio",
 		Name:      "audioGstreamer",
 		Codec:     webrtc.MimeTypeOpus,
-	})}
+	}, {
+		VideoSource: tool.Monitor{},
+
+		DataType: "sample",
+
+		Bitrate: 	3000,
+		MediaType: "video",
+		Name:      "videoGstreamer",
+		Codec:     webrtc.MimeTypeH264,
+	}, }
+
 	
 
 	Lists := make([]listener.Listener, 0)
@@ -178,18 +152,18 @@ func main() {
 
 		if engine == "gstreamer" {
 			if conf.MediaType == "video" && conf.DataType == "sample"{
-				Lis,err     =  video.CreatePipeline(conf);
+				Lis     =  video.CreatePipeline(conf);
 			} else if conf.MediaType == "audio" && conf.DataType == "sample"{
-				Lis,err     =  audio.CreatePipeline(conf);
+				Lis     =  audio.CreatePipeline(conf);
 			} else {
 				err = fmt.Errorf("unimplemented listener")
 			}
-		}else if engine == "screencoder" {
-			if conf.MediaType == "video" && conf.DataType == "rtp"{
-				Lis,err =  appsink.NewAppsink(conf)
-			} else if conf.MediaType == "audio" && conf.DataType == "sample"{
-				Lis,err     =  audio.CreatePipeline(conf);
-			}
+		// }else if engine == "screencoder" {
+		// 	if conf.MediaType == "video" && conf.DataType == "rtp"{
+		// 		Lis,err =  appsink.NewAppsink(conf)
+		// 	} else if conf.MediaType == "audio" && conf.DataType == "sample"{
+		// 		Lis,err     =  audio.CreatePipeline(conf);
+		// 	}
 		} else {
 			err = fmt.Errorf("unimplemented listener")
 		}
@@ -231,7 +205,7 @@ func main() {
 
 
 
-	prox, err := proxy.InitWebRTCProxy(nil, &grpc, &rtc, br, &chans, Lists)
+	prox, err := proxy.InitWebRTCProxy(nil, &grpc, &rtc, br, &chans, Lists,qr)
 	if err != nil {
 		fmt.Printf("%s\n",err.Error())
 		return;
