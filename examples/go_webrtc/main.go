@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	proxy "github.com/OnePlay-Internet/webrtc-proxy"
-	"github.com/OnePlay-Internet/webrtc-proxy/util/tool"
 	"github.com/OnePlay-Internet/webrtc-proxy/hid"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/audio"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/video"
+	"github.com/OnePlay-Internet/webrtc-proxy/util/tool"
 
 	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
 	"github.com/pion/webrtc/v3"
@@ -190,6 +191,7 @@ func main() {
 		},
 	}
 
+	prev := time.Now()
 	_hid := hid.NewHIDSingleton(HIDURL)
 	go func() {
 		for {
@@ -197,6 +199,7 @@ func main() {
 			if channel != nil {
 				str := <-chans.Confs["hid"].Recv
 				_hid.ParseHIDInput(str)
+				prev = time.Now()
 			} else {
 				return
 			}
@@ -210,6 +213,17 @@ func main() {
 		fmt.Printf("%s\n",err.Error())
 		return;
 	}
+
+
+	go func() {
+		for {
+			time.Sleep(60 * time.Second)
+			diff := time.Now().Minute() - prev.Minute();
+			if diff > 15 {
+				prox.Shutdown<-true;
+			}
+		}
+	}()
 	<-prox.Shutdown
 }
 
