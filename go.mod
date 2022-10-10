@@ -8,7 +8,7 @@ require (
 	github.com/pion/webrtc/v3 v3.1.43
 )
 
-require github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20221008163654-e4d5f023dd85 // indirect
+require github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20221010015807-4def2035a1ff // indirect
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
