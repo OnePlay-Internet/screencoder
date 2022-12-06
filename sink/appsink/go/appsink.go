@@ -97,6 +97,13 @@ type  GoPacket struct {
 	data, buf unsafe.Pointer
 }
 
+func (app *Appsink) GetConfig() *config.ListenerConfig {
+	return app.conf
+}
+func (app *Appsink) UpdateConfig(conf *config.ListenerConfig) error {
+	return nil
+}
+
 func (app *Appsink) Open() *config.ListenerConfig {
 	app.shutdown = C.NewEvent()
 	if app.shutdown == nil {

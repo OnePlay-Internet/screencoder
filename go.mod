@@ -8,7 +8,7 @@ require (
 	github.com/pion/webrtc/v3 v3.1.43
 )
 
-require github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20221010015807-4def2035a1ff // indirect
+require github.com/OnePlay-Internet/webrtc-proxy v1.1.1-0.20221010015807-4def2035a1ff
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -27,7 +27,6 @@ require (
 	github.com/pion/transport v0.13.1 // indirect
 	github.com/pion/turn/v2 v2.0.8 // indirect
 	github.com/pion/udp v0.1.1 // indirect
-	github.com/pion/webrtc/v2 v2.2.26
 	golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8 // indirect
 	golang.org/x/net v0.0.0-20220630215102-69896b714898 // indirect
 	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664 // indirect

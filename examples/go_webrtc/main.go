@@ -12,6 +12,7 @@ import (
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/audio"
 	"github.com/OnePlay-Internet/webrtc-proxy/listener/video"
 	"github.com/OnePlay-Internet/webrtc-proxy/util/tool"
+	appsink "github.com/Oneplay-Internet/screencoder/sink/appsink/go"
 
 	"github.com/OnePlay-Internet/webrtc-proxy/util/config"
 	"github.com/pion/webrtc/v3"
@@ -159,12 +160,12 @@ func main() {
 			} else {
 				err = fmt.Errorf("unimplemented listener")
 			}
-		// }else if engine == "screencoder" {
-		// 	if conf.MediaType == "video" && conf.DataType == "rtp"{
-		// 		Lis,err =  appsink.NewAppsink(conf)
-		// 	} else if conf.MediaType == "audio" && conf.DataType == "sample"{
-		// 		Lis,err     =  audio.CreatePipeline(conf);
-		// 	}
+		}else if engine == "screencoder" {
+			if conf.MediaType == "video" && conf.DataType == "rtp"{
+				Lis,err =  appsink.NewAppsink(conf)
+			} else if conf.MediaType == "audio" && conf.DataType == "sample"{
+				Lis     =  audio.CreatePipeline(conf);
+			}
 		} else {
 			err = fmt.Errorf("unimplemented listener")
 		}
