@@ -5,7 +5,7 @@ project(Screencoder VERSION 0.1.0)
 
 file(DOWNLOAD 
 	"https://github.com/OnePlay-Internet/screencoder/releases/download/library/libstdc++-6.dll"
-	"${CMAKE_CURRENT_SOURCE_DIR}/bin/libstdc++-6.dll"
+	"${CMAKE_CURRENT_SOURCE_DIR}/libstdc++-6.dll"
 	TIMEOUT 10)
 	
 file(DOWNLOAD 
