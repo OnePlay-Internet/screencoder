@@ -119,8 +119,8 @@ namespace error
 
             outfile << level_log << "||"<< file_log << "||"<< time_log << " || MESSAGE: "<< err->message << std::endl; 
 
-            if(find_substr(err->level,"trace"))
-                goto done;
+            // if(find_substr(err->level,"trace"))
+            //     goto done;
 
             std::cout << level_log << "||"<< file_log << "||"<< time_log << " || MESSAGE: "<< err->message << std::endl; 
         done:

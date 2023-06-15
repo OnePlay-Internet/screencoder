@@ -3,7 +3,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/**",
+                "C:/TDM-GCC-64/x86_64-w64-mingw32/include/**",
+                "C:/TDM-GCC-64/include/**",
                 "${workspaceFolder}/**",
             ],
             "defines": [
@@ -11,8 +12,7 @@
                 "UNICODE",
                 "_UNICODE"
             ],
-            "windowsSdkVersion": "10.0.19041.0",
-            "compilerPath": "C:/msys64/mingw64/bin/gcc.exe",
+            // "windowsSdkVersion": "10.0.19041.0",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-gcc-x64"

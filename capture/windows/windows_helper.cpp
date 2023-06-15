@@ -15,7 +15,6 @@
 #include <encoder_device.h>
 
 #include <d3dcompiler.h>
-// #include <directxmath.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
