@@ -46,6 +46,7 @@ namespace duplication
         } else {
             return_status = platf::Capture::ERR;
         }
+        duplication_release_frame(dup);
         return return_status;
     }
 
