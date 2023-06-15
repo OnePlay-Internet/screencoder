@@ -65,8 +65,8 @@ namespace session {
             encoder::LibscaleColor::REC_601
         };
 
-        session.capture_event_in = QUEUE_ARRAY_CLASS->init(INFINITE);
-        session.capture_event_out = QUEUE_ARRAY_CLASS->init(INFINITE);
+        session.capture_event_in = QUEUE_ARRAY_CLASS->init(INFINITE_);
+        session.capture_event_out = QUEUE_ARRAY_CLASS->init(INFINITE_);
         session.sink_event_in = sink->get_input_eve(sink);
         session.sink_event_out = sink->get_output_eve(sink);
 

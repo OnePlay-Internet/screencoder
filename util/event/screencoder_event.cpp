@@ -19,7 +19,7 @@ namespace util
     Broadcaster*    
     new_event()
     {
-        return QUEUE_ARRAY_CLASS->init(INFINITE);
+        return QUEUE_ARRAY_CLASS->init(INFINITE_);
     }
 
     void

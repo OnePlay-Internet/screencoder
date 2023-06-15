@@ -14,7 +14,7 @@
 
 #define DEFAULT_BITRATE ( 1000 * 1000 * 30 )
 
-#define INFINITE 10000
+#define INFINITE_ 10000
 
 #define RECORD_SIZE 200
 

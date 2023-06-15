@@ -37,5 +37,5 @@ int main()
     void* shutdown = NewEvent();
     std::thread handle {readloop,appsink};
     handle.detach();
-    // StartScreencodeThread(appsink,shutdown,"nvenc_h264",QueryDisplay(0));
+    StartScreencodeThread(appsink,shutdown,"nvenc_h264",QueryDisplay(0));
 }

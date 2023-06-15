@@ -133,7 +133,7 @@ namespace error
     {
         static util::QueueArray* ret;
         RETURN_ONCE(ret);
-        ret = QUEUE_ARRAY_CLASS->init(INFINITE);
+        ret = QUEUE_ARRAY_CLASS->init(INFINITE_);
         std::thread render {render_log,ret};
         render.detach();
         return ret;
